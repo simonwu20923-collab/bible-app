@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom';
 import './App.css';
+import Reading from './pages/Reading';
 
 function Home() {
   const [name, setName] = React.useState('');
@@ -40,10 +41,6 @@ function Home() {
       )}
     </div>
   );
-}
-
-function Reading() {
-  return <div className="page"><h1>Today's Reading</h1></div>;
 }
 
 function Schedule() {
