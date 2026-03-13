@@ -1,9 +1,11 @@
 import React from 'react';
+import { getTodayReading } from '../data/schedule';
 
+const reading = getTodayReading();
 const todayReading = {
   date: new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' }),
-  nt: { portion: 'Matthew 1-2', description: 'The genealogy and birth of Jesus Christ' },
-  ot: { portion: 'Genesis 1-2', description: 'The creation of the heavens and the earth' },
+  nt: { portion: reading.nt, description: '' },
+  ot: { portion: reading.ot, description: '' },
 };
 
 export default function Reading() {
