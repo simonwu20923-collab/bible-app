@@ -17,12 +17,26 @@ export default function Reading() {
   const [otDone, setOtDone] = React.useState(false);
   const [saving, setSaving] = React.useState('');
   const [todayReaders, setTodayReaders] = React.useState([]);
+  const [verses, setVerses] = React.useState(null);
+  const [showNT, setShowNT] = React.useState(false);
+  const [showOT, setShowOT] = React.useState(false);
 
-  // Load today's check-ins and check if user already checked in
   React.useEffect(() => {
-    if (!name) return;
-    loadTodayReaders(name);
+    loadVerses();
+  }, []);
+
+  React.useEffect(() => {
+    if (name) loadTodayReaders(name);
   }, [name]);
+
+  async function loadVerses() {
+    const { data } = await supabase
+      .from('verses')
+      .select('nt_title, nt_text, ot_title, ot_text')
+      .eq('date', todayStr)
+      .single();
+    if (data) setVerses(data);
+  }
 
   async function loadTodayReaders(currentName) {
     const { data } = await supabase
@@ -32,14 +46,12 @@ export default function Reading() {
       .order('created_at', { ascending: true });
 
     if (data) {
-      // Check if this user already checked in
-      const myCheckins = data.filter(r => 
+      const myCheckins = data.filter(r =>
         r.name.toLowerCase() === currentName.toLowerCase()
       );
       if (myCheckins.some(r => r.portion === 'NT')) setNtDone(true);
       if (myCheckins.some(r => r.portion === 'OT')) setOtDone(true);
 
-      // Build today's readers list (one row per person)
       const readersMap = {};
       data.forEach(r => {
         const key = r.name.toLowerCase();
@@ -55,7 +67,6 @@ export default function Reading() {
     if (done || saving) return;
     setSaving(portion);
 
-    // Double-check for duplicate before inserting
     const { data: existing } = await supabase
       .from('checkins')
       .select('id')
@@ -85,6 +96,23 @@ export default function Reading() {
       localStorage.setItem('bibleAppName', nameInput.trim());
       setName(nameInput.trim());
     }
+  }
+
+  function formatVerseText(text) {
+    if (!text) return null;
+    // Each verse starts with "Mt 1 :1" or "Gn 1 :1" pattern
+    return text.split('\n').map((line, i) => {
+      const match = line.match(/^([A-Z][a-z]+ \d+ :\d+)\s+(.*)/);
+      if (match) {
+        return (
+          <p key={i} className="verse-line">
+            <span className="verse-ref">{match[1]}</span>
+            <span className="verse-body"> {match[2]}</span>
+          </p>
+        );
+      }
+      return line ? <p key={i} className="verse-line">{line}</p> : null;
+    });
   }
 
   if (!name) {
@@ -117,11 +145,28 @@ export default function Reading() {
       </div>
 
       <div className="reading-cards">
+        {/* NT Card */}
         <div className={`reading-card ${ntDone ? 'done' : ''}`}>
           <div className="reading-card-header">
             <span className="reading-tag nt-tag">NT</span>
             <span className="reading-portion">{reading.nt}</span>
           </div>
+          {verses && (
+            <button
+              className="verses-toggle"
+              onClick={() => setShowNT(!showNT)}
+            >
+              {showNT ? '▲ Hide verses' : '▼ Read verses'}
+            </button>
+          )}
+          {showNT && verses && (
+            <div className="verses-box">
+              <div className="verses-title">{verses.nt_title}</div>
+              <div className="verses-text">
+                {formatVerseText(verses.nt_text)}
+              </div>
+            </div>
+          )}
           <button
             className={`checkin-btn ${ntDone ? 'checked' : ''}`}
             onClick={() => handleCheckin('NT', ntDone, setNtDone)}
@@ -131,11 +176,28 @@ export default function Reading() {
           </button>
         </div>
 
+        {/* OT Card */}
         <div className={`reading-card ${otDone ? 'done' : ''}`}>
           <div className="reading-card-header">
             <span className="reading-tag ot-tag">OT</span>
             <span className="reading-portion">{reading.ot}</span>
           </div>
+          {verses && (
+            <button
+              className="verses-toggle"
+              onClick={() => setShowOT(!showOT)}
+            >
+              {showOT ? '▲ Hide verses' : '▼ Read verses'}
+            </button>
+          )}
+          {showOT && verses && (
+            <div className="verses-box">
+              <div className="verses-title">{verses.ot_title}</div>
+              <div className="verses-text">
+                {formatVerseText(verses.ot_text)}
+              </div>
+            </div>
+          )}
           <button
             className={`checkin-btn ot ${otDone ? 'checked' : ''}`}
             onClick={() => handleCheckin('OT', otDone, setOtDone)}

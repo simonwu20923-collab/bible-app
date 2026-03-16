@@ -441,3 +441,51 @@ body {
   border-bottom: 1px solid #2a2a4a;
   font-size: 0.95rem;
 }
+.verses-toggle {
+  width: 100%;
+  background: transparent;
+  border: 1px solid #2a2a4a;
+  border-radius: 6px;
+  color: #6b7280;
+  padding: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  margin-bottom: 12px;
+  transition: all 0.2s;
+}
+
+.verses-toggle:hover { border-color: #7c3aed; color: #a78bfa; }
+
+.verses-box {
+  background: #0f0f1a;
+  border: 1px solid #1f1f35;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.verses-title {
+  color: #a78bfa;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #1f1f35;
+}
+
+.verse-line {
+  margin-bottom: 8px;
+  line-height: 1.7;
+  font-size: 0.9rem;
+}
+
+.verse-ref {
+  color: #6b7280;
+  font-size: 0.75rem;
+  margin-right: 4px;
+  font-style: italic;
+}
+
+.verse-body { color: #e8e8f0; }
