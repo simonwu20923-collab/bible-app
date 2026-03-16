@@ -1,24 +1,43 @@
 import React from 'react';
+import { supabase } from '../supabase';
 import { getTodayReading } from '../data/schedule';
 
 const reading = getTodayReading();
-const todayReading = {
-  date: new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' }),
-  nt: { portion: reading.nt, description: '' },
-  ot: { portion: reading.ot, description: '' },
-};
+const todayStr = new Date().toISOString().split('T')[0];
+const todayLabel = new Date().toLocaleDateString('en-US', {
+  weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+});
 
 export default function Reading() {
-  const [name, setName] = React.useState(() => localStorage.getItem('bibleAppName') || '');
+  const [name, setName] = React.useState(
+    () => localStorage.getItem('bibleAppName') || ''
+  );
   const [nameInput, setNameInput] = React.useState('');
   const [ntDone, setNtDone] = React.useState(false);
   const [otDone, setOtDone] = React.useState(false);
+  const [saving, setSaving] = React.useState('');
 
   function saveName() {
     if (nameInput.trim()) {
       localStorage.setItem('bibleAppName', nameInput.trim());
       setName(nameInput.trim());
     }
+  }
+
+  async function handleCheckin(portion, done, setDone) {
+    if (done) return;
+    setSaving(portion);
+    const { error } = await supabase.from('checkins').insert({
+      name,
+      date: todayStr,
+      portion,
+    });
+    if (error) {
+      alert('Error saving: ' + error.message);
+    } else {
+      setDone(true);
+    }
+    setSaving('');
   }
 
   if (!name) {
@@ -46,40 +65,38 @@ export default function Reading() {
   return (
     <div className="page">
       <div className="reading-header">
-        <div className="reading-date">{todayReading.date}</div>
+        <div className="reading-date">{todayLabel}</div>
         <div className="reading-greeting">Hi {name} 👋</div>
       </div>
 
       <div className="reading-cards">
-
         <div className={`reading-card ${ntDone ? 'done' : ''}`}>
           <div className="reading-card-header">
             <span className="reading-tag nt-tag">NT</span>
-            <span className="reading-portion">{todayReading.nt.portion}</span>
+            <span className="reading-portion">{reading.nt}</span>
           </div>
-          <p className="reading-desc">{todayReading.nt.description}</p>
           <button
             className={`checkin-btn ${ntDone ? 'checked' : ''}`}
-            onClick={() => setNtDone(!ntDone)}
+            onClick={() => handleCheckin('NT', ntDone, setNtDone)}
+            disabled={ntDone || saving === 'NT'}
           >
-            {ntDone ? '✓ Finished NT' : 'Finish NT'}
+            {saving === 'NT' ? 'Saving...' : ntDone ? '✓ Finished NT' : 'Finish NT'}
           </button>
         </div>
 
         <div className={`reading-card ${otDone ? 'done' : ''}`}>
           <div className="reading-card-header">
             <span className="reading-tag ot-tag">OT</span>
-            <span className="reading-portion">{todayReading.ot.portion}</span>
+            <span className="reading-portion">{reading.ot}</span>
           </div>
-          <p className="reading-desc">{todayReading.ot.description}</p>
           <button
             className={`checkin-btn ot ${otDone ? 'checked' : ''}`}
-            onClick={() => setOtDone(!otDone)}
+            onClick={() => handleCheckin('OT', otDone, setOtDone)}
+            disabled={otDone || saving === 'OT'}
           >
-            {otDone ? '✓ Finished OT' : 'Finish OT'}
+            {saving === 'OT' ? 'Saving...' : otDone ? '✓ Finished OT' : 'Finish OT'}
           </button>
         </div>
-
       </div>
 
       {ntDone && otDone && (
