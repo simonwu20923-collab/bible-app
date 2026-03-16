@@ -4,10 +4,7 @@ import './App.css';
 import Reading from './pages/Reading';
 import Home from './pages/Home';
 import Schedule from './pages/Schedule';
-
-function Admin() {
-  return <div className="page"><h1>Admin</h1></div>;
-}
+import Admin from './pages/Admin';
 
 function App() {
   return (
