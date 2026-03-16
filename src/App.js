@@ -3,10 +3,7 @@ import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom';
 import './App.css';
 import Reading from './pages/Reading';
 import Home from './pages/Home';
-
-function Schedule() {
-  return <div className="page"><h1>Schedule</h1></div>;
-}
+import Schedule from './pages/Schedule';
 
 function Admin() {
   return <div className="page"><h1>Admin</h1></div>;
