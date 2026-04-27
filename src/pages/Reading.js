@@ -216,7 +216,7 @@ export default function Reading() {
             {verses?.nt_audio && (
   <AudioPlayer
     label="NT Audio"
-    book={verses.nt_title?.split(' - ')[1]?.replace(/\.\s*\d+.*/, '').trim() || 'NT'}
+    book={verses.nt_title?.replace(/New Testament - /, '').replace(/\s[\d:~]+.*/, '').trim() || 'NT'}
     audioJson={verses.nt_audio}
     startChap={parseInt(verses.nt_title?.match(/(\d+):/)?.[1] || '1', 10)}
   />
@@ -245,7 +245,7 @@ export default function Reading() {
             {verses?.ot_audio && (
   <AudioPlayer
     label="OT Audio"
-    book={verses.ot_title?.split(' - ')[1]?.replace(/\.\s*\d+.*/, '').trim() || 'OT'}
+    book={verses.ot_title?.replace(/Old Testament - /, '').replace(/\s[\d:~]+.*/, '').trim() || 'OT'}
     audioJson={verses.ot_audio}
     startChap={parseInt(verses.ot_title?.match(/(\d+):/)?.[1] || '1', 10)}
   />

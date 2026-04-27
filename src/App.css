@@ -43,6 +43,7 @@ body {
 .nav-links a.active { background: #4c1d95; color: #a78bfa; }
 
 .main-content { padding: 32px 24px; max-width: 900px; margin: 0 auto; }
+.page { width: 100%; }
 .page h1 { font-size: 1.8rem; margin-bottom: 16px; color: #a78bfa; }
 
 .welcome-card {
@@ -477,7 +478,7 @@ body {
   border-radius: 8px;
   padding: 16px;
   margin-bottom: 16px;
-  max-height: 400px;
+  max-height: 65vh;
   overflow-y: auto;
 }
 
@@ -745,3 +746,16 @@ body {
 
 .cal-clickable { cursor: pointer; }
 .cal-clickable:hover { background: #1f1f35; border-radius: 4px; }
+
+/* Mobile reading page padding */
+@media (max-width: 768px) {
+  .reading-page-content {
+    padding: 12px;
+  }
+  .reading-card {
+    padding: 16px;
+  }
+  .verses-box {
+    max-height: 50vh;
+  }
+}
