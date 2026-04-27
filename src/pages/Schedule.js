@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 import schedule from '../data/schedule';
 
-const MONTHS = ['January','February','March','April','May','June',
-  'July','August','September','October','November','December'];
+const MONTHS_EN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MONTHS_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const MONTHS_ZH = ['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'];
 
-export default function Schedule() {
+export default function Schedule({ lang = 'en' }) {
   const [view, setView] = React.useState('calendar');
   const [completedDates, setCompletedDates] = React.useState({});
   const [loading, setLoading] = React.useState(true);
@@ -17,9 +18,36 @@ export default function Schedule() {
   const navigate = useNavigate();
   const todayRef = React.useRef(null);
 
+  const ui = {
+    en: {
+      title: `Reading Schedule ${currentYear}`,
+      both: 'Both', nt: 'NT', ot: 'OT',
+      listView: '☰ List View', calView: '⊞ Calendar View',
+      loading: 'Loading...',
+      weekdays: ['S','M','T','W','T','F','S'],
+      months: MONTHS_EN,
+    },
+    es: {
+      title: `Horario de Lectura ${currentYear}`,
+      both: 'Ambos', nt: 'NT', ot: 'AT',
+      listView: '☰ Vista Lista', calView: '⊞ Vista Calendario',
+      loading: 'Cargando...',
+      weekdays: ['D','L','M','M','J','V','S'],
+      months: MONTHS_ES,
+    },
+    zh: {
+      title: `${currentYear}年閱讀計劃`,
+      both: '兩篇', nt: '新約', ot: '舊約',
+      listView: '☰ 列表', calView: '⊞ 日曆',
+      loading: '載入中...',
+      weekdays: ['日','一','二','三','四','五','六'],
+      months: MONTHS_ZH,
+    },
+  };
+  const t = ui[lang] || ui.en;
+
   React.useEffect(() => { loadCompletedDates(); }, []);
 
-  // Auto-scroll to today after render
   React.useEffect(() => {
     if (!loading && todayRef.current) {
       setTimeout(() => {
@@ -59,7 +87,7 @@ export default function Schedule() {
   }
 
   function renderCalendar() {
-    return MONTHS.map((_, monthIndex) => {
+    return t.months.map((monthName, monthIndex) => {
       const daysInMonth = new Date(currentYear, monthIndex + 1, 0).getDate();
       const firstDay = new Date(currentYear, monthIndex, 1).getDay();
       const cells = [];
@@ -90,9 +118,9 @@ export default function Schedule() {
 
       return (
         <div className="cal-month" key={monthIndex}>
-          <div className="cal-month-name">{MONTHS[monthIndex]}</div>
+          <div className="cal-month-name">{monthName}</div>
           <div className="cal-grid">
-            {['S','M','T','W','T','F','S'].map((d, i) => (
+            {t.weekdays.map((d, i) => (
               <div key={i} className="cal-weekday">{d}</div>
             ))}
             {cells}
@@ -114,9 +142,10 @@ export default function Schedule() {
         if (!schedule[schedKey]) continue;
         const isToday = dateStr === todayStr;
         const dot = getDotClass(dateStr);
-        const label = new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', {
-          month: 'long', day: 'numeric'
-        });
+        const label = new Date(dateStr + 'T12:00:00').toLocaleDateString(
+          lang === 'zh' ? 'zh-TW' : lang === 'es' ? 'es-ES' : 'en-US',
+          { month: 'long', day: 'numeric' }
+        );
 
         allDays.push(
           <div key={dateStr} ref={isToday ? todayRef : null}
@@ -135,20 +164,21 @@ export default function Schedule() {
     return allDays;
   }
 
-  if (loading) return <div className="page"><div className="loading">Loading...</div></div>;
+  if (loading) return <div className="page"><div className="loading">{t.loading}</div></div>;
 
   return (
     <div className="page">
       <div className="schedule-header">
-        <h1>Reading Schedule {currentYear}</h1>
+        <h1>{t.title}</h1>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <div className="cal-legend">
-            <span><span className="cal-dot dot-full" /> Both</span>
-            <span><span className="cal-dot dot-nt" /> NT</span>
-            <span><span className="cal-dot dot-ot" /> OT</span>
+            <span><span className="cal-dot dot-full" /> {t.both}</span>
+            <span><span className="cal-dot dot-nt" /> {t.nt}</span>
+            <span><span className="cal-dot dot-ot" /> {t.ot}</span>
           </div>
-          <button className="view-toggle" onClick={() => setView(v => v === 'calendar' ? 'list' : 'calendar')}>
-            {view === 'calendar' ? '☰ List View' : '⊞ Calendar View'}
+          <button className="view-toggle"
+            onClick={() => setView(v => v === 'calendar' ? 'list' : 'calendar')}>
+            {view === 'calendar' ? t.listView : t.calView}
           </button>
         </div>
       </div>
