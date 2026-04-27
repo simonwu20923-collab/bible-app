@@ -553,7 +553,7 @@ body {
   .reading-card { width: 100%; padding: 12px 10px; }
 
   .verses-box { padding: 12px 8px; background: transparent; border: none; }
-  .verse-line { font-size: 1.15rem; line-height: 2; margin-bottom: 14px; }
+  .verse-line { font-size: 1.15rem !important; line-height: 2; margin-bottom: 14px; }
   .verse-ref { font-size: 0.85rem; }
   .verses-title { font-size: 0.95rem; }
 
@@ -565,4 +565,50 @@ body {
   .admin-grid { grid-template-columns: 1fr; }
   .schedule-header { flex-direction: column; align-items: flex-start; }
   .sticky-banner { top: 48px; }
+}
+
+/* ── Language Toggle ─────────────────────── */
+.lang-toggle {
+  display: flex;
+  gap: 4px;
+  background: #1a1a2e;
+  border: 1px solid #2a2a4a;
+  border-radius: 20px;
+  padding: 3px;
+}
+
+.lang-btn {
+  padding: 4px 12px;
+  border: none;
+  border-radius: 16px;
+  background: transparent;
+  color: #9ca3af;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.lang-btn:hover:not(.lang-btn-unavailable) {
+  background: #2a2a4a;
+  color: #e8e8f0;
+}
+
+.lang-btn-active {
+  background: #7c3aed !important;
+  color: white !important;
+  font-weight: 600;
+}
+
+.lang-btn-unavailable {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.lang-unavailable-msg {
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.85rem;
+  padding: 16px;
+  font-style: italic;
 }

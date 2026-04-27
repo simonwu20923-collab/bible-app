@@ -17,6 +17,7 @@ export default function Reading() {
 
   const reading = getReadingForDate(currentDate);
 
+  const [lang, setLang] = React.useState(() => localStorage.getItem('bibleAppLang') || 'en');
   const [name, setName] = React.useState(() => localStorage.getItem('bibleAppName') || '');
   const [nameInput, setNameInput] = React.useState('');
   const [ntDone, setNtDone] = React.useState(false);
@@ -33,6 +34,12 @@ export default function Reading() {
   const [commentText, setCommentText] = React.useState('');
   const [posting, setPosting] = React.useState(false);
 
+  // Save language preference
+  function changeLang(l) {
+    setLang(l);
+    localStorage.setItem('bibleAppLang', l);
+  }
+
   React.useEffect(() => {
     setNtDone(false); setOtDone(false);
     setShowNT(true); setShowOT(true);
@@ -44,7 +51,7 @@ export default function Reading() {
 
   async function loadVerses() {
     const { data } = await supabase.from('verses')
-      .select('nt_title,nt_text,ot_title,ot_text,nt_audio,ot_audio')
+      .select('nt_title,nt_text,ot_title,ot_text,nt_audio,ot_audio,nt_text_es,ot_text_es,nt_text_zh,ot_text_zh')
       .eq('date', currentDate).single();
     if (data) setVerses(data);
   }
@@ -134,18 +141,51 @@ export default function Reading() {
     }
   }
 
+  // Get the right text based on current language
+  function getNtText() {
+    if (!verses) return null;
+    if (lang === 'es' && verses.nt_text_es) return verses.nt_text_es;
+    if (lang === 'zh' && verses.nt_text_zh) return verses.nt_text_zh;
+    return verses.nt_text;
+  }
+
+  function getOtText() {
+    if (!verses) return null;
+    if (lang === 'es' && verses.ot_text_es) return verses.ot_text_es;
+    if (lang === 'zh' && verses.ot_text_zh) return verses.ot_text_zh;
+    return verses.ot_text;
+  }
+
   function formatVerses(text) {
     if (!text) return null;
     return text.split('\n').map((line, i) => {
-      const m = line.match(/^([A-Z][a-z]+ \d+ :\d+)\s+(.*)/);
-      if (m) return (
+      // Match lines like "Mt 1 :1 text" (English format)
+      const mEn = line.match(/^([A-Z][a-z]+ \d+ :\d+)\s+(.*)/);
+      if (mEn) return (
         <p key={i} className="verse-line" style={{ fontSize: fontSize + 'px' }}>
-          <span className="verse-ref">{m[1]}</span>
-          <span className="verse-body"> {m[2]}</span>
+          <span className="verse-ref">{mEn[1]}</span>
+          <span className="verse-body"> {mEn[2]}</span>
+        </p>
+      );
+      // Match lines like "Mt. 1:1 text" or "創 1:1 text" (Spanish/Chinese format)
+      const mOther = line.match(/^([\w\u4e00-\u9fff]+\.?\s*\d+:\d+)\s+(.*)/);
+      if (mOther) return (
+        <p key={i} className="verse-line" style={{ fontSize: fontSize + 'px' }}>
+          <span className="verse-ref">{mOther[1]}</span>
+          <span className="verse-body"> {mOther[2]}</span>
         </p>
       );
       return line ? <p key={i} className="verse-line" style={{ fontSize: fontSize + 'px' }}>{line}</p> : null;
     });
+  }
+
+  // Language availability indicators
+  function langAvailable(l) {
+    if (!verses) return false;
+    if (l === 'en') return true;
+    if (l === 'es') return !!(verses.nt_text_es || verses.ot_text_es);
+    if (l === 'zh') return !!(verses.nt_text_zh || verses.ot_text_zh);
+    return false;
   }
 
   if (!name) {
@@ -199,35 +239,67 @@ export default function Reading() {
           <span className="readers-count-pill">
             {todayReaders.length} {todayReaders.length === 1 ? 'person has' : 'people have'} read today
           </span>
-          <div className="font-size-row">
-            <span>Text:</span>
-            <button className="font-btn" onClick={() => setFontSize(f => Math.max(12, f - 2))}>A−</button>
-            <button className="font-btn" onClick={() => setFontSize(15)}>A</button>
-            <button className="font-btn" onClick={() => setFontSize(f => Math.min(22, f + 2))}>A+</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            {/* Language Toggle */}
+            <div className="lang-toggle">
+              {[
+                { code: 'en', label: '🇺🇸 EN' },
+                { code: 'es', label: '🇪🇸 ES' },
+                { code: 'zh', label: '🇨🇳 中文' },
+              ].map(({ code, label }) => (
+                <button
+                  key={code}
+                  className={`lang-btn ${lang === code ? 'lang-btn-active' : ''} ${!langAvailable(code) ? 'lang-btn-unavailable' : ''}`}
+                  onClick={() => langAvailable(code) && changeLang(code)}
+                  title={!langAvailable(code) ? 'Not yet available' : ''}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {/* Font Size */}
+            <div className="font-size-row">
+              <span>Text:</span>
+              <button className="font-btn" onClick={() => setFontSize(f => Math.max(12, f - 2))}>A−</button>
+              <button className="font-btn" onClick={() => setFontSize(18)}>A</button>
+              <button className="font-btn" onClick={() => setFontSize(f => Math.min(26, f + 2))}>A+</button>
+            </div>
           </div>
         </div>
 
         <div className="reading-cards">
+          {/* NT Card */}
           <div className={`reading-card ${ntDone ? 'done' : ''}`}>
             <div className="reading-card-header">
               <span className="reading-tag nt-tag">NT</span>
               <span className="reading-portion">{reading.nt}</span>
             </div>
             {verses?.nt_audio && (
-  <AudioPlayer
-    label="NT Audio"
-    book={verses.nt_title?.replace(/New Testament - /, '').replace(/\s[\d:~]+.*/, '').trim() || 'NT'}
-    audioJson={verses.nt_audio}
-    startChap={parseInt(verses.nt_title?.match(/(\d+):/)?.[1] || '1', 10)}
-  />
-)}
+              <AudioPlayer
+                label="NT Audio"
+                book={verses.nt_title?.replace(/New Testament - /, '').replace(/\s[\d:~]+.*/, '').trim() || 'NT'}
+                audioJson={verses.nt_audio}
+                startChap={parseInt(verses.nt_title?.match(/(\d+):/)?.[1] || '1', 10)}
+              />
+            )}
             <button className="verses-toggle" onClick={() => setShowNT(!showNT)}>
               {showNT ? '▲ Hide verses' : '▼ Read verses'}
             </button>
-            {showNT && verses && (
+            {showNT && (
               <div className="verses-box">
-                <div className="verses-title">{verses.nt_title}</div>
-                <div className="verses-text">{formatVerses(verses.nt_text)}</div>
+                {verses ? (
+                  <>
+                    <div className="verses-title">{verses.nt_title}</div>
+                    <div className="verses-text">{formatVerses(getNtText())}</div>
+                    {lang !== 'en' && !langAvailable(lang) && (
+                      <div className="lang-unavailable-msg">
+                        {lang === 'zh' ? '中文版本即将推出' : 'Versión en español próximamente'}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="loading">Loading...</div>
+                )}
               </div>
             )}
             <button className={`checkin-btn ${ntDone ? 'checked' : ''}`}
@@ -237,26 +309,38 @@ export default function Reading() {
             </button>
           </div>
 
+          {/* OT Card */}
           <div className={`reading-card ${otDone ? 'done' : ''}`}>
             <div className="reading-card-header">
               <span className="reading-tag ot-tag">OT</span>
               <span className="reading-portion">{reading.ot}</span>
             </div>
             {verses?.ot_audio && (
-  <AudioPlayer
-    label="OT Audio"
-    book={verses.ot_title?.replace(/Old Testament - /, '').replace(/\s[\d:~]+.*/, '').trim() || 'OT'}
-    audioJson={verses.ot_audio}
-    startChap={parseInt(verses.ot_title?.match(/(\d+):/)?.[1] || '1', 10)}
-  />
-)}
+              <AudioPlayer
+                label="OT Audio"
+                book={verses.ot_title?.replace(/Old Testament - /, '').replace(/\s[\d:~]+.*/, '').trim() || 'OT'}
+                audioJson={verses.ot_audio}
+                startChap={parseInt(verses.ot_title?.match(/(\d+):/)?.[1] || '1', 10)}
+              />
+            )}
             <button className="verses-toggle" onClick={() => setShowOT(!showOT)}>
               {showOT ? '▲ Hide verses' : '▼ Read verses'}
             </button>
-            {showOT && verses && (
+            {showOT && (
               <div className="verses-box">
-                <div className="verses-title">{verses.ot_title}</div>
-                <div className="verses-text">{formatVerses(verses.ot_text)}</div>
+                {verses ? (
+                  <>
+                    <div className="verses-title">{verses.ot_title}</div>
+                    <div className="verses-text">{formatVerses(getOtText())}</div>
+                    {lang !== 'en' && !langAvailable(lang) && (
+                      <div className="lang-unavailable-msg">
+                        {lang === 'zh' ? '中文版本即将推出' : 'Versión en español próximamente'}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="loading">Loading...</div>
+                )}
               </div>
             )}
             <button className={`checkin-btn ot ${otDone ? 'checked' : ''}`}
