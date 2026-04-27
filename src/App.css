@@ -766,3 +766,86 @@ body {
   max-width: 100% !important;
   padding: 20px 32px !important;
 }
+
+/* ── Mobile fixes ───────────────────────── */
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .navbar {
+    padding: 10px 12px;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .nav-brand {
+    font-size: 0.95rem;
+  }
+
+  .nav-links {
+    gap: 4px;
+  }
+
+  .nav-links a {
+    padding: 6px 10px;
+    font-size: 0.78rem;
+  }
+
+  .reading-page-content {
+    padding: 12px 10px;
+  }
+
+  .date-nav {
+    padding: 10px 12px;
+  }
+
+  .reading-date-label {
+    font-size: 0.9rem;
+  }
+
+  .reading-cards {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .reading-card {
+    width: 100%;
+    padding: 16px;
+  }
+
+  .verses-box {
+    max-height: 50vh;
+  }
+
+  .main-content {
+    padding: 16px 12px;
+  }
+
+  .cal-year {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-row {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .leaderboards {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .schedule-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .sticky-banner {
+    top: 48px;
+  }
+}
