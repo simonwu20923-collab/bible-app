@@ -1,10 +1,5 @@
 /**
- * fetchChineseText.js (v2 - fixed parser)
- * 
- * Fetches Chinese Recovery Version from bible.fhl.net
- * Verse structure: <tr><td><b>1:1</b></td><td>verse text</td><td>comments</td></tr>
- *
- * Run: node fetchChineseText.js
+ * fetchChineseText.js (v3 - fixed encoding + verse range)
  */
 
 const { createClient } = require('@supabase/supabase-js');
@@ -51,25 +46,26 @@ function fetchChapter(bookName, chap) {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         'Accept-Language': 'zh-TW,zh;q=0.9',
+        'Accept-Charset': 'utf-8',
         'Referer': 'https://bible.fhl.net/',
       },
       timeout: 20000
     }, (res) => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
+      // Collect raw bytes then decode as UTF-8
+      const chunks = [];
+      res.on('data', chunk => chunks.push(chunk));
       res.on('end', () => {
-        // Parse verses from table rows
-        // Pattern: <b>1:1</b> in first td, verse text in second td
+        const data = Buffer.concat(chunks).toString('utf8');
         const verses = {};
-        const rowPattern = /<tr[^>]*>.*?<b>(\d+:\d+)<\/b>.*?<\/td>\s*<td[^>]*>(.*?)<\/td>/gis;
+
+        // Each verse row: <td align="center"><b>1:1</b>...</td><td>verse text</td><td>comments</td>
+        const rowPattern = /<td[^>]*>\s*<b>(\d+:\d+)<\/b>[^<]*<\/td>\s*<td[^>]*>([\s\S]*?)<\/td>/gi;
         let match;
         while ((match = rowPattern.exec(data)) !== null) {
-          const ref = match[1]; // e.g. "1:1"
+          const ref = match[1];
           let text = match[2];
-          // Clean up: remove HTML tags
           text = text.replace(/<[^>]+>/g, '').trim();
-          // Decode common entities
-          text = text.replace(/&amp;/g, '&').replace(/&nbsp;/g, ' ');
+          text = text.replace(/&amp;/g, '&').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ');
           if (text && text.length > 0) {
             const verseNum = parseInt(ref.split(':')[1], 10);
             verses[verseNum] = text;
@@ -93,24 +89,22 @@ function toDateStr(rawDate) {
   return null;
 }
 
-// Extract start/end verse from title like "New Testament - Luke 20:20~21:4"
+// Parse "New Testament - Luke 20:20~21:4" → {startChap:20, startVerse:20, endChap:21, endVerse:4}
 function parseVerseRange(title) {
-  if (!title) return { startChap: null, startVerse: null, endChap: null, endVerse: null };
+  if (!title) return {};
   const m = title.match(/(\d+):(\d+)~(\d+):(\d+)/);
   if (m) return {
     startChap: parseInt(m[1]), startVerse: parseInt(m[2]),
-    endChap: parseInt(m[3]), endVerse: parseInt(m[4])
+    endChap:   parseInt(m[3]), endVerse:   parseInt(m[4])
   };
-  // Single chapter range like "Luke 1:26~1:56"
   const m2 = title.match(/(\d+):(\d+)/);
   if (m2) return { startChap: parseInt(m2[1]), startVerse: parseInt(m2[2]), endChap: null, endVerse: null };
-  return { startChap: null, startVerse: null, endChap: null, endVerse: null };
+  return {};
 }
 
 async function fetchVerseRange(bookName, startChap, startVerse, endChap, endVerse) {
   const abbrev = BOOKS_ZH[bookName] || bookName;
   const lines = [];
-
   const chapEnd = endChap || startChap;
 
   for (let c = startChap; c <= chapEnd; c++) {
@@ -118,14 +112,13 @@ async function fetchVerseRange(bookName, startChap, startVerse, endChap, endVers
     const verses = await fetchChapter(bookName, c);
 
     const vStart = (c === startChap) ? (startVerse || 1) : 1;
-    const vEnd = (c === chapEnd && endVerse) ? endVerse : 999;
+    const vEnd   = (c === chapEnd && endVerse) ? endVerse : 999;
 
-    const verseNums = Object.keys(verses).map(Number).sort((a, b) => a - b);
-    for (const vNum of verseNums) {
+    Object.keys(verses).map(Number).sort((a, b) => a - b).forEach(vNum => {
       if (vNum >= vStart && vNum <= vEnd) {
         lines.push(`${abbrev} ${c}:${vNum} ${verses[vNum]}`);
       }
-    }
+    });
     await sleep(700);
   }
 
@@ -133,14 +126,12 @@ async function fetchVerseRange(bookName, startChap, startVerse, endChap, endVers
 }
 
 async function main() {
-  console.log('🇨🇳 Fetching Chinese Recovery Version (v2 - fixed parser)\n');
+  console.log('🇨🇳 Fetching Chinese Recovery Version (v3)\n');
 
   const wb = xlsx.readFile(path.join(__dirname, 'Bible_Reading_Mastersheet__3_.xlsx'), { cellDates: true });
   const rows = xlsx.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, cellDates: true });
 
-  // Skip already done
-  const { data: existing } = await supabase
-    .from('verses').select('date').not('nt_text_zh', 'is', null);
+  const { data: existing } = await supabase.from('verses').select('date').not('nt_text_zh', 'is', null);
   const doneDates = new Set((existing || []).map(r => r.date));
   console.log(`Already done: ${doneDates.size} dates\n`);
 
@@ -148,59 +139,40 @@ async function main() {
 
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
-    const rawDate = row[0];
-    const dateStr = toDateStr(rawDate);
+    const dateStr = toDateStr(row[0]);
     if (!dateStr || doneDates.has(dateStr)) continue;
 
-    const ntTitle   = row[2];
-    const otTitle   = row[4];
-    const otBook    = row[7];
-    const ntBook    = row[10];
+    const ntTitle = row[2], otTitle = row[4];
+    const otBook = row[7], ntBook = row[10];
 
     console.log(`\n📅 ${dateStr}`);
 
-    // Parse verse ranges from titles
     const ntRange = parseVerseRange(ntTitle);
     const otRange = parseVerseRange(otTitle);
 
     let ntText = null, otText = null;
 
     if (ntBook && ntRange.startChap) {
-      ntText = await fetchVerseRange(
-        ntBook,
-        ntRange.startChap, ntRange.startVerse,
-        ntRange.endChap,   ntRange.endVerse
-      );
+      ntText = await fetchVerseRange(ntBook, ntRange.startChap, ntRange.startVerse, ntRange.endChap, ntRange.endVerse);
       console.log(`  NT: ${ntText ? ntText.split('\n').length + ' verses' : 'none'}`);
     }
 
     if (otBook && otRange.startChap) {
-      otText = await fetchVerseRange(
-        otBook,
-        otRange.startChap, otRange.startVerse,
-        otRange.endChap,   otRange.endVerse
-      );
+      otText = await fetchVerseRange(otBook, otRange.startChap, otRange.startVerse, otRange.endChap, otRange.endVerse);
       console.log(`  OT: ${otText ? otText.split('\n').length + ' verses' : 'none'}`);
     }
 
-    const { error } = await supabase
-      .from('verses')
+    const { error } = await supabase.from('verses')
       .update({ nt_text_zh: ntText, ot_text_zh: otText })
       .eq('date', dateStr);
 
-    if (error) {
-      console.error(`  ✗ DB error: ${error.message}`);
-      failed++;
-    } else {
-      updated++;
-    }
+    if (error) { console.error(`  ✗ DB: ${error.message}`); failed++; }
+    else updated++;
 
     await sleep(300);
   }
 
-  console.log('\n✅ Done!');
-  console.log(`   Updated: ${updated}`);
-  console.log(`   Failed:  ${failed}`);
+  console.log(`\n✅ Done! Updated: ${updated}, Failed: ${failed}`);
 }
 
 main().catch(err => { console.error('Fatal:', err); process.exit(1); });

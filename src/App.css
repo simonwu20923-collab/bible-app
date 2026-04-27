@@ -612,3 +612,21 @@ body {
   padding: 16px;
   font-style: italic;
 }
+
+/* Navbar with language toggle */
+.navbar {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@media (max-width: 768px) {
+  .navbar {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+  .lang-toggle {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+  }
+}
