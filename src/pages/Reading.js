@@ -27,7 +27,7 @@ export default function Reading() {
   const [verses, setVerses] = React.useState(null);
   const [showNT, setShowNT] = React.useState(true);
   const [showOT, setShowOT] = React.useState(true);
-  const [fontSize, setFontSize] = React.useState(17);
+  const [fontSize, setFontSize] = React.useState(18);
   const [comments, setComments] = React.useState([]);
   const [commentName, setCommentName] = React.useState(() => localStorage.getItem('bibleAppName') || '');
   const [commentText, setCommentText] = React.useState('');

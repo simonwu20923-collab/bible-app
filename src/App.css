@@ -553,7 +553,7 @@ body {
   .reading-card { width: 100%; padding: 12px 10px; }
 
   .verses-box { padding: 12px 8px; background: transparent; border: none; }
-  .verse-line { font-size: 1.15rem !important; line-height: 2; margin-bottom: 14px; }
+  .verse-line { font-size: 1.15rem; line-height: 2; margin-bottom: 14px; }
   .verse-ref { font-size: 0.85rem; }
   .verses-title { font-size: 0.95rem; }
 
