@@ -480,8 +480,6 @@ body {
   border-radius: 8px;
   padding: 16px;
   margin-bottom: 16px;
-  max-height: 65vh;
-  overflow-y: auto;
 }
 
 .verses-title {
@@ -494,9 +492,9 @@ body {
 }
 
 .verse-line {
-  margin-bottom: 8px;
-  line-height: 1.7;
-  font-size: 0.9rem;
+  margin-bottom: 10px;
+  line-height: 1.8;
+  font-size: 1rem;
 }
 
 .verse-ref {
@@ -756,9 +754,6 @@ body {
   }
   .reading-card {
     padding: 16px;
-  }
-  .verses-box {
-    max-height: 50vh;
   }
 }
 
