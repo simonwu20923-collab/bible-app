@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="zh-hant"><head>
+<meta charset="utf-8"/>
+
+<style>
+input[type="checkbox"]:checked {
+  color: red;
+  box-shadow: 0 0 0 3px red;
+}
+#cookieBanner {
+    width: 100%;
+    background-color: #0828f3;
+    color: white;
+    padding: 3rem;
+}
+#acceptCookies {
+    background-color: #ffffff;
+    color: black;
+    padding: 0.5rem;
+    border: 2px solid #000000;
+    border-radius: 5px;
+    cursor: pointer;
+    position: absolute;
+    right: 3rem;
+}
+
+#deleteCookies {
+    background-color: #ffffff;
+    color: black;
+    padding: 0.5rem;
+    border: 2px solid #000000;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-left: 3rem;
+}
+</style>
+<script src="footnote.js"></script>
+<script src="cv.js"></script>
+<script >
+<!--
+ function setsn(nid) {snid=document.s.ssn.selectedIndex;
+add="/new/read.php?id="+nid+"&&SSS=0&nodic=0&VERSION3=recover&TABFLAG=1&strongflag="+snid
+location.href=add;
+}
+function setchap(pn)
+{
+var i,j,k,txt;
+var cnum=new Array(50,40,27,36,34,24,21,4,31,24,22,25,29,36,10,13,10,42,150,31,12,8,66,52,5,48,12,14,3,9,1,4,7,3,3,3,2,14,4,28,16,24,21,28,16,16,13,6,6,4,4,5,3,6,4,3,1,13,5,5,3,5,1,1,1,22);
+if (pn==2)
+ {
+   i=cnum[document.p.sb.selectedIndex];
+    document.s.sb.options[document.p.sb.selectedIndex].selected=true;
+}
+else
+{
+    i=cnum[document.s.sb.selectedIndex];
+    document.p.sb.options[document.s.sb.selectedIndex].selected=true;
+}
+  document.s.sc.options.length=i-1;
+document.p.sc.options.length=i-1;
+for (j=i;j>0;j--)
+     {
+       k=j;
+       if (i==150) txt="第 "+j+" 篇";
+   else txt="第 "+j+" 章";
+       document.s.sc.options[k]=new Option(txt,j);
+       document.p.sc.options[k]=new Option(txt,j);
+   }
+document.s.sc.options[0]=new Option("請選擇",0,true,true);document.p.sc.options[0]=new Option("請選擇",0,true,true);}
+ function psetsn(nid) {snid=document.p.ssn.selectedIndex;
+add="/new/read.php?id="+nid+"&&SSS=0&nodic=0&VERSION3=recover&TABFLAG=1&strongflag="+snid;
+location.href=add;
+}
+ function gotochap() { var add,chapp;
+chapp=document.s.sc.selectedIndex;
+if (chapp<=0) return;
+ add="/new/read.php?chineses="+document.s.sb.options[document.s.sb.selectedIndex].value+"&strongflag=0&SSS=0&nodic=0&VERSION3=recover&TABFLAG=1&nodic=0&chap="+chapp+VMSG;
+location.href=add;
+}
+ function gosearch() { var add,midd;
+ midd=1;
+if (document.s.skey.value.charAt(0)=='#')
+add="search.php?VERSION=recover&orig=0&TABFLAG=1&range_bid="+midd+"&range_eid="+midd+"&keyword=%23"+document.s.skey.value.substring(1,document.s.skey.value.length);
+else
+add="search.php?VERSION=recover&orig=0&TABFLAG=1&keyword="+document.s.skey.value;
+window.open(add);}
+ function pgotochap() { var add,chapp;
+chapp=document.p.sc.selectedIndex;
+if (chapp<=0) return;
+ add="/new/read.php?chineses="+document.p.sb.options[document.p.sb.selectedIndex].value+"&strongflag=0&SSS=0&nodic=0&VERSION3=recover&TABFLAG=1&nodic=0&chap="+chapp+VMSG;
+location.href=add;
+}
+ function pgosearch() { var add,midd;
+ midd=1;
+if (document.p.skey.value.charAt(0)=='#')
+add="search.php?VERSION=recover&orig=0&TABFLAG=1&range_bid="+midd+"&range_eid="+midd+"&keyword=%23"+document.p.skey.value.substring(1,document.p.skey.value.length);
+else
+add="search.php?VERSION=recover&orig=0&TABFLAG=1&keyword="+document.p.skey.value;
+window.open(add);}
+-->
+</script>
+<style type="text/css">
+ruby{
+ display:inline-table;
+text-align:center;
+white-space:nowrap;
+ vertical-align:25%;
+}
+ruby>rb{
+display:table-row-group;
+}ruby>rt{
+display:table-header-group;font-size:65%;
+text-align:right;}
+</style>
+<title>聖經閱讀</title>
+<style type="text/css">
+body {
+ font-family:Arial,Arial Unicode MS,Helvetica, sans-serif;
+}
+table {
+border: 1px solid #888888;
+border-collapse: collapse;
+}
+tr, td {
+border: 1px solid #888888;
+}
+</style>
+</head>
+<body onLoad="javascript:focus()"><form method="get" action="/new/read.php" name="s"><a href="#CCV">版本選擇</a><input type="hidden" name="chineses" value="創" /><input type="hidden" name="chap" value="1" /><div hidden="hidden"><input type="submit" name="sub2" value="版本對照"/><input type="checkbox" name="VERSION1" value="unv"  onclick="cv(this);"/>FHL和合本
+<input type="checkbox" name="VERSION2" value="rcuv"  onclick="cv(this);"/>和合本2010
+<input type="checkbox" name="VERSION3" value="tcv95"  onclick="cv(this);"/>現代中文譯本1995版
+<input type="checkbox" name="VERSION4" value="tcv2019"  onclick="cv(this);"/>現代中文譯本2019版
+<input type="checkbox" name="VERSION5" value="wcb"  onclick="cv(this);"/>環球譯本
+<input type="checkbox" name="VERSION6" value="ncv"  onclick="cv(this);"/>新譯本
+<input type="checkbox" name="VERSION7" value="csb"  onclick="cv(this);"/>中文標準譯本
+<input type="checkbox" name="VERSION8" value="recover" checked="checked" onclick="cv(this);"/>恢復本
+<input type="checkbox" name="VERSION9" value="ofm"  onclick="cv(this);"/>思高譯本
+<input type="checkbox" name="VERSION10" value="lcc"  onclick="cv(this);"/>呂振中譯本
+<input type="checkbox" name="VERSION11" value="cnet"  onclick="cv(this);"/>NET聖經中譯本
+<input type="checkbox" name="VERSION13" value="wlunv"  onclick="cv(this);"/>深文理和合本
+<input type="checkbox" name="VERSION15" value="cbol"  onclick="cv(this);"/>原文直譯(參考用)
+<input type="checkbox" name="VERSION16" value="esv"  onclick="cv(this);"/>ESV
+<input type="checkbox" name="VERSION17" value="kjv"  onclick="cv(this);"/>KJV
+<input type="checkbox" name="VERSION18" value="bbe"  onclick="cv(this);"/>BBE
+<input type="checkbox" name="VERSION19" value="web"  onclick="cv(this);"/>WEB
+<input type="checkbox" name="VERSION20" value="asv"  onclick="cv(this);"/>ASV
+<input type="checkbox" name="VERSION21" value="darby"  onclick="cv(this);"/>Darby
+<input type="checkbox" name="VERSION22" value="erv"  onclick="cv(this);"/>ERV
+<input type="checkbox" name="VERSION23" value="bhs"  onclick="cv(this);"/>舊約馬索拉原文
+<input type="checkbox" name="VERSION26" value="lxx"  onclick="cv(this);"/>七十士譯本
+<input type="checkbox" name="VERSION27" value="ttvhl2021"  onclick="cv(this);"/>現代台語2021版漢字
+<input type="checkbox" name="VERSION28" value="ttvcl2021"  onclick="cv(this);"/>現代台語2021版全羅
+<input type="checkbox" name="VERSION29" value="tghg"  onclick="cv(this);"/>聖經公會巴克禮台漢本
+<input type="checkbox" name="VERSION34" value="bklcl"  onclick="cv(this);"/>巴克禮全羅
+<input type="checkbox" name="VERSION35" value="bklhl"  onclick="cv(this);"/>巴克禮漢羅
+<input type="checkbox" name="VERSION36" value="thv2e"  onclick="cv(this);"/>聖經公會現代客語全羅
+<input type="checkbox" name="VERSION37" value="thv12h"  onclick="cv(this);"/>聖經公會現代客語漢字
+<input type="checkbox" name="VERSION39" value="sgebklcl"  onclick="cv(this);"/>全民台語聖經全羅
+<input type="checkbox" name="VERSION40" value="sgebklhl"  onclick="cv(this);"/>全民台語聖經漢羅
+<input type="checkbox" name="VERSION41" value="gebklhlruby"  onclick="cv(this);"/>全民台語聖經Ruby
+<input type="checkbox" name="VERSION42" value="baru"  onclick="cv(this);"/>印尼聖經
+<input type="checkbox" name="VERSION43" value="ind1958"  onclick="cv(this);"/>印尼舊聖經
+<input type="checkbox" name="VERSION44" value="vietnamese"  onclick="cv(this);"/>越南聖經
+<input type="checkbox" name="VERSION45" value="russian"  onclick="cv(this);"/>俄文聖經
+<input type="checkbox" name="VERSION46" value="korean"  onclick="cv(this);"/>韓文聖經
+<input type="checkbox" name="VERSION47" value="jp"  onclick="cv(this);"/>日語聖經
+<input type="checkbox" name="VERSION48" value="bunun"  onclick="cv(this);"/>聖經公會布農語聖經
+<input type="checkbox" name="VERSION53" value="tay"  onclick="cv(this);"/>聖經公會泰雅爾語聖經
+<input type="checkbox" name="VERSION55" value="rukai"  onclick="cv(this);"/>聖經公會魯凱語聖經
+<input type="checkbox" name="VERSION56" value="sed"  onclick="cv(this);"/>賽德克族Tgdaya語
+<input type="checkbox" name="VERSION57" value="ams"  onclick="cv(this);"/>聖經公會阿美語1997
+<input type="checkbox" name="VERSION59" value="tru"  onclick="cv(this);"/>聖經公會太魯閣語聖經
+<input type="checkbox" name="VERSION61" value="tibet"  onclick="cv(this);"/>藏語聖經
+<input type="checkbox" name="VERSION62" value="cvul"  onclick="cv(this);"/>武加大譯本
+<input type="checkbox" name="VERSION63" value="nvul"  onclick="cv(this);"/>新武加大譯本
+<input type="checkbox" name="VERSION64" value="cumv"  onclick="cv(this);"/>官話和合本
+<input type="checkbox" name="VERSION65" value="pmb"  onclick="cv(this);"/>北京官話譯本
+<input type="checkbox" name="VERSION66" value="cuwv"  onclick="cv(this);"/>文理和合本
+<input type="checkbox" name="VERSION71" value="mormil"  onclick="cv(this);"/>神天聖書
+<input type="checkbox" name="VERSION72" value="wdv"  onclick="cv(this);"/>文理委辦譯本
+<input type="checkbox" name="VERSION73" value="ssewb"  onclick="cv(this);"/>施約瑟淺文理譯本
+<input type="checkbox" name="VERSION74" value="marwb"  onclick="cv(this);"/>馬殊曼譯本
+<input type="checkbox" name="VERSION81" value="cwmgbm"  onclick="cv(this);"/>四人小組譯本
+<input type="checkbox" name="VERSION82" value="cogorw"  onclick="cv(this);"/>高連茨基聖詠經
+<input type="checkbox" name="VERSION85" value="cwkfag"  onclick="cv(this);"/>郭實臘新遺詔書和舊遺詔聖書
+<input type="checkbox" name="VERSION90" value="cwtaiping"  onclick="cv(this);"/>太平天國文理譯本
+<input type="submit" name="sub1" value="版本對照" /><br /></div>
+ <select name="ssn" onchange="setsn(31)">
+<option value="0" selected="selected">無 Strong's number</option>
+<option value="1">Strong's Number 放上面</option>
+<option value="2">Strong's Number 放後面</option>
+</select> <a href="/new/read.php?id=31&amp;nodic=10"/>有地理</a><img src="/map/icon/green/site.png" alt="site" border="0"/><img src="camera.png" alt="photo" border="0"/>  <a href="/new/read.php?id=31&amp;nodic=01"/>查字典</a> <a href="/map/lm.php?engs=Gen&amp;gb=0&amp;blm=chap%3D1" target="map">本章地圖</a> <a href="http://bible.fhl.net/object/sg.php?engs=Gen&amp;gb=0&amp;chap=1" target="obj">影像</a>  [ <a href="/new/read.php?id=31&strongflag=0&SSS=0&nodic=0&VERSION3=recover&TABFLAG=0">條列</a> |  <a href="/new/read.php?id=31&strongflag=0&SSS=0&nodic=0&VERSION3=recover&TABFLAG=1">表格</a> |  <a href="/new/read.php?id=31&strongflag=0&SSS=0&nodic=0&VERSION3=recover&TABFLAG=2">整段</a> ]  <a href="/new/read.php?id=31&strongflag=0&SSS=0&nodic=0&VERSION3=recover&TABFLAG=1">繁</a> <a href="/gbdoc/new/read.php?id=31&strongflag=0&SSS=0&nodic=0&VERSION3=recover&TABFLAG=1">簡</a> <a href="heb.html">語態</a>  <a href="measurement.html" target="mea">度量衡</a> <a href="../new" target=\other">其他</a><!--!!1-->
+ <a href="record.html"><font color="red">閱讀計畫</font></a><p />
+<a href="../NUII/_rwd/"><span style="font-size:20pt;color:red; text-decoration: underline;">新版</span></a><a id="pnext" href="/new/read.php?id=33&m=0&strongflag=0&SSS=0&nodic=0&VERSION3=recover&TABFLAG=1"><img src="next.png" border="0" alt="下一章" align="middle" /></a> <select name="sb" onchange="setchap(1)">
+<option value="%E5%89%B5" selected="selected">創世記</option>
+<option value="%E5%87%BA">出埃及記</option>
+<option value="%E5%88%A9">利未記</option>
+<option value="%E6%B0%91">民數記</option>
+<option value="%E7%94%B3">申命記</option>
+<option value="%E6%9B%B8">約書亞記</option>
+<option value="%E5%A3%AB">士師記</option>
+<option value="%E5%BE%97">路得記</option>
+<option value="%E6%92%92%E4%B8%8A">撒母耳記上</option>
+<option value="%E6%92%92%E4%B8%8B">撒母耳記下</option>
+<option value="%E7%8E%8B%E4%B8%8A">列王紀上</option>
+<option value="%E7%8E%8B%E4%B8%8B">列王紀下</option>
+<option value="%E4%BB%A3%E4%B8%8A">歷代志上</option>
+<option value="%E4%BB%A3%E4%B8%8B">歷代志下</option>
+<option value="%E6%8B%89">以斯拉記</option>
+<option value="%E5%B0%BC">尼希米記</option>
+<option value="%E6%96%AF">以斯帖記</option>
+<option value="%E4%BC%AF">約伯記</option>
+<option value="%E8%A9%A9">詩篇</option>
+<option value="%E7%AE%B4">箴言</option>
+<option value="%E5%82%B3">傳道書</option>
+<option value="%E6%AD%8C">雅歌</option>
+<option value="%E8%B3%BD">以賽亞書</option>
+<option value="%E8%80%B6">耶利米書</option>
+<option value="%E5%93%80">耶利米哀歌</option>
+<option value="%E7%B5%90">以西結書</option>
+<option value="%E4%BD%86">但以理書</option>
+<option value="%E4%BD%95">何西阿書</option>
+<option value="%E7%8F%A5">約珥書</option>
+<option value="%E6%91%A9">阿摩司書</option>
+<option value="%E4%BF%84">俄巴底亞書</option>
+<option value="%E6%8B%BF">約拿書</option>
+<option value="%E5%BD%8C">彌迦書</option>
+<option value="%E9%B4%BB">那鴻書</option>
+<option value="%E5%93%88">哈巴谷書</option>
+<option value="%E7%95%AA">西番雅書</option>
+<option value="%E8%A9%B2">哈該書</option>
+<option value="%E4%BA%9E">撒迦利亞書</option>
+<option value="%E7%91%AA">瑪拉基書</option>
+<option value="%E5%A4%AA">馬太福音</option>
+<option value="%E5%8F%AF">馬可福音</option>
+<option value="%E8%B7%AF">路加福音</option>
+<option value="%E7%B4%84">約翰福音</option>
+<option value="%E5%BE%92">使徒行傳</option>
+<option value="%E7%BE%85">羅馬書</option>
+<option value="%E6%9E%97%E5%89%8D">哥林多前書</option>
+<option value="%E6%9E%97%E5%BE%8C">哥林多後書</option>
+<option value="%E5%8A%A0">加拉太書</option>
+<option value="%E5%BC%97">以弗所書</option>
+<option value="%E8%85%93">腓立比書</option>
+<option value="%E8%A5%BF">歌羅西書</option>
+<option value="%E5%B8%96%E5%89%8D">帖撒羅尼迦前書</option>
+<option value="%E5%B8%96%E5%BE%8C">帖撒羅尼迦後書</option>
+<option value="%E6%8F%90%E5%89%8D">提摩太前書</option>
+<option value="%E6%8F%90%E5%BE%8C">提摩太後書</option>
+<option value="%E5%A4%9A">提多書</option>
+<option value="%E9%96%80">腓利門書</option>
+<option value="%E4%BE%86">希伯來書</option>
+<option value="%E9%9B%85">雅各書</option>
+<option value="%E5%BD%BC%E5%89%8D">彼得前書</option>
+<option value="%E5%BD%BC%E5%BE%8C">彼得後書</option>
+<option value="%E7%B4%84%E4%B8%80">約翰一書</option>
+<option value="%E7%B4%84%E4%BA%8C">約翰二書</option>
+<option value="%E7%B4%84%E4%B8%89">約翰三書</option>
+<option value="%E7%8C%B6">猶大書</option>
+<option value="%E5%95%9F">啟示錄</option>
+</select>  <select name="sc" onchange="gotochap()">
+<option value="0">請選擇</option>
+<option value="1" selected="selected">第 1 章</option>
+<option value="2">第 2 章</option>
+<option value="3">第 3 章</option>
+<option value="4">第 4 章</option>
+<option value="5">第 5 章</option>
+<option value="6">第 6 章</option>
+<option value="7">第 7 章</option>
+<option value="8">第 8 章</option>
+<option value="9">第 9 章</option>
+<option value="10">第 10 章</option>
+<option value="11">第 11 章</option>
+<option value="12">第 12 章</option>
+<option value="13">第 13 章</option>
+<option value="14">第 14 章</option>
+<option value="15">第 15 章</option>
+<option value="16">第 16 章</option>
+<option value="17">第 17 章</option>
+<option value="18">第 18 章</option>
+<option value="19">第 19 章</option>
+<option value="20">第 20 章</option>
+<option value="21">第 21 章</option>
+<option value="22">第 22 章</option>
+<option value="23">第 23 章</option>
+<option value="24">第 24 章</option>
+<option value="25">第 25 章</option>
+<option value="26">第 26 章</option>
+<option value="27">第 27 章</option>
+<option value="28">第 28 章</option>
+<option value="29">第 29 章</option>
+<option value="30">第 30 章</option>
+<option value="31">第 31 章</option>
+<option value="32">第 32 章</option>
+<option value="33">第 33 章</option>
+<option value="34">第 34 章</option>
+<option value="35">第 35 章</option>
+<option value="36">第 36 章</option>
+<option value="37">第 37 章</option>
+<option value="38">第 38 章</option>
+<option value="39">第 39 章</option>
+<option value="40">第 40 章</option>
+<option value="41">第 41 章</option>
+<option value="42">第 42 章</option>
+<option value="43">第 43 章</option>
+<option value="44">第 44 章</option>
+<option value="45">第 45 章</option>
+<option value="46">第 46 章</option>
+<option value="47">第 47 章</option>
+<option value="48">第 48 章</option>
+<option value="49">第 49 章</option>
+<option value="50">第 50 章</option>
+</select>&nbsp;&nbsp;&nbsp;查詢或移至：<input type="text" name="skey" size="10"  onchange="gosearch()" /><input type="button" value="go" name="sgo"/> <a href="sreadme.html">說明</a><br/></form> <!--IN_COM--><font size="+2" color="#000090">創世記                                     </font>  <font size="-1" color="red">線上收聽:<a href="listenhb.php?version=0&amp;bid=1&amp;chap=001">中文和合本</a>  <a href="listenhb.php?version=4&amp;bid=1C&amp;chap=001">現代中文譯本修訂版</a>  <a href="listenhb.php?version=17&amp;bid=1&amp;chap=001" target="audio">現代台語</a>  <a href="listenhb.php?version=1&amp;bid=1&amp;chap=001">台語聖經</a>  <a href="listenhb.php?version=2&amp;bid=1&amp;chap=001" target="audio">客語</a>  <a href="listenhb.php?version=8&amp;bid=1&amp;chap=001" target="audio">福州話</a>  <a href="listenhb.php?version=7&amp;bid=1&amp;chap=001" target="audio">希伯來文讀經</a> <a href="http://pub.fhl.net/audio/">下載檔案</a>  <a href="http://bible.fhl.net/new/audio.html">關於語音聖經</a></font><hr /><br /><div id="popup" style="position: absolute;">
+<table bgcolor="#ffffbb" border="0" cellpadding="2" cellspacing="2">
+<tbody id="sndicBody"></tbody>
+</table></div>
+<div id="popupfn" style="position: absolute;">
+<table bgcolor="#ffffbb" border="0" cellpadding="2" cellspacing="2">
+<tbody id="sndicBody1"></tbody>
+</table></div>
+<table border="1"><tr><td align="center">章節</td><td align="center">恢復本經文</td><td align="center">註釋</td></tr><tr><td align="center"><b>1:1</b><a name="1:1"/></td><td >起初神創造諸天與地，</td><td><a href="../new/com.php?book=3&amp;engs=Gen&amp;chap=1&amp;sec=1&amp;m=0" target="comm"><nobr>註釋</nobr></a> <a href="../new/com.php?book=4&amp;engs=Gen&amp;chap=1&amp;sec=1&amp;m=0" target="comm"><nobr>串珠</nobr></a> <a href="../new/com.php?book=8&amp;engs=Gen&amp;chap=1&amp;sec=1&amp;m=0" target="comm"><nobr>蔡茂堂</nobr></a> <a href="../new/com.php?book=10&amp;engs=Gen&amp;chap=1&amp;sec=1&amp;m=0" target="comm"><nobr>康來昌</nobr></a> <a href="../new/com.php?book=13&amp;engs=Gen&amp;chap=1&amp;sec=1&amp;m=0" target=\"comm\"><nobr>金</nobr></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=1&amp;m=0" target="comm"></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=1&amp;m=0" target="comm"></a> <a href="../new/com.php?book=21&amp;engs=Gen&amp;chap=1&amp;sec=1&amp;m=0" target="comm"></a>  <a href="parsing.php?engs=Gen&amp;chap=1&amp;sec=1&amp;m=0" target="parsing"><nobr>原文</nobr></a> <a href="ob.php?book=all&amp;chineses=1&amp;chap=1&amp;sec=1" target="ob"><nobr>典藏</nobr></a><!--@@c=001001--></td>
+</tr>
+<tr><td align="center"><b>1:2</b><a name="1:2"/></td><td >而地變為荒廢空虛，淵面黑暗。神的靈覆罩在水面上。</td><td><a href="../new/com.php?book=3&amp;engs=Gen&amp;chap=1&amp;sec=2&amp;m=0" target="comm"><nobr>註釋</nobr></a> <a href="../new/com.php?book=4&amp;engs=Gen&amp;chap=1&amp;sec=2&amp;m=0" target="comm"><nobr>串珠</nobr></a> <a href="../new/com.php?book=8&amp;engs=Gen&amp;chap=1&amp;sec=2&amp;m=0" target="comm"><nobr>蔡茂堂</nobr></a> <a href="../new/com.php?book=10&amp;engs=Gen&amp;chap=1&amp;sec=2&amp;m=0" target="comm"><nobr>康來昌</nobr></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=2&amp;m=0" target="comm"></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=2&amp;m=0" target="comm"></a> <a href="../new/com.php?book=21&amp;engs=Gen&amp;chap=1&amp;sec=2&amp;m=0" target="comm"></a>  <a href="parsing.php?engs=Gen&amp;chap=1&amp;sec=2&amp;m=0" target="parsing"><nobr>原文</nobr></a> <a href="ob.php?book=all&amp;chineses=1&amp;chap=1&amp;sec=2" target="ob"><nobr>典藏</nobr></a><!--@@c=001002--></td>
+</tr>
+<tr><td align="center"><b>1:3</b><a name="1:3"/></td><td >神說，要有光，就有了光。</td><td><a href="../new/com.php?book=3&amp;engs=Gen&amp;chap=1&amp;sec=3&amp;m=0" target="comm"><nobr>註釋</nobr></a> <a href="../new/com.php?book=4&amp;engs=Gen&amp;chap=1&amp;sec=3&amp;m=0" target="comm"><nobr>串珠</nobr></a> <a href="../new/com.php?book=8&amp;engs=Gen&amp;chap=1&amp;sec=3&amp;m=0" target="comm"><nobr>蔡茂堂</nobr></a> <a href="../new/com.php?book=10&amp;engs=Gen&amp;chap=1&amp;sec=3&amp;m=0" target="comm"><nobr>康來昌</nobr></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=3&amp;m=0" target="comm"></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=3&amp;m=0" target="comm"></a> <a href="../new/com.php?book=21&amp;engs=Gen&amp;chap=1&amp;sec=3&amp;m=0" target="comm"></a>  <a href="parsing.php?engs=Gen&amp;chap=1&amp;sec=3&amp;m=0" target="parsing"><nobr>原文</nobr></a> <a href="ob.php?book=all&amp;chineses=1&amp;chap=1&amp;sec=3" target="ob"><nobr>典藏</nobr></a><!--@@c=001003--></td>
+</tr>
+<tr><td align="center"><b>1:4</b><a name="1:4"/></td><td >神看光是好的，就把光暗分開了。</td><td><a href="../new/com.php?book=3&amp;engs=Gen&amp;chap=1&amp;sec=4&amp;m=0" target="comm"><nobr>註釋</nobr></a> <a href="../new/com.php?book=4&amp;engs=Gen&amp;chap=1&amp;sec=4&amp;m=0" target="comm"><nobr>串珠</nobr></a> <a href="../new/com.php?book=8&amp;engs=Gen&amp;chap=1&amp;sec=4&amp;m=0" target="comm"><nobr>蔡茂堂</nobr></a> <a href="../new/com.php?book=10&amp;engs=Gen&amp;chap=1&amp;sec=4&amp;m=0" target="comm"><nobr>康來昌</nobr></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=4&amp;m=0" target="comm"></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=4&amp;m=0" target="comm"></a> <a href="../new/com.php?book=21&amp;engs=Gen&amp;chap=1&amp;sec=4&amp;m=0" target="comm"></a>  <a href="parsing.php?engs=Gen&amp;chap=1&amp;sec=4&amp;m=0" target="parsing"><nobr>原文</nobr></a> <a href="ob.php?book=all&amp;chineses=1&amp;chap=1&amp;sec=4" target="ob"><nobr>典藏</nobr></a><!--@@c=001004--></td>
+</tr>
+<tr><td align="center"><b>1:5</b><a name="1:5"/></td><td >神稱光為晝，稱暗為夜；有晚上，有早晨，這是第一日。</td><td><a href="../new/com.php?book=3&amp;engs=Gen&amp;chap=1&amp;sec=5&amp;m=0" target="comm"><nobr>註釋</nobr></a> <a href="../new/com.php?book=4&amp;engs=Gen&amp;chap=1&amp;sec=5&amp;m=0" target="comm"><nobr>串珠</nobr></a> <a href="../new/com.php?book=8&amp;engs=Gen&amp;chap=1&amp;sec=5&amp;m=0" target="comm"><nobr>蔡茂堂</nobr></a> <a href="../new/com.php?book=10&amp;engs=Gen&amp;chap=1&amp;sec=5&amp;m=0" target="comm"><nobr>康來昌</nobr></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=5&amp;m=0" target="comm"></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=5&amp;m=0" target="comm"></a> <a href="../new/com.php?book=21&amp;engs=Gen&amp;chap=1&amp;sec=5&amp;m=0" target="comm"></a>  <a href="parsing.php?engs=Gen&amp;chap=1&amp;sec=5&amp;m=0" target="parsing"><nobr>原文</nobr></a> <a href="ob.php?book=all&amp;chineses=1&amp;chap=1&amp;sec=5" target="ob"><nobr>典藏</nobr></a><!--@@c=001005--></td>
+</tr>
+<tr><td align="center"><b>1:6</b><a name="1:6"/></td><td >神說，諸水之間要有廣闊的空間，將水與水分開。</td><td><a href="../new/com.php?book=3&amp;engs=Gen&amp;chap=1&amp;sec=6&amp;m=0" target="comm"><nobr>註釋</nobr></a> <a href="../new/com.php?book=4&amp;engs=Gen&amp;chap=1&amp;sec=6&amp;m=0" target="comm"><nobr>串珠</nobr></a> <a href="../new/com.php?book=8&amp;engs=Gen&amp;chap=1&amp;sec=6&amp;m=0" target="comm"><nobr>蔡茂堂</nobr></a> <a href="../new/com.php?book=10&amp;engs=Gen&amp;chap=1&amp;sec=6&amp;m=0" target="comm"><nobr>康來昌</nobr></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=6&amp;m=0" target="comm"></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=6&amp;m=0" target="comm"></a> <a href="../new/com.php?book=21&amp;engs=Gen&amp;chap=1&amp;sec=6&amp;m=0" target="comm"></a>  <a href="parsing.php?engs=Gen&amp;chap=1&amp;sec=6&amp;m=0" target="parsing"><nobr>原文</nobr></a> <a href="ob.php?book=all&amp;chineses=1&amp;chap=1&amp;sec=6" target="ob"><nobr>典藏</nobr></a><!--@@c=001006--></td>
+</tr>
+<tr><td align="center"><b>1:7</b><a name="1:7"/></td><td >神就造出天空，將天空以下的水，與天空以上的水分開；事就這樣成了。</td><td><a href="../new/com.php?book=3&amp;engs=Gen&amp;chap=1&amp;sec=7&amp;m=0" target="comm"><nobr>註釋</nobr></a> <a href="../new/com.php?book=4&amp;engs=Gen&amp;chap=1&amp;sec=7&amp;m=0" target="comm"><nobr>串珠</nobr></a> <a href="../new/com.php?book=8&amp;engs=Gen&amp;chap=1&amp;sec=7&amp;m=0" target="comm"><nobr>蔡茂堂</nobr></a> <a href="../new/com.php?book=10&amp;engs=Gen&amp;chap=1&amp;sec=7&amp;m=0" target="comm"><nobr>康來昌</nobr></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=7&amp;m=0" target="comm"></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=7&amp;m=0" target="comm"></a> <a href="../new/com.php?book=21&amp;engs=Gen&amp;chap=1&amp;sec=7&amp;m=0" target="comm"></a>  <a href="parsing.php?engs=Gen&amp;chap=1&amp;sec=7&amp;m=0" target="parsing"><nobr>原文</nobr></a> <a href="ob.php?book=all&amp;chineses=1&amp;chap=1&amp;sec=7" target="ob"><nobr>典藏</nobr></a><!--@@c=001007--></td>
+</tr>
+<tr><td align="center"><b>1:8</b><a name="1:8"/></td><td >神稱天空為天；有晚上，有早晨，是第二日。</td><td><a href="../new/com.php?book=3&amp;engs=Gen&amp;chap=1&amp;sec=8&amp;m=0" target="comm"><nobr>註釋</nobr></a> <a href="../new/com.php?book=4&amp;engs=Gen&amp;chap=1&amp;sec=8&amp;m=0" target="comm"><nobr>串珠</nobr></a> <a href="../new/com.php?book=8&amp;engs=Gen&amp;chap=1&amp;sec=8&amp;m=0" target="comm"><nobr>蔡茂堂</nobr></a> <a href="../new/com.php?book=10&amp;engs=Gen&amp;chap=1&amp;sec=8&amp;m=0" target="comm"><nobr>康來昌</nobr></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=8&amp;m=0" target="comm"></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=8&amp;m=0" target="comm"></a> <a href="../new/com.php?book=21&amp;engs=Gen&amp;chap=1&amp;sec=8&amp;m=0" target="comm"></a>  <a href="parsing.php?engs=Gen&amp;chap=1&amp;sec=8&amp;m=0" target="parsing"><nobr>原文</nobr></a> <a href="ob.php?book=all&amp;chineses=1&amp;chap=1&amp;sec=8" target="ob"><nobr>典藏</nobr></a><!--@@c=001008--></td>
+</tr>
+<tr><td align="center"><b>1:9</b><a name="1:9"/></td><td >神說，天以下的水要聚在一處，使旱地露出來；事就這樣成了。</td><td><a href="../new/com.php?book=3&amp;engs=Gen&amp;chap=1&amp;sec=9&amp;m=0" target="comm"><nobr>註釋</nobr></a> <a href="../new/com.php?book=4&amp;engs=Gen&amp;chap=1&amp;sec=9&amp;m=0" target="comm"><nobr>串珠</nobr></a> <a href="../new/com.php?book=8&amp;engs=Gen&amp;chap=1&amp;sec=9&amp;m=0" target="comm"><nobr>蔡茂堂</nobr></a> <a href="../new/com.php?book=10&amp;engs=Gen&amp;chap=1&amp;sec=9&amp;m=0" target="comm"><nobr>康來昌</nobr></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=9&amp;m=0" target="comm"></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=9&amp;m=0" target="comm"></a> <a href="../new/com.php?book=21&amp;engs=Gen&amp;chap=1&amp;sec=9&amp;m=0" target="comm"></a>  <a href="parsing.php?engs=Gen&amp;chap=1&amp;sec=9&amp;m=0" target="parsing"><nobr>原文</nobr></a> <a href="ob.php?book=all&amp;chineses=1&amp;chap=1&amp;sec=9" target="ob"><nobr>典藏</nobr></a><!--@@c=001009--></td>
+</tr>
+<tr><td align="center"><b>1:10</b><a name="1:10"/></td><td >神稱旱地為地，稱水的聚處為海；神看是好的。</td><td><a href="../new/com.php?book=3&amp;engs=Gen&amp;chap=1&amp;sec=10&amp;m=0" target="comm"><nobr>註釋</nobr></a> <a href="../new/com.php?book=4&amp;engs=Gen&amp;chap=1&amp;sec=10&amp;m=0" target="comm"><nobr>串珠</nobr></a> <a href="../new/com.php?book=8&amp;engs=Gen&amp;chap=1&amp;sec=10&amp;m=0" target="comm"><nobr>蔡茂堂</nobr></a> <a href="../new/com.php?book=10&amp;engs=Gen&amp;chap=1&amp;sec=10&amp;m=0" target="comm"><nobr>康來昌</nobr></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=10&amp;m=0" target="comm"></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=10&amp;m=0" target="comm"></a> <a href="../new/com.php?book=21&amp;engs=Gen&amp;chap=1&amp;sec=10&amp;m=0" target="comm"></a>  <a href="parsing.php?engs=Gen&amp;chap=1&amp;sec=10&amp;m=0" target="parsing"><nobr>原文</nobr></a> <a href="ob.php?book=all&amp;chineses=1&amp;chap=1&amp;sec=10" target="ob"><nobr>典藏</nobr></a><!--@@c=001010--></td>
+</tr>
+<tr><td align="center"><b>1:11</b><a name="1:11"/></td><td >神說，地要長出青草，和結種子的菜蔬，並���果子的樹木，各從其類，果子都包著核；事就這樣成了。</td><td><a href="../new/com.php?book=3&amp;engs=Gen&amp;chap=1&amp;sec=11&amp;m=0" target="comm"><nobr>註釋</nobr></a> <a href="../new/com.php?book=4&amp;engs=Gen&amp;chap=1&amp;sec=11&amp;m=0" target="comm"><nobr>串珠</nobr></a> <a href="../new/com.php?book=8&amp;engs=Gen&amp;chap=1&amp;sec=11&amp;m=0" target="comm"><nobr>蔡茂堂</nobr></a> <a href="../new/com.php?book=10&amp;engs=Gen&amp;chap=1&amp;sec=11&amp;m=0" target="comm"><nobr>康來昌</nobr></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=11&amp;m=0" target="comm"></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=11&amp;m=0" target="comm"></a> <a href="../new/com.php?book=21&amp;engs=Gen&amp;chap=1&amp;sec=11&amp;m=0" target="comm"></a>  <a href="parsing.php?engs=Gen&amp;chap=1&amp;sec=11&amp;m=0" target="parsing"><nobr>原文</nobr></a> <a href="ob.php?book=all&amp;chineses=1&amp;chap=1&amp;sec=11" target="ob"><nobr>典藏</nobr></a><!--@@c=001011--></td>
+</tr>
+<tr><td align="center"><b>1:12</b><a name="1:12"/></td><td >於是地生出青草，和結種子的菜蔬，各從其類，並結果子的樹木，各從其類，果子都包著核；神看是好的。</td><td><a href="../new/com.php?book=3&amp;engs=Gen&amp;chap=1&amp;sec=12&amp;m=0" target="comm"><nobr>註���</nobr></a> <a href="../new/com.php?book=4&amp;engs=Gen&amp;chap=1&amp;sec=12&amp;m=0" target="comm"><nobr>串珠</nobr></a> <a href="../new/com.php?book=8&amp;engs=Gen&amp;chap=1&amp;sec=12&amp;m=0" target="comm"><nobr>蔡茂堂</nobr></a> <a href="../new/com.php?book=10&amp;engs=Gen&amp;chap=1&amp;sec=12&amp;m=0" target="comm"><nobr>康來昌</nobr></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=12&amp;m=0" target="comm"></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=12&amp;m=0" target="comm"></a> <a href="../new/com.php?book=21&amp;engs=Gen&amp;chap=1&amp;sec=12&amp;m=0" target="comm"></a>  <a href="parsing.php?engs=Gen&amp;chap=1&amp;sec=12&amp;m=0" target="parsing"><nobr>原文</nobr></a> <a href="ob.php?book=all&amp;chineses=1&amp;chap=1&amp;sec=12" target="ob"><nobr>典藏</nobr></a><!--@@c=001012--></td>
+</tr>
+<tr><td align="center"><b>1:13</b><a name="1:13"/></td><td >有晚上，有早晨，是第三日。</td><td><a href="../new/com.php?book=3&amp;engs=Gen&amp;chap=1&amp;sec=13&amp;m=0" target="comm"><nobr>註釋</nobr></a> <a href="../new/com.php?book=4&amp;engs=Gen&amp;chap=1&amp;sec=13&amp;m=0" target="comm"><nobr>串珠</nobr></a> <a href="../new/com.php?book=8&amp;engs=Gen&amp;chap=1&amp;sec=13&amp;m=0" target="comm"><nobr>蔡茂堂</nobr></a> <a href="../new/com.php?book=10&amp;engs=Gen&amp;chap=1&amp;sec=13&amp;m=0" target="comm"><nobr>康來昌</nobr></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=13&amp;m=0" target="comm"></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=13&amp;m=0" target="comm"></a> <a href="../new/com.php?book=21&amp;engs=Gen&amp;chap=1&amp;sec=13&amp;m=0" target="comm"></a>  <a href="parsing.php?engs=Gen&amp;chap=1&amp;sec=13&amp;m=0" target="parsing"><nobr>原文</nobr></a> <a href="ob.php?book=all&amp;chineses=1&amp;chap=1&amp;sec=13" target="ob"><nobr>典藏</nobr></a><!--@@c=001013--></td>
+</tr>
+<tr><td align="center"><b>1:14</b><a name="1:14"/></td><td >神說，天上穹蒼之中要有光體，可以分晝夜，作記號，定節令、日子、年歲；</td><td><a href="../new/com.php?book=3&amp;engs=Gen&amp;chap=1&amp;sec=14&amp;m=0" target="comm"><nobr>註釋</nobr></a> <a href="../new/com.php?book=4&amp;engs=Gen&amp;chap=1&amp;sec=14&amp;m=0" target="comm"><nobr>串珠</nobr></a> <a href="../new/com.php?book=8&amp;engs=Gen&amp;chap=1&amp;sec=14&amp;m=0" target="comm"><nobr>蔡茂堂</nobr></a> <a href="../new/com.php?book=10&amp;engs=Gen&amp;chap=1&amp;sec=14&amp;m=0" target="comm"><nobr>康來昌</nobr></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=14&amp;m=0" target="comm"></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=14&amp;m=0" target="comm"></a> <a href="../new/com.php?book=21&amp;engs=Gen&amp;chap=1&amp;sec=14&amp;m=0" target="comm"></a>  <a href="parsing.php?engs=Gen&amp;chap=1&amp;sec=14&amp;m=0" target="parsing"><nobr>原文</nobr></a> <a href="ob.php?book=all&amp;chineses=1&amp;chap=1&amp;sec=14" target="ob"><nobr>典藏</nobr></a><!--@@c=001014--></td>
+</tr>
+<tr><td align="center"><b>1:15</b><a name="1:15"/></td><td >並要發光在天上穹蒼之中，普照在地上；事就這樣成了。</td><td><a href="../new/com.php?book=3&amp;engs=Gen&amp;chap=1&amp;sec=15&amp;m=0" target="comm"><nobr>註釋</nobr></a> <a href="../new/com.php?book=4&amp;engs=Gen&amp;chap=1&amp;sec=15&amp;m=0" target="comm"><nobr>串珠</nobr></a> <a href="../new/com.php?book=8&amp;engs=Gen&amp;chap=1&amp;sec=15&amp;m=0" target="comm"><nobr>蔡茂堂</nobr></a> <a href="../new/com.php?book=10&amp;engs=Gen&amp;chap=1&amp;sec=15&amp;m=0" target="comm"><nobr>康來昌</nobr></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=15&amp;m=0" target="comm"></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=15&amp;m=0" target="comm"></a> <a href="../new/com.php?book=21&amp;engs=Gen&amp;chap=1&amp;sec=15&amp;m=0" target="comm"></a>  <a href="parsing.php?engs=Gen&amp;chap=1&amp;sec=15&amp;m=0" target="parsing"><nobr>原文</nobr></a> <a href="ob.php?book=all&amp;chineses=1&amp;chap=1&amp;sec=15" target="ob"><nobr>典藏</nobr></a><!--@@c=001015--></td>
+</tr>
+<tr><td align="center"><b>1:16</b><a name="1:16"/></td><td >於是神造了兩個大的光體，大的管晝，小的管夜；又造眾星。</td><td><a href="../new/com.php?book=3&amp;engs=Gen&amp;chap=1&amp;sec=16&amp;m=0" target="comm"><nobr>註釋</nobr></a> <a href="../new/com.php?book=4&amp;engs=Gen&amp;chap=1&amp;sec=16&amp;m=0" target="comm"><nobr>串珠</nobr></a> <a href="../new/com.php?book=8&amp;engs=Gen&amp;chap=1&amp;sec=16&amp;m=0" target="comm"><nobr>蔡茂堂</nobr></a> <a href="../new/com.php?book=10&amp;engs=Gen&amp;chap=1&amp;sec=16&amp;m=0" target="comm"><nobr>康來昌</nobr></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=16&amp;m=0" target="comm"></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=16&amp;m=0" target="comm"></a> <a href="../new/com.php?book=21&amp;engs=Gen&amp;chap=1&amp;sec=16&amp;m=0" target="comm"></a>  <a href="parsing.php?engs=Gen&amp;chap=1&amp;sec=16&amp;m=0" target="parsing"><nobr>原文</nobr></a> <a href="ob.php?book=all&amp;chineses=1&amp;chap=1&amp;sec=16" target="ob"><nobr>典藏</nobr></a><!--@@c=001016--></td>
+</tr>
+<tr><td align="center"><b>1:17</b><a name="1:17"/></td><td >就把這些光體擺設在天上穹蒼之中，普照在地上，</td><td><a href="../new/com.php?book=3&amp;engs=Gen&amp;chap=1&amp;sec=17&amp;m=0" target="comm"><nobr>註釋</nobr></a> <a href="../new/com.php?book=4&amp;engs=Gen&amp;chap=1&amp;sec=17&amp;m=0" target="comm"><nobr>串珠</nobr></a> <a href="../new/com.php?book=8&amp;engs=Gen&amp;chap=1&amp;sec=17&amp;m=0" target="comm"><nobr>蔡茂堂</nobr></a> <a href="../new/com.php?book=10&amp;engs=Gen&amp;chap=1&amp;sec=17&amp;m=0" target="comm"><nobr>康來昌</nobr></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=17&amp;m=0" target="comm"></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=17&amp;m=0" target="comm"></a> <a href="../new/com.php?book=21&amp;engs=Gen&amp;chap=1&amp;sec=17&amp;m=0" target="comm"></a>  <a href="parsing.php?engs=Gen&amp;chap=1&amp;sec=17&amp;m=0" target="parsing"><nobr>原文</nobr></a> <a href="ob.php?book=all&amp;chineses=1&amp;chap=1&amp;sec=17" target="ob"><nobr>典藏</nobr></a><!--@@c=001017--></td>
+</tr>
+<tr><td align="center"><b>1:18</b><a name="1:18"/></td><td >管理晝夜，分別光暗；神看是好的。</td><td><a href="../new/com.php?book=3&amp;engs=Gen&amp;chap=1&amp;sec=18&amp;m=0" target="comm"><nobr>註釋</nobr></a> <a href="../new/com.php?book=4&amp;engs=Gen&amp;chap=1&amp;sec=18&amp;m=0" target="comm"><nobr>串珠</nobr></a> <a href="../new/com.php?book=8&amp;engs=Gen&amp;chap=1&amp;sec=18&amp;m=0" target="comm"><nobr>蔡茂堂</nobr></a> <a href="../new/com.php?book=10&amp;engs=Gen&amp;chap=1&amp;sec=18&amp;m=0" target="comm"><nobr>康來昌</nobr></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=18&amp;m=0" target="comm"></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=18&amp;m=0" target="comm"></a> <a href="../new/com.php?book=21&amp;engs=Gen&amp;chap=1&amp;sec=18&amp;m=0" target="comm"></a>  <a href="parsing.php?engs=Gen&amp;chap=1&amp;sec=18&amp;m=0" target="parsing"><nobr>原文</nobr></a> <a href="ob.php?book=all&amp;chineses=1&amp;chap=1&amp;sec=18" target="ob"><nobr>典藏</nobr></a><!--@@c=001018--></td>
+</tr>
+<tr><td align="center"><b>1:19</b><a name="1:19"/></td><td >有晚上，有早晨，是第四日。</td><td><a href="../new/com.php?book=3&amp;engs=Gen&amp;chap=1&amp;sec=19&amp;m=0" target="comm"><nobr>註釋</nobr></a> <a href="../new/com.php?book=4&amp;engs=Gen&amp;chap=1&amp;sec=19&amp;m=0" target="comm"><nobr>串珠</nobr></a> <a href="../new/com.php?book=8&amp;engs=Gen&amp;chap=1&amp;sec=19&amp;m=0" target="comm"><nobr>蔡茂堂</nobr></a> <a href="../new/com.php?book=10&amp;engs=Gen&amp;chap=1&amp;sec=19&amp;m=0" target="comm"><nobr>康來昌</nobr></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=19&amp;m=0" target="comm"></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=19&amp;m=0" target="comm"></a> <a href="../new/com.php?book=21&amp;engs=Gen&amp;chap=1&amp;sec=19&amp;m=0" target="comm"></a>  <a href="parsing.php?engs=Gen&amp;chap=1&amp;sec=19&amp;m=0" target="parsing"><nobr>原文</nobr></a> <a href="ob.php?book=all&amp;chineses=1&amp;chap=1&amp;sec=19" target="ob"><nobr>典藏</nobr></a><!--@@c=001019--></td>
+</tr>
+<tr><td align="center"><b>1:20</b><a name="1:20"/></td><td >神說，水要多多滋生有生命的物；要有禽鳥飛在地面以上，天空之中。</td><td><a href="../new/com.php?book=3&amp;engs=Gen&amp;chap=1&amp;sec=20&amp;m=0" target="comm"><nobr>註釋</nobr></a> <a href="../new/com.php?book=4&amp;engs=Gen&amp;chap=1&amp;sec=20&amp;m=0" target="comm"><nobr>串珠</nobr></a> <a href="../new/com.php?book=8&amp;engs=Gen&amp;chap=1&amp;sec=20&amp;m=0" target="comm"><nobr>蔡茂堂</nobr></a> <a href="../new/com.php?book=10&amp;engs=Gen&amp;chap=1&amp;sec=20&amp;m=0" target="comm"><nobr>康來昌</nobr></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=20&amp;m=0" target="comm"></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=20&amp;m=0" target="comm"></a> <a href="../new/com.php?book=21&amp;engs=Gen&amp;chap=1&amp;sec=20&amp;m=0" target="comm"></a> <a href="../new/com.php?book=30&amp;engs=Gen&amp;chap=1&amp;sec=20&amp;m=0" target="comm"></a> <a href="../new/com.php?book=33&amp;engs=Gen&amp;chap=1&amp;sec=20&amp;m=0" target=\"comm\"><nobr>字典</nobr></a>  <a href="parsing.php?engs=Gen&amp;chap=1&amp;sec=20&amp;m=0" target="parsing"><nobr>原文</nobr></a> <a href="ob.php?book=all&amp;chineses=1&amp;chap=1&amp;sec=20" target="ob"><nobr>典藏</nobr></a><!--@@c=001020--></td>
+</tr>
+<tr><td align="center"><b>1:21</b><a name="1:21"/></td><td >神就創造大魚，和水中所滋生各樣有生命的動物，各從其類；又創造各樣飛鳥，各從其類；神看是好的。</td><td><a href="../new/com.php?book=3&amp;engs=Gen&amp;chap=1&amp;sec=21&amp;m=0" target="comm"><nobr>註釋</nobr></a> <a href="../new/com.php?book=4&amp;engs=Gen&amp;chap=1&amp;sec=21&amp;m=0" target="comm"><nobr>串珠</nobr></a> <a href="../new/com.php?book=8&amp;engs=Gen&amp;chap=1&amp;sec=21&amp;m=0" target="comm"><nobr>蔡茂堂</nobr></a> <a href="../new/com.php?book=10&amp;engs=Gen&amp;chap=1&amp;sec=21&amp;m=0" target="comm"><nobr>康來昌</nobr></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=21&amp;m=0" target="comm"></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=21&amp;m=0" target="comm"></a> <a href="../new/com.php?book=21&amp;engs=Gen&amp;chap=1&amp;sec=21&amp;m=0" target="comm"></a> <a href="../new/com.php?book=30&amp;engs=Gen&amp;chap=1&amp;sec=21&amp;m=0" target="comm"></a> <a href="../new/com.php?book=33&amp;engs=Gen&amp;chap=1&amp;sec=21&amp;m=0" target=\"comm\"><nobr>字典</nobr></a>  <a href="parsing.php?engs=Gen&amp;chap=1&amp;sec=21&amp;m=0" target="parsing"><nobr>原文</nobr></a> <a href="ob.php?book=all&amp;chineses=1&amp;chap=1&amp;sec=21" target="ob"><nobr>典藏</nobr></a><!--@@c=001021--></td>
+</tr>
+<tr><td align="center"><b>1:22</b><a name="1:22"/></td><td >神就賜福給這一切，說，要繁衍增多，充滿海中的水；禽鳥也要增多在地上。</td><td><a href="../new/com.php?book=3&amp;engs=Gen&amp;chap=1&amp;sec=22&amp;m=0" target="comm"><nobr>註釋</nobr></a> <a href="../new/com.php?book=4&amp;engs=Gen&amp;chap=1&amp;sec=22&amp;m=0" target="comm"><nobr>串珠</nobr></a> <a href="../new/com.php?book=8&amp;engs=Gen&amp;chap=1&amp;sec=22&amp;m=0" target="comm"><nobr>蔡茂堂</nobr></a> <a href="../new/com.php?book=10&amp;engs=Gen&amp;chap=1&amp;sec=22&amp;m=0" target="comm"><nobr>康來昌</nobr></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=22&amp;m=0" target="comm"></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=22&amp;m=0" target="comm"></a> <a href="../new/com.php?book=21&amp;engs=Gen&amp;chap=1&amp;sec=22&amp;m=0" target="comm"></a> <a href="../new/com.php?book=30&amp;engs=Gen&amp;chap=1&amp;sec=22&amp;m=0" target="comm"></a> <a href="../new/com.php?book=33&amp;engs=Gen&amp;chap=1&amp;sec=22&amp;m=0" target=\"comm\"><nobr>字典</nobr></a>  <a href="parsing.php?engs=Gen&amp;chap=1&amp;sec=22&amp;m=0" target="parsing"><nobr>原文</nobr></a> <a href="ob.php?book=all&amp;chineses=1&amp;chap=1&amp;sec=22" target="ob"><nobr>典藏</nobr></a><!--@@c=001022--></td>
+</tr>
+<tr><td align="center"><b>1:23</b><a name="1:23"/></td><td >有晚上，有早晨，是第五日。</td><td><a href="../new/com.php?book=3&amp;engs=Gen&amp;chap=1&amp;sec=23&amp;m=0" target="comm"><nobr>註釋</nobr></a> <a href="../new/com.php?book=4&amp;engs=Gen&amp;chap=1&amp;sec=23&amp;m=0" target="comm"><nobr>串珠</nobr></a> <a href="../new/com.php?book=8&amp;engs=Gen&amp;chap=1&amp;sec=23&amp;m=0" target="comm"><nobr>蔡茂堂</nobr></a> <a href="../new/com.php?book=10&amp;engs=Gen&amp;chap=1&amp;sec=23&amp;m=0" target="comm"><nobr>康來昌</nobr></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=23&amp;m=0" target="comm"></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=23&amp;m=0" target="comm"></a> <a href="../new/com.php?book=21&amp;engs=Gen&amp;chap=1&amp;sec=23&amp;m=0" target="comm"></a>  <a href="parsing.php?engs=Gen&amp;chap=1&amp;sec=23&amp;m=0" target="parsing"><nobr>原文</nobr></a> <a href="ob.php?book=all&amp;chineses=1&amp;chap=1&amp;sec=23" target="ob"><nobr>典藏</nobr></a><!--@@c=001023--></td>
+</tr>
+<tr><td align="center"><b>1:24</b><a name="1:24"/></td><td >神說，地要生出有生命的物，各從其類；牲畜、爬物、走獸，各從其類；事就這樣成了。</td><td><a href="../new/com.php?book=3&amp;engs=Gen&amp;chap=1&amp;sec=24&amp;m=0" target="comm"><nobr>註釋</nobr></a> <a href="../new/com.php?book=4&amp;engs=Gen&amp;chap=1&amp;sec=24&amp;m=0" target="comm"><nobr>串珠</nobr></a> <a href="../new/com.php?book=8&amp;engs=Gen&amp;chap=1&amp;sec=24&amp;m=0" target="comm"><nobr>蔡茂堂</nobr></a> <a href="../new/com.php?book=10&amp;engs=Gen&amp;chap=1&amp;sec=24&amp;m=0" target="comm"><nobr>康來昌</nobr></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=24&amp;m=0" target="comm"></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=24&amp;m=0" target="comm"></a> <a href="../new/com.php?book=21&amp;engs=Gen&amp;chap=1&amp;sec=24&amp;m=0" target="comm"></a> <a href="../new/com.php?book=30&amp;engs=Gen&amp;chap=1&amp;sec=24&amp;m=0" target="comm"></a> <a href="../new/com.php?book=33&amp;engs=Gen&amp;chap=1&amp;sec=24&amp;m=0" target=\"comm\"><nobr>字典</nobr></a>  <a href="parsing.php?engs=Gen&amp;chap=1&amp;sec=24&amp;m=0" target="parsing"><nobr>原文</nobr></a> <a href="ob.php?book=all&amp;chineses=1&amp;chap=1&amp;sec=24" target="ob"><nobr>典藏</nobr></a><!--@@c=001024--></td>
+</tr>
+<tr><td align="center"><b>1:25</b><a name="1:25"/></td><td >於是神造出走獸，各從其類；牲畜各從其類；地上一切爬物，各從其類；神看是好的。</td><td><a href="../new/com.php?book=3&amp;engs=Gen&amp;chap=1&amp;sec=25&amp;m=0" target="comm"><nobr>註釋</nobr></a> <a href="../new/com.php?book=4&amp;engs=Gen&amp;chap=1&amp;sec=25&amp;m=0" target="comm"><nobr>串珠</nobr></a> <a href="../new/com.php?book=8&amp;engs=Gen&amp;chap=1&amp;sec=25&amp;m=0" target="comm"><nobr>蔡茂堂</nobr></a> <a href="../new/com.php?book=10&amp;engs=Gen&amp;chap=1&amp;sec=25&amp;m=0" target="comm"><nobr>康來昌</nobr></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=25&amp;m=0" target="comm"></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=25&amp;m=0" target="comm"></a> <a href="../new/com.php?book=21&amp;engs=Gen&amp;chap=1&amp;sec=25&amp;m=0" target="comm"></a> <a href="../new/com.php?book=30&amp;engs=Gen&amp;chap=1&amp;sec=25&amp;m=0" target="comm"></a> <a href="../new/com.php?book=33&amp;engs=Gen&amp;chap=1&amp;sec=25&amp;m=0" target=\"comm\"><nobr>字典</nobr></a>  <a href="parsing.php?engs=Gen&amp;chap=1&amp;sec=25&amp;m=0" target="parsing"><nobr>原文</nobr></a> <a href="ob.php?book=all&amp;chineses=1&amp;chap=1&amp;sec=25" target="ob"><nobr>典藏</nobr></a><!--@@c=001025--></td>
+</tr>
+<tr><td align="center"><b>1:26</b><a name="1:26"/></td><td >神說，我們要按著我們的形像，照著我們的樣式造人，使他們管理海裏的魚、空中的鳥、地上的牲畜、和全地、並地上所爬的一切爬物。</td><td><a href="../new/com.php?book=3&amp;engs=Gen&amp;chap=1&amp;sec=26&amp;m=0" target="comm"><nobr>註釋</nobr></a> <a href="../new/com.php?book=4&amp;engs=Gen&amp;chap=1&amp;sec=26&amp;m=0" target="comm"><nobr>串珠</nobr></a> <a href="../new/com.php?book=8&amp;engs=Gen&amp;chap=1&amp;sec=26&amp;m=0" target="comm"><nobr>蔡茂堂</nobr></a> <a href="../new/com.php?book=10&amp;engs=Gen&amp;chap=1&amp;sec=26&amp;m=0" target="comm"><nobr>康來昌</nobr></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=26&amp;m=0" target="comm"></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=26&amp;m=0" target="comm"></a> <a href="../new/com.php?book=21&amp;engs=Gen&amp;chap=1&amp;sec=26&amp;m=0" target="comm"></a> <a href="../new/com.php?book=30&amp;engs=Gen&amp;chap=1&amp;sec=26&amp;m=0" target="comm"></a> <a href="../new/com.php?book=33&amp;engs=Gen&amp;chap=1&amp;sec=26&amp;m=0" target=\"comm\"><nobr>字典</nobr></a>  <a href="parsing.php?engs=Gen&amp;chap=1&amp;sec=26&amp;m=0" target="parsing"><nobr>原文</nobr></a> <a href="ob.php?book=all&amp;chineses=1&amp;chap=1&amp;sec=26" target="ob"><nobr>典藏</nobr></a><!--@@c=001026--></td>
+</tr>
+<tr><td align="center"><b>1:27</b><a name="1:27"/></td><td >神就按著自己的形像創造人，乃是按著神的形像創造他；創造他們有男有女。</td><td><a href="../new/com.php?book=1&amp;engs=Gen&amp;chap=1&amp;sec=27&amp;m=0" target="comm"><nobr>C註釋</nobr></a> <a href="../new/com.php?book=3&amp;engs=Gen&amp;chap=1&amp;sec=27&amp;m=0" target="comm"><nobr>註釋</nobr></a> <a href="../new/com.php?book=4&amp;engs=Gen&amp;chap=1&amp;sec=27&amp;m=0" target="comm"><nobr>串珠</nobr></a> <a href="../new/com.php?book=8&amp;engs=Gen&amp;chap=1&amp;sec=27&amp;m=0" target="comm"><nobr>蔡茂堂</nobr></a> <a href="../new/com.php?book=10&amp;engs=Gen&amp;chap=1&amp;sec=27&amp;m=0" target="comm"><nobr>康來昌</nobr></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=27&amp;m=0" target="comm"></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=27&amp;m=0" target="comm"></a> <a href="../new/com.php?book=21&amp;engs=Gen&amp;chap=1&amp;sec=27&amp;m=0" target="comm"></a>  <a href="parsing.php?engs=Gen&amp;chap=1&amp;sec=27&amp;m=0" target="parsing"><nobr>原文</nobr></a> <a href="ob.php?book=all&amp;chineses=1&amp;chap=1&amp;sec=27" target="ob"><nobr>典藏</nobr></a><!--@@c=001027--></td>
+</tr>
+<tr><td align="center"><b>1:28</b><a name="1:28"/></td><td >神就賜福給他們；又對他們說，要繁衍增多，遍滿地面，並制伏這地，也要管理海裏的魚、空中的鳥、和地上各樣行動的活物。</td><td><a href="../new/com.php?book=3&amp;engs=Gen&amp;chap=1&amp;sec=28&amp;m=0" target="comm"><nobr>註釋</nobr></a> <a href="../new/com.php?book=4&amp;engs=Gen&amp;chap=1&amp;sec=28&amp;m=0" target="comm"><nobr>串珠</nobr></a> <a href="../new/com.php?book=8&amp;engs=Gen&amp;chap=1&amp;sec=28&amp;m=0" target="comm"><nobr>蔡茂堂</nobr></a> <a href="../new/com.php?book=10&amp;engs=Gen&amp;chap=1&amp;sec=28&amp;m=0" target="comm"><nobr>康來昌</nobr></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=28&amp;m=0" target="comm"></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=28&amp;m=0" target="comm"></a> <a href="../new/com.php?book=21&amp;engs=Gen&amp;chap=1&amp;sec=28&amp;m=0" target="comm"></a> <a href="../new/com.php?book=30&amp;engs=Gen&amp;chap=1&amp;sec=28&amp;m=0" target="comm"></a> <a href="../new/com.php?book=33&amp;engs=Gen&amp;chap=1&amp;sec=28&amp;m=0" target=\"comm\"><nobr>字典</nobr></a>  <a href="parsing.php?engs=Gen&amp;chap=1&amp;sec=28&amp;m=0" target="parsing"><nobr>原文</nobr></a> <a href="ob.php?book=all&amp;chineses=1&amp;chap=1&amp;sec=28" target="ob"><nobr>典藏</nobr></a><!--@@c=001028--></td>
+</tr>
+<tr><td align="center"><b>1:29</b><a name="1:29"/></td><td >神說，看哪，我將遍地上各樣結種子的菜蔬，和各樣結有核果子的樹，賜給你們作食物。</td><td><a href="../new/com.php?book=3&amp;engs=Gen&amp;chap=1&amp;sec=29&amp;m=0" target="comm"><nobr>註釋</nobr></a> <a href="../new/com.php?book=4&amp;engs=Gen&amp;chap=1&amp;sec=29&amp;m=0" target="comm"><nobr>串珠</nobr></a> <a href="../new/com.php?book=8&amp;engs=Gen&amp;chap=1&amp;sec=29&amp;m=0" target="comm"><nobr>蔡茂堂</nobr></a> <a href="../new/com.php?book=10&amp;engs=Gen&amp;chap=1&amp;sec=29&amp;m=0" target="comm"><nobr>康來昌</nobr></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=29&amp;m=0" target="comm"></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=29&amp;m=0" target="comm"></a> <a href="../new/com.php?book=21&amp;engs=Gen&amp;chap=1&amp;sec=29&amp;m=0" target="comm"></a>  <a href="parsing.php?engs=Gen&amp;chap=1&amp;sec=29&amp;m=0" target="parsing"><nobr>原文</nobr></a> <a href="ob.php?book=all&amp;chineses=1&amp;chap=1&amp;sec=29" target="ob"><nobr>典藏</nobr></a><!--@@c=001029--></td>
+</tr>
+<tr><td align="center"><b>1:30</b><a name="1:30"/></td><td >至於地上各樣的走獸和空中各樣的飛鳥，並各樣爬在地上有生命的物，我將青草賜給牠們作食物；事就這樣成了。</td><td><a href="../new/com.php?book=3&amp;engs=Gen&amp;chap=1&amp;sec=30&amp;m=0" target="comm"><nobr>註釋</nobr></a> <a href="../new/com.php?book=4&amp;engs=Gen&amp;chap=1&amp;sec=30&amp;m=0" target="comm"><nobr>串珠</nobr></a> <a href="../new/com.php?book=8&amp;engs=Gen&amp;chap=1&amp;sec=30&amp;m=0" target="comm"><nobr>蔡茂堂</nobr></a> <a href="../new/com.php?book=10&amp;engs=Gen&amp;chap=1&amp;sec=30&amp;m=0" target="comm"><nobr>康來昌</nobr></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=30&amp;m=0" target="comm"></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=30&amp;m=0" target="comm"></a> <a href="../new/com.php?book=21&amp;engs=Gen&amp;chap=1&amp;sec=30&amp;m=0" target="comm"></a> <a href="../new/com.php?book=30&amp;engs=Gen&amp;chap=1&amp;sec=30&amp;m=0" target="comm"></a> <a href="../new/com.php?book=33&amp;engs=Gen&amp;chap=1&amp;sec=30&amp;m=0" target=\"comm\"><nobr>字典</nobr></a>  <a href="parsing.php?engs=Gen&amp;chap=1&amp;sec=30&amp;m=0" target="parsing"><nobr>原文</nobr></a> <a href="ob.php?book=all&amp;chineses=1&amp;chap=1&amp;sec=30" target="ob"><nobr>典藏</nobr></a><!--@@c=001030--></td>
+</tr>
+<tr><td align="center"><b>1:31</b><a name="1:31"/></td><td >神看一切所造的都甚好；有晚上，有早晨，是第六日。</td><td><a href="../new/com.php?book=3&amp;engs=Gen&amp;chap=1&amp;sec=31&amp;m=0" target="comm"><nobr>註釋</nobr></a> <a href="../new/com.php?book=4&amp;engs=Gen&amp;chap=1&amp;sec=31&amp;m=0" target="comm"><nobr>串珠</nobr></a> <a href="../new/com.php?book=8&amp;engs=Gen&amp;chap=1&amp;sec=31&amp;m=0" target="comm"><nobr>蔡茂堂</nobr></a> <a href="../new/com.php?book=10&amp;engs=Gen&amp;chap=1&amp;sec=31&amp;m=0" target="comm"><nobr>康來昌</nobr></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=31&amp;m=0" target="comm"></a> <a href="../new/com.php?book=20&amp;engs=Gen&amp;chap=1&amp;sec=31&amp;m=0" target="comm"></a> <a href="../new/com.php?book=21&amp;engs=Gen&amp;chap=1&amp;sec=31&amp;m=0" target="comm"></a>  <a href="parsing.php?engs=Gen&amp;chap=1&amp;sec=31&amp;m=0" target="parsing"><nobr>原文</nobr></a> <a href="ob.php?book=all&amp;chineses=1&amp;chap=1&amp;sec=31" target="ob"><nobr>典藏</nobr></a><!--@@c=001031--></td>
+</tr>
+</table></font>
+<br /><hr />
+<form method="get" action="/new/read.php" name="p"><input type="hidden" name="chap" value="1" /><a id="p1next" href="/new/read.php?id=33&m=0&strongflag=0&SSS=0&nodic=0&VERSION3=recover&TABFLAG=1"><img src="next.png" border="0" alt="下一章"  align="middle" /></a> <select name="sb" onchange="setchap(2)">
+<option value="%E5%89%B5" selected="selected">創世記</option>
+<option value="%E5%87%BA">出埃及記</option>
+<option value="%E5%88%A9">利未記</option>
+<option value="%E6%B0%91">民數記</option>
+<option value="%E7%94%B3">申命記</option>
+<option value="%E6%9B%B8">約書亞記</option>
+<option value="%E5%A3%AB">士師記</option>
+<option value="%E5%BE%97">路得記</option>
+<option value="%E6%92%92%E4%B8%8A">撒母耳記上</option>
+<option value="%E6%92%92%E4%B8%8B">撒母耳記下</option>
+<option value="%E7%8E%8B%E4%B8%8A">列王紀上</option>
+<option value="%E7%8E%8B%E4%B8%8B">列王紀下</option>
+<option value="%E4%BB%A3%E4%B8%8A">歷代志上</option>
+<option value="%E4%BB%A3%E4%B8%8B">歷代志下</option>
+<option value="%E6%8B%89">以斯拉記</option>
+<option value="%E5%B0%BC">尼希米記</option>
+<option value="%E6%96%AF">以斯帖記</option>
+<option value="%E4%BC%AF">約伯記</option>
+<option value="%E8%A9%A9">詩篇</option>
+<option value="%E7%AE%B4">箴言</option>
+<option value="%E5%82%B3">傳道書</option>
+<option value="%E6%AD%8C">雅歌</option>
+<option value="%E8%B3%BD">以賽亞書</option>
+<option value="%E8%80%B6">耶利米書</option>
+<option value="%E5%93%80">耶利米哀歌</option>
+<option value="%E7%B5%90">以西結書</option>
+<option value="%E4%BD%86">但以理書</option>
+<option value="%E4%BD%95">何西阿書</option>
+<option value="%E7%8F%A5">約珥書</option>
+<option value="%E6%91%A9">阿摩司書</option>
+<option value="%E4%BF%84">俄巴底亞書</option>
+<option value="%E6%8B%BF">約拿書</option>
+<option value="%E5%BD%8C">彌迦書</option>
+<option value="%E9%B4%BB">那鴻書</option>
+<option value="%E5%93%88">哈巴谷書</option>
+<option value="%E7%95%AA">西番雅書</option>
+<option value="%E8%A9%B2">哈該書</option>
+<option value="%E4%BA%9E">撒迦利亞書</option>
+<option value="%E7%91%AA">瑪拉基書</option>
+<option value="%E5%A4%AA">馬太福音</option>
+<option value="%E5%8F%AF">馬可福音</option>
+<option value="%E8%B7%AF">路加福音</option>
+<option value="%E7%B4%84">約翰福音</option>
+<option value="%E5%BE%92">使徒行傳</option>
+<option value="%E7%BE%85">羅馬書</option>
+<option value="%E6%9E%97%E5%89%8D">哥林多前書</option>
+<option value="%E6%9E%97%E5%BE%8C">哥林多後書</option>
+<option value="%E5%8A%A0">加拉太書</option>
+<option value="%E5%BC%97">以弗所書</option>
+<option value="%E8%85%93">腓立比書</option>
+<option value="%E8%A5%BF">歌羅西書</option>
+<option value="%E5%B8%96%E5%89%8D">帖撒羅尼迦前書</option>
+<option value="%E5%B8%96%E5%BE%8C">帖撒羅尼迦後書</option>
+<option value="%E6%8F%90%E5%89%8D">提摩太前書</option>
+<option value="%E6%8F%90%E5%BE%8C">提摩太後書</option>
+<option value="%E5%A4%9A">提多書</option>
+<option value="%E9%96%80">腓利門書</option>
+<option value="%E4%BE%86">希伯來書</option>
+<option value="%E9%9B%85">雅各書</option>
+<option value="%E5%BD%BC%E5%89%8D">彼得前書</option>
+<option value="%E5%BD%BC%E5%BE%8C">彼得後書</option>
+<option value="%E7%B4%84%E4%B8%80">約翰一書</option>
+<option value="%E7%B4%84%E4%BA%8C">約翰二書</option>
+<option value="%E7%B4%84%E4%B8%89">約翰三書</option>
+<option value="%E7%8C%B6">猶大書</option>
+<option value="%E5%95%9F">啟示錄</option>
+</select>  <select name="sc" onchange="pgotochap()">
+<option value="0">請選擇</option>
+<option value="1" selected="selected">第 1 章</option>
+<option value="2">第 2 章</option>
+<option value="3">第 3 章</option>
+<option value="4">第 4 章</option>
+<option value="5">第 5 章</option>
+<option value="6">第 6 章</option>
+<option value="7">第 7 章</option>
+<option value="8">第 8 章</option>
+<option value="9">第 9 章</option>
+<option value="10">第 10 章</option>
+<option value="11">第 11 章</option>
+<option value="12">第 12 章</option>
+<option value="13">第 13 章</option>
+<option value="14">第 14 章</option>
+<option value="15">第 15 章</option>
+<option value="16">第 16 章</option>
+<option value="17">第 17 章</option>
+<option value="18">第 18 章</option>
+<option value="19">第 19 章</option>
+<option value="20">第 20 章</option>
+<option value="21">第 21 章</option>
+<option value="22">第 22 章</option>
+<option value="23">第 23 章</option>
+<option value="24">第 24 章</option>
+<option value="25">第 25 章</option>
+<option value="26">第 26 章</option>
+<option value="27">第 27 章</option>
+<option value="28">第 28 章</option>
+<option value="29">第 29 章</option>
+<option value="30">第 30 章</option>
+<option value="31">第 31 章</option>
+<option value="32">第 32 章</option>
+<option value="33">第 33 章</option>
+<option value="34">第 34 章</option>
+<option value="35">第 35 章</option>
+<option value="36">第 36 章</option>
+<option value="37">第 37 章</option>
+<option value="38">第 38 章</option>
+<option value="39">第 39 章</option>
+<option value="40">第 40 章</option>
+<option value="41">第 41 章</option>
+<option value="42">第 42 章</option>
+<option value="43">第 43 章</option>
+<option value="44">第 44 章</option>
+<option value="45">第 45 章</option>
+<option value="46">第 46 章</option>
+<option value="47">第 47 章</option>
+<option value="48">第 48 章</option>
+<option value="49">第 49 章</option>
+<option value="50">第 50 章</option>
+</select>&nbsp;&nbsp;&nbsp;查詢或移至：<input type="text" name="skey" size="10" onchange="pgosearch()" /><input type="button" value="go" onclick="pgosearch()" /> <a href="sreadme.html">說明</a><p /> <select name="ssn" onchange="psetsn(31)">
+<option value="0" selected="selected">無 Strong's number</option>
+<option value="1">Strong's Number 放上面</option>
+<option value="2">Strong's Number 放後面</option>
+</select> [ <a href="/new/read.php?id=31&strongflag=0&SSS=0&nodic=0&VERSION3=recover&TABFLAG=0">條列</a> |  <a href="/new/read.php?id=31&strongflag=0&SSS=0&nodic=0&VERSION3=recover&TABFLAG=1">表格</a> |  <a href="/new/read.php?id=31&strongflag=0&SSS=0&nodic=0&VERSION3=recover&TABFLAG=2">整段</a> ]  <a href="/new/read.php?id=31&strongflag=0&SSS=0&nodic=0&VERSION3=recover&TABFLAG=1">繁</a> <a href="/gbdoc/new/read.php?id=31&strongflag=0&SSS=0&nodic=0&VERSION3=recover&TABFLAG=1">簡</a> <a href="heb.html">語態</a>  <!--IN_COM--><!--@@--><a href="../new/read.html">重新查詢</a> <a href="http://bible.fhl.net/object/sg.php?engs=Gen&amp;gb=0&amp;chap=1" target="obj">影像</a> <a href="/map/lm.php?engs=Gen&amp;gb=0&amp;blm=chap%3D1" target="map">本章地圖</a>  <a href="measurement.html" target="mea">度量衡</a>  <a href="../new" target=\other\>其他</a><br /><!--!!-->
+<input type="submit" name="sub2" value="版本對照" /><br/><span style="color:#196f92;">中文:</span><input type="checkbox" name="VERSION1" value="unv"  onclick="cv(this);"/>FHL和合本<input type="checkbox" name="VERSION2" value="rcuv"  onclick="cv(this);"/>和合本2010<input type="checkbox" name="VERSION3" value="tcv95"  onclick="cv(this);"/>現代中文譯本1995版<input type="checkbox" name="VERSION4" value="tcv2019"  onclick="cv(this);"/>現代中文譯本2019版<input type="checkbox" name="VERSION5" value="wcb"  onclick="cv(this);"/>環球譯本<input type="checkbox" name="VERSION6" value="ncv"  onclick="cv(this);"/>新譯本<input type="checkbox" name="VERSION7" value="csb"  onclick="cv(this);"/>中文標準譯本<input type="checkbox" name="VERSION8" value="recover" checked="checked" onclick="cv(this);"/>恢復本<input type="checkbox" name="VERSION9" value="ofm"  onclick="cv(this);"/>思高譯本<input type="checkbox" name="VERSION10" value="lcc"  onclick="cv(this);"/>呂振中譯本<input type="checkbox" name="VERSION11" value="cnet"  onclick="cv(this);"/>NET聖經中譯本<input type="checkbox" name="VERSION13" value="wlunv"  onclick="cv(this);"/>深文理和合本<input type="checkbox" name="VERSION64" value="cumv"  onclick="cv(this);"/>官話和合本<input type="checkbox" name="VERSION65" value="pmb"  onclick="cv(this);"/>北京官話譯本<input type="checkbox" name="VERSION66" value="cuwv"  onclick="cv(this);"/>文理和合本<input type="checkbox" name="VERSION71" value="mormil"  onclick="cv(this);"/>神天聖書<input type="checkbox" name="VERSION72" value="wdv"  onclick="cv(this);"/>文理委辦譯本<input type="checkbox" name="VERSION73" value="ssewb"  onclick="cv(this);"/>施約瑟淺文理譯本<input type="checkbox" name="VERSION74" value="marwb"  onclick="cv(this);"/>馬殊曼譯本<input type="checkbox" name="VERSION81" value="cwmgbm"  onclick="cv(this);"/>四人小組譯本<input type="checkbox" name="VERSION82" value="cogorw"  onclick="cv(this);"/>高連茨基聖詠經<input type="checkbox" name="VERSION85" value="cwkfag"  onclick="cv(this);"/>郭實臘新遺詔書和舊遺詔聖書<input type="checkbox" name="VERSION90" value="cwtaiping"  onclick="cv(this);"/>太平天國文理譯本<input type="checkbox" name="VERSION15" value="cbol"  onclick="cv(this);"/>原文直譯(參考用)<br/><span style="color:#196f92;">英文:</span><input type="checkbox" name="VERSION16" value="esv"  onclick="cv(this);"/>ESV<input type="checkbox" name="VERSION17" value="kjv"  onclick="cv(this);"/>KJV<input type="checkbox" name="VERSION18" value="bbe"  onclick="cv(this);"/>BBE<input type="checkbox" name="VERSION19" value="web"  onclick="cv(this);"/>WEB<input type="checkbox" name="VERSION20" value="asv"  onclick="cv(this);"/>ASV<input type="checkbox" name="VERSION21" value="darby"  onclick="cv(this);"/>Darby<input type="checkbox" name="VERSION22" value="erv"  onclick="cv(this);"/>ERV<br/><span style="color:#196f92;">原文與古譯本:</span><input type="checkbox" name="VERSION23" value="bhs"  onclick="cv(this);"/>舊約馬索拉原文<input type="checkbox" name="VERSION26" value="lxx"  onclick="cv(this);"/>七十士譯本<br/><span style="color:#196f92;">台客語:</span><input type="checkbox" name="VERSION27" value="ttvhl2021"  onclick="cv(this);"/>現代台語2021版漢字<input type="checkbox" name="VERSION28" value="ttvcl2021"  onclick="cv(this);"/>現代台語2021版全羅<input type="checkbox" name="VERSION29" value="tghg"  onclick="cv(this);"/>聖經公會巴克禮台漢本<input type="checkbox" name="VERSION34" value="bklcl"  onclick="cv(this);"/>巴克禮全羅<input type="checkbox" name="VERSION35" value="bklhl"  onclick="cv(this);"/>巴克禮漢羅<input type="checkbox" name="VERSION36" value="thv2e"  onclick="cv(this);"/>聖經公會現代客語全羅<input type="checkbox" name="VERSION37" value="thv12h"  onclick="cv(this);"/>聖經公會現代客語漢字<input type="checkbox" name="VERSION39" value="sgebklcl"  onclick="cv(this);"/>全民台語聖經全羅<input type="checkbox" name="VERSION40" value="sgebklhl"  onclick="cv(this);"/>全民台語聖經漢羅<input type="checkbox" name="VERSION41" value="gebklhlruby"  onclick="cv(this);"/>全民台語聖經Ruby<br/><span style="color:#196f92;">其他:</span><input type="checkbox" name="VERSION48" value="bunun"  onclick="cv(this);"/>聖經公會布農語聖經<input type="checkbox" name="VERSION53" value="tay"  onclick="cv(this);"/>聖經公會泰雅爾語聖經<input type="checkbox" name="VERSION55" value="rukai"  onclick="cv(this);"/>聖經公會魯凱語聖經<input type="checkbox" name="VERSION56" value="sed"  onclick="cv(this);"/>賽德克族Tgdaya語<input type="checkbox" name="VERSION57" value="ams"  onclick="cv(this);"/>聖經公會阿美語1997<input type="checkbox" name="VERSION59" value="tru"  onclick="cv(this);"/>聖經公會太魯閣語聖經<input type="checkbox" name="VERSION42" value="baru"  onclick="cv(this);"/>印尼聖經<input type="checkbox" name="VERSION43" value="ind1958"  onclick="cv(this);"/>印尼舊聖經<input type="checkbox" name="VERSION44" value="vietnamese"  onclick="cv(this);"/>越南聖經<input type="checkbox" name="VERSION45" value="russian"  onclick="cv(this);"/>俄文聖經<input type="checkbox" name="VERSION46" value="korean"  onclick="cv(this);"/>韓文聖經<input type="checkbox" name="VERSION47" value="jp"  onclick="cv(this);"/>日語聖經<input type="checkbox" name="VERSION61" value="tibet"  onclick="cv(this);"/>藏語聖經<input type="checkbox" name="VERSION62" value="cvul"  onclick="cv(this);"/>武加大譯本<input type="checkbox" name="VERSION63" value="nvul"  onclick="cv(this);"/>新武加大譯本<a id="CCV"><input type="submit" name="sub1" value="版本對照"/><input type="hidden" name="strongflag" value="0" /><input type="hidden" name="TABFLAG" value="1" /><input type="hidden" name="nodic" value="0" /><input type="hidden" name="TAIU" value="0" /><input type="hidden" name="maps" value="" /><input type="hidden" name="tmp" value="" /><input type="hidden" name="chineses" value="創" /><input type="hidden" name="chap" value="1" /><!--@@id=31--><!--@@strongfg=0--><!--@@TABFLAG=1--><!--@@chineses=創--><!--@@chap=1--></form><hr />
+恢復本經文由<a href="http://www.twgbr.org.tw">台灣福音書房</a>授權給信望愛資訊中心網路刊載用。<br/>各聖經譯本著作權如<a href="https://www.fhl.net/main/fhl/fhl8.html">版權說明</a>。<hr />本畫面由<a href="http://www.fhl.net">信望愛資訊中心</a>之<a href="http://bible.fhl.net" target="_top">CBOL計畫</a>產生，歡迎<a href="linkhowto.html">連結</a>，無須申請。CBOL計畫之資料版權宣告採用<a href="http://bible.fhl.net/new/fdl.txt">GNU Free Documentation License</a>。願上帝的話能建造每一位使用這系統的人，來榮耀祂自己的名。<div id="cookieBanner"> <p>信望愛站使用cookies 技術來強化網站功能，您使用本網站，表示您同意我們使用 cookies 技術.</p>
+        <button id="acceptCookies">接受Cookies</button>
+    </div>
+</div><script>
+var iframe;
+var audio;
+let audioOpened = false;
+function openAudio() {
+  audioOpened = true;
+  audio.style="display: block";
+  iframe.style = "display: block";
+}
+function toggleAudio() {
+  if (audioOpened) {
+    iframe.style = "display: none";
+    audioOpened = false;
+  } else {
+    openAudio();
+  }
+}
+function addOnAudioOnClick() {
+  let listens = [...document.getElementsByTagName("A")]
+    .filter((e) => e.href.indexOf("/listenhb.php")>0);
+  listens.map((e) => {
+      e.onclick=(e)=>{openAudio();iframe.src=e.target.href;return false;}
+    });
+  audio = document.createElement("div"); 
+  audio.innerHTML='<input type=button onclick="toggleAudio()" value="&#x1F508;"></input><br>';
+  audio.style="display: none";
+  iframe = document.createElement("iframe"); 
+  iframe.allow="autoplay";
+  iframe.width=650;
+  iframe.height=250;
+  audio.appendChild(iframe);
+  listens[0].parentNode.appendChild(audio);
+}
+addOnAudioOnClick();
+//
+// JAVASCRIPT FOR COOKIE BANNER
+// waits for the html and css to load before running the script
+
+window.onload = function() {
+document.getElementById("cookieBanner").style.display = "none"; // hides the cookie banner
+
+// function to set a cookie when the 'accept cookies' button is pressed
+document.getElementById("acceptCookies").addEventListener("click", function() {
+    document.cookie = "=cookiesAccepted=YES; expires=Thu, 31 Dec 3000 12:00:00 UTC; path=/"; // sets a cookie
+    document.getElementById("cookieBanner").style.display = "none";
+});
+
+// function to delete a cookie when the 'delete cookies' button is pressed
+
+// function to check for a cookie
+function checkCookie() {
+    let cookieSet = document.cookie; // looks for a cookie
+    if (cookieSet == "") {
+        document.getElementById("cookieBanner").style.display = "block"; // if no cookie show cookie banner
+    } else if (cookieSet != "") {
+    }
+}
+
+checkCookie();
+}
+</script>
+   <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"2a9a8c94a28e4087a517c8cd3f5861a4","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body></html>

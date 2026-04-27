@@ -208,7 +208,42 @@ export default function Reading() {
 
   const bannerContent = [...bannerItems, ...bannerItems];
   const dateShort = currentDate.slice(5).replace('-', '/');
-
+  function getTitle(englishTitle, portion) {
+  if (!englishTitle) return englishTitle;
+  if (lang === 'en') return englishTitle;
+  
+  if (lang === 'es') {
+    return englishTitle
+      .replace('New Testament', 'Nuevo Testamento')
+      .replace('Old Testament', 'Antiguo Testamento');
+  }
+  
+  if (lang === 'zh') {
+    return englishTitle
+      .replace('New Testament', '新約')
+      .replace('Old Testament', '舊約')
+      .replace('Matthew', '太').replace('Mark', '可')
+      .replace('Luke', '路').replace('John', '約')
+      .replace('Acts', '徒').replace('Romans', '羅')
+      .replace('Genesis', '創').replace('Exodus', '出')
+      .replace('Leviticus', '利').replace('Numbers', '民')
+      .replace('Deuteronomy', '申').replace('Joshua', '書')
+      .replace('Judges', '士').replace('Psalms', '詩')
+      .replace('Proverbs', '箴').replace('Isaiah', '賽')
+      .replace('Jeremiah', '耶').replace('Ezekiel', '結')
+      .replace('Daniel', '但').replace('Revelation', '啟')
+      .replace('1 Samuel', '撒上').replace('2 Samuel', '撒下')
+      .replace('1 Kings', '王上').replace('2 Kings', '王下')
+      .replace('1 Corinthians', '林前').replace('2 Corinthians', '林後')
+      .replace('Galatians', '加').replace('Ephesians', '弗')
+      .replace('Philippians', '腓').replace('Colossians', '西')
+      .replace('Hebrews', '來').replace('James', '雅')
+      .replace('1 Peter', '彼前').replace('2 Peter', '彼後')
+      .replace('1 John', '約壹').replace('Jude', '猶')
+      .replace(' - ', ' - ');
+  }
+  return englishTitle;
+}
   return (
     <>
       {bannerItems.length > 0 && (
@@ -289,7 +324,7 @@ export default function Reading() {
               <div className="verses-box">
                 {verses ? (
                   <>
-                    <div className="verses-title">{verses.nt_title}</div>
+                    <div className="verses-title">{getTitle(verses.nt_title)}</div>
                     <div className="verses-text">{formatVerses(getNtText())}</div>
                     {lang !== 'en' && !langAvailable(lang) && (
                       <div className="lang-unavailable-msg">
@@ -330,7 +365,7 @@ export default function Reading() {
               <div className="verses-box">
                 {verses ? (
                   <>
-                    <div className="verses-title">{verses.ot_title}</div>
+                    <div className="verses-title">{getTitle(verses.ot_title)}</div>
                     <div className="verses-text">{formatVerses(getOtText())}</div>
                     {lang !== 'en' && !langAvailable(lang) && (
                       <div className="lang-unavailable-msg">
