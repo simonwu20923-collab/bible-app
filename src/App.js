@@ -8,28 +8,26 @@ import Admin from './pages/Admin';
 
 function App() {
   return (
-    <BrowserRouter>
-      <div className="app">
-        <nav className="navbar">
-          <div className="nav-brand">📖 Bible Reading</div>
-          <div className="nav-links">
-            <NavLink to="/" end>Home</NavLink>
-            <NavLink to="/reading">Reading</NavLink>
-            <NavLink to="/schedule">Schedule</NavLink>
-            <NavLink to="/admin">Admin</NavLink>
-          </div>
-        </nav>
-        <main className="main-content">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/reading" element={<Reading />} />
-            <Route path="/schedule" element={<Schedule />} />
-            <Route path="/admin" element={<Admin />} />
-          </Routes>
-        </main>
-      </div>
-    </BrowserRouter>
-  );
+  <BrowserRouter>
+    <div className="app">
+      <nav className="navbar">
+        <div className="nav-brand">📖 Bible Reading</div>
+        <div className="nav-links">
+          <NavLink to="/" end>Home</NavLink>
+          <NavLink to="/reading">Reading</NavLink>
+          <NavLink to="/schedule">Schedule</NavLink>
+          <NavLink to="/admin">Admin</NavLink>
+        </div>
+      </nav>
+      <Routes>
+        <Route path="/" element={<div className="main-content"><Home /></div>} />
+        <Route path="/reading" element={<Reading />} />
+        <Route path="/schedule" element={<div className="main-content"><Schedule /></div>} />
+        <Route path="/admin" element={<div className="main-content"><Admin /></div>} />
+      </Routes>
+    </div>
+  </BrowserRouter>
+);
 }
 
 export default App;

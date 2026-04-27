@@ -759,3 +759,8 @@ body {
     max-height: 50vh;
   }
 }
+
+.reading-page-content {
+  max-width: 100% !important;
+  padding: 20px 32px !important;
+}
