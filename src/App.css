@@ -98,10 +98,25 @@ body {
 .reading-greeting { color: #a78bfa; font-weight: 500; }
 
 .reading-cards {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-direction: row;
   gap: 16px;
-  margin-bottom: 24px;
+  width: 100%;
+  align-items: flex-start;
+}
+
+.reading-card {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 768px) {
+  .reading-cards {
+    flex-direction: column;
+  }
+  .reading-card {
+    width: 100%;
+  }
 }
 
 @media (max-width: 600px) {
@@ -518,8 +533,13 @@ body {
 .banner-ot { color: #a78bfa; font-weight: 600; }
 .banner-sep { margin: 0 4px; color: #4b5563; }
 
-.reading-page-content { padding-top: 36px; }
-
+.reading-page-content {
+  max-width: 1400px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 20px 24px;
+  box-sizing: border-box;
+}
 /* Date navigation */
 .date-nav {
   display: flex;

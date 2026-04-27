@@ -25,8 +25,8 @@ export default function Reading() {
   const [todayReaders, setTodayReaders] = React.useState([]);
   const [bannerItems, setBannerItems] = React.useState([]);
   const [verses, setVerses] = React.useState(null);
-  const [showNT, setShowNT] = React.useState(false);
-  const [showOT, setShowOT] = React.useState(false);
+  const [showNT, setShowNT] = React.useState(true);
+  const [showOT, setShowOT] = React.useState(true);
   const [fontSize, setFontSize] = React.useState(15);
   const [comments, setComments] = React.useState([]);
   const [commentName, setCommentName] = React.useState(() => localStorage.getItem('bibleAppName') || '');
@@ -35,7 +35,7 @@ export default function Reading() {
 
   React.useEffect(() => {
     setNtDone(false); setOtDone(false);
-    setShowNT(false); setShowOT(false);
+    setShowNT(true); setShowOT(true);
     setVerses(null); setTodayReaders([]); setBannerItems([]);
     loadVerses();
     loadComments();
@@ -216,7 +216,7 @@ export default function Reading() {
             {verses?.nt_audio && (
   <AudioPlayer
     label="NT Audio"
-    book={verses.nt_title?.split(' - ')[1]?.split(' ')[0] || 'NT'}
+    book={verses.nt_title?.split(' - ')[1]?.replace(/\.\s*\d+.*/, '').trim() || 'NT'}
     audioJson={verses.nt_audio}
     startChap={parseInt(verses.nt_title?.match(/(\d+):/)?.[1] || '1', 10)}
   />
@@ -245,7 +245,7 @@ export default function Reading() {
             {verses?.ot_audio && (
   <AudioPlayer
     label="OT Audio"
-    book={verses.ot_title?.split(' - ')[1]?.split(' ')[0] || 'OT'}
+    book={verses.ot_title?.split(' - ')[1]?.replace(/\.\s*\d+.*/, '').trim() || 'OT'}
     audioJson={verses.ot_audio}
     startChap={parseInt(verses.ot_title?.match(/(\d+):/)?.[1] || '1', 10)}
   />
