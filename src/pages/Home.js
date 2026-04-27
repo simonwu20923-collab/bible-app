@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 
-export default function Home() {
+export default function Home({ lang = 'en' }) {
   const [name, setName] = React.useState(() => localStorage.getItem('bibleAppName') || '');
   const [nameInput, setNameInput] = React.useState('');
   const [stats, setStats] = React.useState(null);
@@ -13,14 +13,56 @@ export default function Home() {
   const [loading, setLoading] = React.useState(true);
   const navigate = useNavigate();
 
+  const ui = {
+    en: {
+      title: 'Church in Cerritos', sub: 'Bible Reading Tracker 2026',
+      namePlaceholder: 'Enter your name...', start: 'Start →',
+      streak: 'Day Streak 🔥', fullDays: 'Full Days ✓', daysRead: 'Days Read',
+      continueReading: '📖 Continue Reading', next: 'Next:',
+      todayReading: '📅 Today\'s Reading', goToDate: 'Go to current date',
+      viewSchedule: '🗓 View Schedule', calList: 'Calendar & List',
+      thisWeek: '🏆 This Week', allTime: '⭐ All Time',
+      noReadings: 'No readings this week yet',
+      full: 'full', days: 'days',
+      recentComments: '💬 Recent Comments',
+      loading: 'Loading...',
+    },
+    es: {
+      title: 'Iglesia en Cerritos', sub: 'Registro de Lectura Bíblica 2026',
+      namePlaceholder: 'Ingresa tu nombre...', start: 'Comenzar →',
+      streak: 'Racha 🔥', fullDays: 'Días Completos ✓', daysRead: 'Días Leídos',
+      continueReading: '📖 Continuar Leyendo', next: 'Siguiente:',
+      todayReading: '📅 Lectura de Hoy', goToDate: 'Ir a la fecha actual',
+      viewSchedule: '🗓 Ver Horario', calList: 'Calendario y Lista',
+      thisWeek: '🏆 Esta Semana', allTime: '⭐ Todo el Tiempo',
+      noReadings: 'Sin lecturas esta semana',
+      full: 'completo', days: 'días',
+      recentComments: '💬 Comentarios Recientes',
+      loading: 'Cargando...',
+    },
+    zh: {
+      title: '瑟瑞托斯召會', sub: '2026年聖經閱讀記錄',
+      namePlaceholder: '輸入你的名字...', start: '開始 →',
+      streak: '連續天數 🔥', fullDays: '完整天數 ✓', daysRead: '已讀天數',
+      continueReading: '📖 繼續閱讀', next: '下一個：',
+      todayReading: '📅 今日閱讀', goToDate: '前往今天',
+      viewSchedule: '🗓 閱讀計劃', calList: '日曆與列表',
+      thisWeek: '🏆 本週', allTime: '⭐ 總排行',
+      noReadings: '本週還沒有閱讀記錄',
+      full: '全部', days: '天',
+      recentComments: '💬 最近留言',
+      loading: '載入中...',
+    },
+  };
+  const t = ui[lang] || ui.en;
+
   React.useEffect(() => { loadLeaderboard(); loadRecentComments(); }, []);
   React.useEffect(() => { if (name) loadMyStats(name); }, [name]);
 
   async function loadRecentComments() {
     const { data } = await supabase.from('comments')
       .select('name, text, date, created_at')
-      .order('created_at', { ascending: false })
-      .limit(5);
+      .order('created_at', { ascending: false }).limit(5);
     if (data) setRecentComments(data);
   }
 
@@ -49,7 +91,6 @@ export default function Home() {
       else break;
     }
 
-    // Find next unread date
     for (let i = 0; i < 30; i++) {
       const d = new Date(today);
       d.setDate(today.getDate() + i);
@@ -98,18 +139,19 @@ export default function Home() {
   }
 
   function formatDate(dateStr) {
-    return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', {
-      month: 'short', day: 'numeric'
-    });
+    return new Date(dateStr + 'T12:00:00').toLocaleDateString(
+      lang === 'zh' ? 'zh-TW' : lang === 'es' ? 'es-ES' : 'en-US',
+      { month: 'short', day: 'numeric' }
+    );
   }
 
   function timeAgo(ts) {
     const m = Math.floor((Date.now() - new Date(ts)) / 60000);
-    if (m < 1) return 'just now';
-    if (m < 60) return `${m}m ago`;
+    if (m < 1) return lang === 'zh' ? '剛剛' : lang === 'es' ? 'ahora mismo' : 'just now';
+    if (m < 60) return lang === 'zh' ? `${m}分鐘前` : lang === 'es' ? `hace ${m}m` : `${m}m ago`;
     const h = Math.floor(m / 60);
-    if (h < 24) return `${h}h ago`;
-    return `${Math.floor(h / 24)}d ago`;
+    if (h < 24) return lang === 'zh' ? `${h}小時前` : lang === 'es' ? `hace ${h}h` : `${h}h ago`;
+    return lang === 'zh' ? `${Math.floor(h/24)}天前` : lang === 'es' ? `hace ${Math.floor(h/24)}d` : `${Math.floor(h/24)}d ago`;
   }
 
   const medals = ['🥇', '🥈', '🥉'];
@@ -119,13 +161,13 @@ export default function Home() {
       <div className="page">
         <div className="welcome-card">
           <div className="welcome-emoji">📖</div>
-          <h1>Church in Cerritos</h1>
-          <p className="welcome-sub">Bible Reading Tracker 2026</p>
+          <h1>{t.title}</h1>
+          <p className="welcome-sub">{t.sub}</p>
           <div className="name-input-row">
-            <input className="name-input" placeholder="Enter your name..."
+            <input className="name-input" placeholder={t.namePlaceholder}
               value={nameInput} onChange={e => setNameInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && saveName()} />
-            <button className="start-btn" onClick={saveName}>Start →</button>
+            <button className="start-btn" onClick={saveName}>{t.start}</button>
           </div>
         </div>
       </div>
@@ -138,15 +180,15 @@ export default function Home() {
         <div className="stats-row">
           <div className="stat-card">
             <div className="stat-number">{stats.streak}</div>
-            <div className="stat-label">Day Streak 🔥</div>
+            <div className="stat-label">{t.streak}</div>
           </div>
           <div className="stat-card">
             <div className="stat-number">{stats.fullDays}</div>
-            <div className="stat-label">Full Days ✓</div>
+            <div className="stat-label">{t.fullDays}</div>
           </div>
           <div className="stat-card">
             <div className="stat-number">{stats.totalDays}</div>
-            <div className="stat-label">Days Read</div>
+            <div className="stat-label">{t.daysRead}</div>
           </div>
         </div>
       )}
@@ -156,43 +198,41 @@ export default function Home() {
           <button className="home-btn home-btn-primary"
             onClick={() => navigate(nextDate === new Date().toISOString().split('T')[0]
               ? '/reading' : `/reading?date=${nextDate}`)}>
-            <div className="home-btn-title">📖 Continue Reading</div>
-            <div className="home-btn-sub">Next: {formatDate(nextDate)}</div>
+            <div className="home-btn-title">{t.continueReading}</div>
+            <div className="home-btn-sub">{t.next} {formatDate(nextDate)}</div>
           </button>
         )}
-        <button className="home-btn home-btn-green"
-          onClick={() => navigate('/reading')}>
-          <div className="home-btn-title">📅 Today's Reading</div>
-          <div className="home-btn-sub">Go to current date</div>
+        <button className="home-btn home-btn-green" onClick={() => navigate('/reading')}>
+          <div className="home-btn-title">{t.todayReading}</div>
+          <div className="home-btn-sub">{t.goToDate}</div>
         </button>
-        <button className="home-btn home-btn-blue"
-          onClick={() => navigate('/schedule')}>
-          <div className="home-btn-title">🗓 View Schedule</div>
-          <div className="home-btn-sub">Calendar & List</div>
+        <button className="home-btn home-btn-blue" onClick={() => navigate('/schedule')}>
+          <div className="home-btn-title">{t.viewSchedule}</div>
+          <div className="home-btn-sub">{t.calList}</div>
         </button>
       </div>
 
-      {loading ? <div className="loading">Loading...</div> : (
+      {loading ? <div className="loading">{t.loading}</div> : (
         <div className="leaderboards">
           <div className="leaderboard-card">
-            <div className="leaderboard-title">🏆 This Week</div>
+            <div className="leaderboard-title">{t.thisWeek}</div>
             {topWeek.length === 0
-              ? <div className="lb-empty">No readings this week yet</div>
+              ? <div className="lb-empty">{t.noReadings}</div>
               : topWeek.map((r, i) => (
                 <div className="lb-row" key={r.name}>
                   <span className="lb-rank">{medals[i] || i + 1}</span>
                   <span className="lb-name">{r.name}</span>
-                  <span className="lb-score">{r.full} full · {r.total} days</span>
+                  <span className="lb-score">{r.full} {t.full} · {r.total} {t.days}</span>
                 </div>
               ))}
           </div>
           <div className="leaderboard-card">
-            <div className="leaderboard-title">⭐ All Time</div>
+            <div className="leaderboard-title">{t.allTime}</div>
             {topAllTime.map((r, i) => (
               <div className="lb-row" key={r.name}>
                 <span className="lb-rank">{medals[i] || i + 1}</span>
                 <span className="lb-name">{r.name}</span>
-                <span className="lb-score">{r.full} full · {r.total} days</span>
+                <span className="lb-score">{r.full} {t.full} · {r.total} {t.days}</span>
               </div>
             ))}
           </div>
@@ -201,7 +241,7 @@ export default function Home() {
 
       {recentComments.length > 0 && (
         <div className="recent-comments-section">
-          <div className="comments-title">💬 Recent Comments</div>
+          <div className="comments-title">{t.recentComments}</div>
           {recentComments.map((c, i) => (
             <div className="comment" key={i}
               onClick={() => navigate(`/reading?date=${c.date}`)}
