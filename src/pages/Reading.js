@@ -10,12 +10,11 @@ export default function Reading({ lang = 'en' }) {
   const currentDate = searchParams.get('date') || todayStr;
 
   const dateLabel = new Date(currentDate + 'T12:00:00').toLocaleDateString(
-    lang === 'zh' ? 'zh-TW' : lang === 'es' ? 'es-ES' : 'en-US',
+    lang === 'zh' || lang === 'sc' ? 'zh-TW' : lang === 'es' ? 'es-ES' : 'en-US',
     { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }
   );
   const startOfYear = new Date(new Date(currentDate).getFullYear(), 0, 0);
   const dayOfYear = Math.floor((new Date(currentDate + 'T12:00:00') - startOfYear) / 86400000);
-
   const reading = getReadingForDate(currentDate);
 
   const [name, setName] = React.useState(() => localStorage.getItem('bibleAppName') || '');
@@ -38,31 +37,27 @@ export default function Reading({ lang = 'en' }) {
     setNtDone(false); setOtDone(false);
     setShowNT(true); setShowOT(true);
     setVerses(null); setTodayReaders([]); setBannerItems([]);
-    loadVerses();
-    loadComments();
+    loadVerses(); loadComments();
     if (name) loadReaders(name);
   }, [currentDate]);
 
   async function loadVerses() {
     const { data } = await supabase.from('verses')
-      .select('nt_title,nt_text,ot_title,ot_text,nt_audio,ot_audio,nt_text_es,ot_text_es,nt_text_zh,ot_text_zh')
+      .select('nt_title,nt_text,ot_title,ot_text,nt_audio,ot_audio,nt_audio_zh,ot_audio_zh,nt_text_es,ot_text_es,nt_text_zh,ot_text_zh,nt_text_sc,ot_text_sc')
       .eq('date', currentDate).single();
     if (data) setVerses(data);
   }
 
   async function loadReaders(n) {
     const { data } = await supabase.from('checkins')
-      .select('name,portion,created_at')
-      .eq('date', currentDate)
+      .select('name,portion,created_at').eq('date', currentDate)
       .order('created_at', { ascending: true });
     if (!data) return;
-
     if (n) {
       const my = data.filter(r => r.name.toLowerCase() === n.toLowerCase());
       if (my.some(r => r.portion === 'NT')) setNtDone(true);
       if (my.some(r => r.portion === 'OT')) setOtDone(true);
     }
-
     const map = {};
     data.forEach(r => {
       const k = r.name.toLowerCase();
@@ -71,17 +66,13 @@ export default function Reading({ lang = 'en' }) {
       if (r.portion === 'OT') map[k].ot = true;
     });
     setTodayReaders(Object.values(map));
-
     const recent = [...data].reverse().slice(0, 8);
-    setBannerItems(recent.map(r => ({
-      name: r.name, portion: r.portion, time: timeAgo(r.created_at)
-    })));
+    setBannerItems(recent.map(r => ({ name: r.name, portion: r.portion, time: timeAgo(r.created_at) })));
   }
 
   async function loadComments() {
     const { data } = await supabase.from('comments')
-      .select('id,name,text,created_at')
-      .eq('date', currentDate)
+      .select('id,name,text,created_at').eq('date', currentDate)
       .order('created_at', { ascending: false });
     if (data) setComments(data);
   }
@@ -119,75 +110,79 @@ export default function Reading({ lang = 'en' }) {
     const { error } = await supabase.from('comments').insert({
       date: currentDate, name: commentName.trim(), text: commentText.trim()
     });
-    if (!error) {
-      setCommentText('');
-      localStorage.setItem('bibleAppName', commentName.trim());
-      loadComments();
-    }
+    if (!error) { setCommentText(''); localStorage.setItem('bibleAppName', commentName.trim()); loadComments(); }
     setPosting(false);
   }
 
   function saveName() {
     if (nameInput.trim()) {
       localStorage.setItem('bibleAppName', nameInput.trim());
-      setName(nameInput.trim());
-      setCommentName(nameInput.trim());
+      setName(nameInput.trim()); setCommentName(nameInput.trim());
     }
   }
 
+  // Get text for current language
   function getNtText() {
     if (!verses) return null;
     if (lang === 'es' && verses.nt_text_es) return verses.nt_text_es;
     if (lang === 'zh' && verses.nt_text_zh) return verses.nt_text_zh;
+    if (lang === 'sc' && verses.nt_text_sc) return verses.nt_text_sc;
     return verses.nt_text;
   }
-
   function getOtText() {
     if (!verses) return null;
     if (lang === 'es' && verses.ot_text_es) return verses.ot_text_es;
     if (lang === 'zh' && verses.ot_text_zh) return verses.ot_text_zh;
+    if (lang === 'sc' && verses.ot_text_sc) return verses.ot_text_sc;
     return verses.ot_text;
   }
+  // Both zh and sc use same audio
+  function getNtAudio() {
+    if (!verses) return null;
+    if ((lang === 'zh' || lang === 'sc') && verses.nt_audio_zh) return verses.nt_audio_zh;
+    return verses.nt_audio;
+  }
+  function getOtAudio() {
+    if (!verses) return null;
+    if ((lang === 'zh' || lang === 'sc') && verses.ot_audio_zh) return verses.ot_audio_zh;
+    return verses.ot_audio;
+  }
 
-  function getTitle(englishTitle) {
-    if (!englishTitle || lang === 'en') return englishTitle;
-    if (lang === 'es') {
-      return englishTitle
-        .replace('New Testament', 'Nuevo Testamento')
-        .replace('Old Testament', 'Antiguo Testamento');
+  // Translate section title
+  function getTitle(title) {
+    if (!title || lang === 'en') return title;
+    if (lang === 'es') return title.replace('New Testament', 'Nuevo Testamento').replace('Old Testament', 'Antiguo Testamento');
+    const isZh = lang === 'zh' || lang === 'sc';
+    if (isZh) {
+      return title
+        .replace('New Testament', lang === 'sc' ? '新约' : '新約')
+        .replace('Old Testament', lang === 'sc' ? '旧约' : '舊約')
+        .replace('Matthew','太').replace('Mark','可').replace('Luke','路')
+        .replace('John','约').replace('Acts','徒').replace('Romans','罗')
+        .replace('1 Corinthians','林前').replace('2 Corinthians','林后')
+        .replace('Galatians','加').replace('Ephesians','弗').replace('Philippians','腓')
+        .replace('Colossians','西').replace('1 Thessalonians','帖前').replace('2 Thessalonians','帖后')
+        .replace('1 Timothy','提前').replace('2 Timothy','提后').replace('Titus','多')
+        .replace('Philemon','门').replace('Hebrews','来').replace('James','雅')
+        .replace('1 Peter','彼前').replace('2 Peter','彼后')
+        .replace('1 John','约一').replace('2 John','约二').replace('3 John','约三')
+        .replace('Jude','犹').replace('Revelation','启')
+        .replace('Genesis','创').replace('Exodus','出').replace('Leviticus','利')
+        .replace('Numbers','民').replace('Deuteronomy','申').replace('Joshua','书')
+        .replace('Judges','士').replace('Ruth','得')
+        .replace('1 Samuel','撒上').replace('2 Samuel','撒下')
+        .replace('1 Kings','王上').replace('2 Kings','王下')
+        .replace('1 Chronicles','代上').replace('2 Chronicles','代下')
+        .replace('Ezra','拉').replace('Nehemiah','尼').replace('Esther','斯')
+        .replace('Job','伯').replace('Psalms','诗').replace('Proverbs','箴')
+        .replace('Ecclesiastes','传').replace('Song of Songs','歌')
+        .replace('Isaiah','赛').replace('Jeremiah','耶').replace('Lamentations','哀')
+        .replace('Ezekiel','结').replace('Daniel','但').replace('Hosea','何')
+        .replace('Joel','珥').replace('Amos','摩').replace('Micah','弥')
+        .replace('Nahum','鸿').replace('Habakkuk','哈').replace('Zephaniah','番')
+        .replace('Haggai','该').replace('Zechariah','亚').replace('Malachi','玛');
     }
-    if (lang === 'zh') {
-      return englishTitle
-        .replace('New Testament', '新約').replace('Old Testament', '舊約')
-        .replace('Matthew', '太').replace('Mark', '可').replace('Luke', '路')
-        .replace('John', '約').replace('Acts', '徒').replace('Romans', '羅')
-        .replace('1 Corinthians', '林前').replace('2 Corinthians', '林後')
-        .replace('Galatians', '加').replace('Ephesians', '弗')
-        .replace('Philippians', '腓').replace('Colossians', '西')
-        .replace('1 Thessalonians', '帖前').replace('2 Thessalonians', '帖後')
-        .replace('1 Timothy', '提前').replace('2 Timothy', '提後')
-        .replace('Titus', '多').replace('Philemon', '門')
-        .replace('Hebrews', '來').replace('James', '雅')
-        .replace('1 Peter', '彼前').replace('2 Peter', '彼後')
-        .replace('1 John', '約壹').replace('2 John', '約貳').replace('3 John', '約參')
-        .replace('Jude', '猶').replace('Revelation', '啟')
-        .replace('Genesis', '創').replace('Exodus', '出').replace('Leviticus', '利')
-        .replace('Numbers', '民').replace('Deuteronomy', '申').replace('Joshua', '書')
-        .replace('Judges', '士').replace('Ruth', '得')
-        .replace('1 Samuel', '撒上').replace('2 Samuel', '撒下')
-        .replace('1 Kings', '王上').replace('2 Kings', '王下')
-        .replace('1 Chronicles', '代上').replace('2 Chronicles', '代下')
-        .replace('Ezra', '拉').replace('Nehemiah', '尼').replace('Esther', '斯')
-        .replace('Job', '伯').replace('Psalms', '詩').replace('Proverbs', '箴')
-        .replace('Ecclesiastes', '傳').replace('Song of Songs', '歌')
-        .replace('Isaiah', '賽').replace('Jeremiah', '耶')
-        .replace('Lamentations', '哀').replace('Ezekiel', '結').replace('Daniel', '但')
-        .replace('Hosea', '何').replace('Joel', '珥').replace('Amos', '摩')
-        .replace('Obadiah', '俄').replace('Jonah', '拿').replace('Micah', '彌')
-        .replace('Nahum', '鴻').replace('Habakkuk', '哈').replace('Zephaniah', '番')
-        .replace('Haggai', '該').replace('Zechariah', '亞').replace('Malachi', '瑪');
-    }
-    return englishTitle;
+    return title;
   }
 
   function formatVerses(text) {
@@ -196,56 +191,43 @@ export default function Reading({ lang = 'en' }) {
       const mEn = line.match(/^([A-Z][a-z]+ \d+ :\d+)\s+(.*)/);
       if (mEn) return (
         <p key={i} className="verse-line" style={{ fontSize: fontSize + 'px' }}>
-          <span className="verse-ref">{mEn[1]}</span>
-          <span className="verse-body"> {mEn[2]}</span>
+          <span className="verse-ref">{mEn[1]}</span><span className="verse-body"> {mEn[2]}</span>
         </p>
       );
       const mOther = line.match(/^([\w\u4e00-\u9fff]+\.?\s*\d+:\d+)\s+(.*)/);
       if (mOther) return (
         <p key={i} className="verse-line" style={{ fontSize: fontSize + 'px' }}>
-          <span className="verse-ref">{mOther[1]}</span>
-          <span className="verse-body"> {mOther[2]}</span>
+          <span className="verse-ref">{mOther[1]}</span><span className="verse-body"> {mOther[2]}</span>
         </p>
       );
       return line ? <p key={i} className="verse-line" style={{ fontSize: fontSize + 'px' }}>{line}</p> : null;
     });
   }
 
-  // UI labels based on language
   const ui = {
-    en: { readToday: 'read today', hideVerses: '▲ Hide verses', readVerses: '▼ Read verses',
-          finishNT: 'Finish NT', finishOT: 'Finish OT', finishedNT: '✓ Finished NT',
-          finishedOT: '✓ Finished OT', saving: 'Saving...', completed: '🎉 You completed both readings today!',
-          readersTitle: "Today's Readers", discussion: '💬 Discussion', noComments: 'No comments yet — be the first!',
-          yourName: 'Your name', shareThought: 'Share a thought...', post: 'Post Comment', posting: 'Posting...',
-          dayOf: 'Day', of: 'of', person: 'person has', people: 'people have', text: 'Text:' },
-    es: { readToday: 'leyeron hoy', hideVerses: '▲ Ocultar versículos', readVerses: '▼ Leer versículos',
-          finishNT: 'Terminar NT', finishOT: 'Terminar AT', finishedNT: '✓ NT completado',
-          finishedOT: '✓ AT completado', saving: 'Guardando...', completed: '🎉 ¡Completaste ambas lecturas hoy!',
-          readersTitle: 'Lectores de hoy', discussion: '💬 Discusión', noComments: '¡Sé el primero en comentar!',
-          yourName: 'Tu nombre', shareThought: 'Comparte un pensamiento...', post: 'Publicar', posting: 'Publicando...',
-          dayOf: 'Día', of: 'de', person: 'persona leyó', people: 'personas leyeron', text: 'Texto:' },
-    zh: { readToday: '人已閱讀', hideVerses: '▲ 隱藏經文', readVerses: '▼ 閱讀經文',
-          finishNT: '完成新約', finishOT: '完成舊約', finishedNT: '✓ 新約完成',
-          finishedOT: '✓ 舊約完成', saving: '儲存中...', completed: '🎉 你今天完成了兩篇閱讀！',
-          readersTitle: '今日讀者', discussion: '💬 討論', noComments: '還沒有留言，成為第一個！',
-          yourName: '你的名字', shareThought: '分享你的想法...', post: '發表留言', posting: '發佈中...',
-          dayOf: '第', of: '天 / 365', person: '人已閱讀', people: '人已閱讀', text: '字體：' },
+    en: { hideVerses:'▲ Hide verses', readVerses:'▼ Read verses', finishNT:'Finish NT', finishOT:'Finish OT', finishedNT:'✓ Finished NT', finishedOT:'✓ Finished OT', saving:'Saving...', completed:'🎉 You completed both readings today!', readersTitle:"Today's Readers", discussion:'💬 Discussion', noComments:'No comments yet — be the first!', yourName:'Your name', shareThought:'Share a thought...', post:'Post Comment', posting:'Posting...', person:'person has', people:'people have', today:'today', text:'Text:', dayOf:'Day', of:'of' },
+    es: { hideVerses:'▲ Ocultar', readVerses:'▼ Leer versículos', finishNT:'Terminar NT', finishOT:'Terminar AT', finishedNT:'✓ NT completado', finishedOT:'✓ AT completado', saving:'Guardando...', completed:'🎉 ¡Completaste ambas lecturas hoy!', readersTitle:'Lectores de hoy', discussion:'💬 Discusión', noComments:'¡Sé el primero!', yourName:'Tu nombre', shareThought:'Comparte un pensamiento...', post:'Publicar', posting:'Publicando...', person:'persona leyó', people:'personas leyeron', today:'', text:'Texto:', dayOf:'Día', of:'de' },
+    zh: { hideVerses:'▲ 隱藏經文', readVerses:'▼ 閱讀經文', finishNT:'完成新約', finishOT:'完成舊約', finishedNT:'✓ 新約完成', finishedOT:'✓ 舊約完成', saving:'儲存中...', completed:'🎉 你今天完成了兩篇閱讀！', readersTitle:'今日讀者', discussion:'💬 討論', noComments:'還沒有留言', yourName:'你的名字', shareThought:'分享你的想法...', post:'發表留言', posting:'發佈中...', person:'人已閱讀', people:'人已閱讀', today:'', text:'字體：', dayOf:'第', of:'天/365' },
+    sc: { hideVerses:'▲ 隐藏经文', readVerses:'▼ 阅读经文', finishNT:'完成新约', finishOT:'完成旧约', finishedNT:'✓ 新约完成', finishedOT:'✓ 旧约完成', saving:'保存中...', completed:'🎉 你今天完成了两篇阅读！', readersTitle:'今日读者', discussion:'💬 讨论', noComments:'还没有留言', yourName:'你的名字', shareThought:'分享你的想法...', post:'发表留言', posting:'发布中...', person:'人已阅读', people:'人已阅读', today:'', text:'字体：', dayOf:'第', of:'天/365' },
   };
   const t = ui[lang] || ui.en;
 
   if (!name) {
+    const placeholder = { en:'Enter your name...', es:'Ingresa tu nombre...', zh:'輸入你的名字...', sc:'输入你的名字...' };
+    const title = { en:"What's your name?", es:'¿Cuál es tu nombre?', zh:'你叫什麼名字？', sc:'你叫什么名字？' };
+    const sub = { en:'So we can track your reading', es:'Para registrar tu lectura', zh:'記錄你的閱讀進度', sc:'记录你的阅读进度' };
+    const btn = { en:'Save →', es:'Guardar →', zh:'儲存 →', sc:'保存 →' };
     return (
       <div className="page">
         <div className="welcome-card">
           <div className="welcome-emoji">📖</div>
-          <h1>{lang === 'zh' ? '你叫什麼名字？' : lang === 'es' ? '¿Cuál es tu nombre?' : "What's your name?"}</h1>
-          <p className="welcome-sub">{lang === 'zh' ? '記錄你的閱讀進度' : lang === 'es' ? 'Para registrar tu lectura' : 'So we can track your reading'}</p>
+          <h1>{title[lang] || title.en}</h1>
+          <p className="welcome-sub">{sub[lang] || sub.en}</p>
           <div className="name-input-row">
-            <input className="name-input" placeholder={lang === 'zh' ? '輸入你的名字...' : lang === 'es' ? 'Ingresa tu nombre...' : 'Enter your name...'}
+            <input className="name-input" placeholder={placeholder[lang] || placeholder.en}
               value={nameInput} onChange={e => setNameInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && saveName()} />
-            <button className="start-btn" onClick={saveName}>{lang === 'zh' ? '儲存 →' : lang === 'es' ? 'Guardar →' : 'Save →'}</button>
+            <button className="start-btn" onClick={saveName}>{btn[lang] || btn.en}</button>
           </div>
         </div>
       </div>
@@ -283,7 +265,7 @@ export default function Reading({ lang = 'en' }) {
 
         <div className="reading-meta-row">
           <span className="readers-count-pill">
-            {todayReaders.length} {todayReaders.length === 1 ? t.person : t.people} {lang !== 'zh' ? 'today' : ''}
+            {todayReaders.length} {todayReaders.length === 1 ? t.person : t.people} {t.today}
           </span>
           <div className="font-size-row">
             <span>{t.text}</span>
@@ -294,16 +276,17 @@ export default function Reading({ lang = 'en' }) {
         </div>
 
         <div className="reading-cards">
+          {/* NT Card */}
           <div className={`reading-card ${ntDone ? 'done' : ''}`}>
             <div className="reading-card-header">
               <span className="reading-tag nt-tag">NT</span>
               <span className="reading-portion">{reading.nt}</span>
             </div>
-            {verses?.nt_audio && (
+            {getNtAudio() && (
               <AudioPlayer
                 label="NT Audio"
                 book={verses.nt_title?.replace(/New Testament - /, '').replace(/\s[\d:~]+.*/, '').trim() || 'NT'}
-                audioJson={verses.nt_audio}
+                audioJson={getNtAudio()}
                 startChap={parseInt(verses.nt_title?.match(/(\d+):/)?.[1] || '1', 10)}
               />
             )}
@@ -313,30 +296,28 @@ export default function Reading({ lang = 'en' }) {
             {showNT && (
               <div className="verses-box">
                 {verses ? (
-                  <>
-                    <div className="verses-title">{getTitle(verses.nt_title)}</div>
-                    <div className="verses-text">{formatVerses(getNtText())}</div>
-                  </>
+                  <><div className="verses-title">{getTitle(verses.nt_title)}</div>
+                  <div className="verses-text">{formatVerses(getNtText())}</div></>
                 ) : <div className="loading">Loading...</div>}
               </div>
             )}
             <button className={`checkin-btn ${ntDone ? 'checked' : ''}`}
-              onClick={() => handleCheckin('NT', ntDone, setNtDone)}
-              disabled={ntDone || !!saving}>
+              onClick={() => handleCheckin('NT', ntDone, setNtDone)} disabled={ntDone || !!saving}>
               {saving === 'NT' ? t.saving : ntDone ? t.finishedNT : t.finishNT}
             </button>
           </div>
 
+          {/* OT Card */}
           <div className={`reading-card ${otDone ? 'done' : ''}`}>
             <div className="reading-card-header">
               <span className="reading-tag ot-tag">OT</span>
               <span className="reading-portion">{reading.ot}</span>
             </div>
-            {verses?.ot_audio && (
+            {getOtAudio() && (
               <AudioPlayer
                 label="OT Audio"
                 book={verses.ot_title?.replace(/Old Testament - /, '').replace(/\s[\d:~]+.*/, '').trim() || 'OT'}
-                audioJson={verses.ot_audio}
+                audioJson={getOtAudio()}
                 startChap={parseInt(verses.ot_title?.match(/(\d+):/)?.[1] || '1', 10)}
               />
             )}
@@ -346,30 +327,25 @@ export default function Reading({ lang = 'en' }) {
             {showOT && (
               <div className="verses-box">
                 {verses ? (
-                  <>
-                    <div className="verses-title">{getTitle(verses.ot_title)}</div>
-                    <div className="verses-text">{formatVerses(getOtText())}</div>
-                  </>
+                  <><div className="verses-title">{getTitle(verses.ot_title)}</div>
+                  <div className="verses-text">{formatVerses(getOtText())}</div></>
                 ) : <div className="loading">Loading...</div>}
               </div>
             )}
             <button className={`checkin-btn ot ${otDone ? 'checked' : ''}`}
-              onClick={() => handleCheckin('OT', otDone, setOtDone)}
-              disabled={otDone || !!saving}>
+              onClick={() => handleCheckin('OT', otDone, setOtDone)} disabled={otDone || !!saving}>
               {saving === 'OT' ? t.saving : otDone ? t.finishedOT : t.finishOT}
             </button>
           </div>
         </div>
 
-        {ntDone && otDone && (
-          <div className="completed-banner">{t.completed}</div>
-        )}
+        {ntDone && otDone && <div className="completed-banner">{t.completed}</div>}
 
         {todayReaders.length > 0 && (
           <div className="readers-section">
             <div className="readers-title">{t.readersTitle} ({todayReaders.length})</div>
             <div className="readers-table">
-              <div className="readers-header"><span>{lang === 'zh' ? '姓名' : lang === 'es' ? 'Nombre' : 'Name'}</span><span>NT</span><span>OT</span></div>
+              <div className="readers-header"><span>{lang === 'en' ? 'Name' : lang === 'es' ? 'Nombre' : '姓名'}</span><span>NT</span><span>OT</span></div>
               {todayReaders.map(r => (
                 <div className="readers-row" key={r.name}>
                   <span>{r.name}</span>

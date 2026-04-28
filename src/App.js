@@ -14,9 +14,15 @@ function App() {
   function changeLang(l) {
     setLang(l);
     localStorage.setItem('bibleAppLang', l);
-    // Trigger storage event so other components can react
-    window.dispatchEvent(new Event('langChange'));
   }
+
+  const navLabels = {
+    en: { home: 'Home', reading: 'Reading', schedule: 'Schedule' },
+    es: { home: 'Inicio', reading: 'Lectura', schedule: 'Horario' },
+    zh: { home: '首頁', reading: '閱讀', schedule: '計劃' },
+    sc: { home: '首页', reading: '阅读', schedule: '计划' },
+  };
+  const nav = navLabels[lang] || navLabels.en;
 
   return (
     <BrowserRouter>
@@ -24,23 +30,17 @@ function App() {
         <nav className="navbar">
           <div className="nav-brand">📖 Bible Reading</div>
           <div className="nav-links">
-            <NavLink to="/" end>
-              {lang === 'zh' ? '首頁' : lang === 'es' ? 'Inicio' : 'Home'}
-            </NavLink>
-            <NavLink to="/reading">
-              {lang === 'zh' ? '閱讀' : lang === 'es' ? 'Lectura' : 'Reading'}
-            </NavLink>
-            <NavLink to="/schedule">
-              {lang === 'zh' ? '計劃' : lang === 'es' ? 'Horario' : 'Schedule'}
-            </NavLink>
+            <NavLink to="/" end>{nav.home}</NavLink>
+            <NavLink to="/reading">{nav.reading}</NavLink>
+            <NavLink to="/schedule">{nav.schedule}</NavLink>
             <NavLink to="/admin">Admin</NavLink>
           </div>
-          {/* Language Toggle in Navbar */}
           <div className="lang-toggle">
             {[
               { code: 'en', label: '🇺🇸' },
               { code: 'es', label: '🇪🇸' },
-              { code: 'zh', label: '中文' },
+              { code: 'zh', label: '繁' },
+              { code: 'sc', label: '简' },
             ].map(({ code, label }) => (
               <button
                 key={code}
