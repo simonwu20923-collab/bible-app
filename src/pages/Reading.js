@@ -151,10 +151,15 @@ export default function Reading({ lang = 'en' }) {
   // Translate section title
   function getTitle(title) {
     if (!title || lang === 'en') return title;
-    if (lang === 'es') return title.replace('New Testament', 'Nuevo Testamento').replace('Old Testament', 'Antiguo Testamento');
+    // Normalize abbreviated book names to full names first
+    let normalized = title;
+    Object.entries(ABBREV).forEach(([abbr, full]) => {
+      normalized = normalized.replace(new RegExp(abbr.replace(/\./g, '\\.'), 'g'), full);
+    });
+    if (lang === 'es') return normalized.replace('New Testament', 'Nuevo Testamento').replace('Old Testament', 'Antiguo Testamento');
     const isZh = lang === 'zh' || lang === 'sc';
     if (isZh) {
-      return title
+      return normalized
         .replace('New Testament', lang === 'sc' ? '新约' : '新約')
         .replace('Old Testament', lang === 'sc' ? '旧约' : '舊約')
         .replace('Matthew','太').replace('Mark','可').replace('Luke','路')
@@ -171,8 +176,11 @@ export default function Reading({ lang = 'en' }) {
         .replace('Numbers','民').replace('Deuteronomy','申').replace('Joshua','书')
         .replace('Judges','士').replace('Ruth','得')
         .replace('1 Samuel','撒上').replace('2 Samuel','撒下')
+        .replace('1 Sam','撒上').replace('2 Sam','撒下')
         .replace('1 Kings','王上').replace('2 Kings','王下')
+        .replace('1 King','王上').replace('2 King','王下')
         .replace('1 Chronicles','代上').replace('2 Chronicles','代下')
+        .replace('1 Chr','代上').replace('2 Chr','代下')
         .replace('Ezra','拉').replace('Nehemiah','尼').replace('Esther','斯')
         .replace('Job','伯').replace('Psalms','诗').replace('Proverbs','箴')
         .replace('Ecclesiastes','传').replace('Song of Songs','歌')
@@ -203,7 +211,143 @@ export default function Reading({ lang = 'en' }) {
       return line ? <p key={i} className="verse-line" style={{ fontSize: fontSize + 'px' }}>{line}</p> : null;
     });
   }
+  // Normalize abbreviated book names to full English names
+  const ABBREV = {
+    'Gen.':'Genesis','Ex.':'Exodus','Exod.':'Exodus','Lev.':'Leviticus',
+    'Num.':'Numbers','Deut.':'Deuteronomy','Josh.':'Joshua','Judg.':'Judges',
+    '1 Sam.':'1 Samuel','2 Sam.':'2 Samuel',
+    '1 Kgs.':'1 Kings','2 Kgs.':'2 Kings',
+    '1 King':'1 Kings','2 King':'2 Kings',
+    '1 Chr':'1 Chronicles','2 Chr':'2 Chronicles',
+    '1 Sam':'1 Samuel','2 Sam':'2 Samuel',
+    '1 Chr.':'1 Chronicles','2 Chr.':'2 Chronicles',
+    'Neh.':'Nehemiah','Esth.':'Esther',
+    'Ps.':'Psalms','Pss.':'Psalms','Prov.':'Proverbs',
+    'Eccl.':'Ecclesiastes','Song.':'Song of Songs','Song of Sol.':'Song of Songs',
+    'Isa.':'Isaiah','Jer.':'Jeremiah','Lam.':'Lamentations',
+    'Ezek.':'Ezekiel','Dan.':'Daniel','Hos.':'Hosea',
+    'Mic.':'Micah','Nah.':'Nahum','Hab.':'Habakkuk','Zeph.':'Zephaniah',
+    'Hag.':'Haggai','Zech.':'Zechariah','Mal.':'Malachi',
+    'Matt.':'Matthew','Mk.':'Mark','Lk.':'Luke','Jn.':'John',
+    'Rom.':'Romans',
+    '1 Cor.':'1 Corinthians','2 Cor.':'2 Corinthians',
+    'Gal.':'Galatians','Eph.':'Ephesians','Phil.':'Philippians','Col.':'Colossians',
+    '1 Thess.':'1 Thessalonians','2 Thess.':'2 Thessalonians',
+    '1 Tim.':'1 Timothy','2 Tim.':'2 Timothy',
+    'Philem.':'Philemon','Heb.':'Hebrews','Jas.':'James',
+    '1 Pet.':'1 Peter','2 Pet.':'2 Peter',
+    '1 Jn.':'1 John','2 Jn.':'2 John','3 Jn.':'3 John','Rev.':'Revelation',
+  };
 
+  const ZH_MAP = {
+    'Matthew':'太','Mark':'可','Luke':'路','John':'约',
+    'Acts':'徒','Romans':'罗','Genesis':'创','Exodus':'出',
+    'Leviticus':'利','Numbers':'民','Deuteronomy':'申',
+    'Psalms':'诗','Proverbs':'箴','Isaiah':'赛','Revelation':'启',
+    '1 Samuel':'撒上','2 Samuel':'撒下','1 Kings':'王上','2 Kings':'王下',
+    '1 Chronicles':'代上','2 Chronicles':'代下',
+    'Jeremiah':'耶','Ezekiel':'结','Daniel':'但',
+    'Joshua':'书','Judges':'士','Ruth':'得','Ezra':'拉',
+    'Nehemiah':'尼','Esther':'斯','Job':'伯',
+    'Ecclesiastes':'传','Song of Songs':'歌',
+    'Lamentations':'哀','Hosea':'何','Joel':'珥','Amos':'摩',
+    'Obadiah':'俄','Jonah':'拿','Micah':'弥','Nahum':'鸿',
+    'Habakkuk':'哈','Zephaniah':'番','Haggai':'该',
+    'Zechariah':'亚','Malachi':'玛','Hebrews':'来','James':'雅',
+    '1 John':'约一','2 John':'约二','3 John':'约三',
+    '1 Peter':'彼前','2 Peter':'彼后','Jude':'犹',
+    '1 Corinthians':'林前','2 Corinthians':'林后',
+    'Galatians':'加','Ephesians':'弗','Philippians':'腓',
+    'Colossians':'西','1 Thessalonians':'帖前','2 Thessalonians':'帖后',
+    '1 Timothy':'提前','2 Timothy':'提后','Titus':'多','Philemon':'门',
+  };
+
+  const ES_MAP = {
+    'Matthew':'Mt.','Mark':'Mc.','Luke':'Lc.','John':'Jn.',
+    'Acts':'Hch.','Romans':'Ro.','Genesis':'Gn.','Exodus':'Éx.',
+    'Leviticus':'Lv.','Numbers':'Nm.','Deuteronomy':'Dt.',
+    'Psalms':'Sal.','Proverbs':'Pr.','Isaiah':'Is.','Revelation':'Ap.',
+    '1 Samuel':'1 S.','2 Samuel':'2 S.','1 Kings':'1 R.','2 Kings':'2 R.',
+    '1 Chronicles':'1 Cr.','2 Chronicles':'2 Cr.',
+    'Jeremiah':'Jer.','Ezekiel':'Ez.','Daniel':'Dn.',
+    'Joshua':'Jos.','Judges':'Jue.','Ruth':'Rut',
+    'Job':'Job','Hebrews':'Heb.','James':'Sant.',
+    '1 Corinthians':'1 Co.','2 Corinthians':'2 Co.',
+    'Galatians':'Gá.','Ephesians':'Ef.','Philippians':'Fil.',
+    'Colossians':'Col.','1 John':'1 Jn.','2 John':'2 Jn.','3 John':'3 Jn.',
+    '1 Peter':'1 Pe.','2 Peter':'2 Pe.','Jude':'Jud.',
+  };
+
+  function normalizeBook(abbrev) {
+    return ABBREV[abbrev] || abbrev;
+  }
+
+  // Translate a portion string like "Matt. 28:1-28:20" into the target language
+  function translatePortion(portion, language) {
+    if (!portion || language === 'en') return portion;
+    // First normalize abbreviations to full names
+    let result = portion;
+    Object.entries(ABBREV).forEach(([abbr, full]) => {
+      result = result.replace(new RegExp(abbr.replace(/\./g, '\\.'), 'g'), full);
+    });
+    if (language === 'zh' || language === 'sc') {
+      Object.entries(ZH_MAP).forEach(([full, char]) => {
+        result = result.replace(new RegExp(full, 'g'), char);
+      });
+    } else if (language === 'es') {
+      Object.entries(ES_MAP).forEach(([full, abbr]) => {
+        result = result.replace(new RegExp(full, 'g'), abbr);
+      });
+    }
+    return result;
+  }
+
+  function getBookLabel(title, language) {
+    if (!title) return '';
+    // Extract book name from title like "New Testament - Luke 21:5~21:36"
+    const clean = title
+      .replace(/New Testament\s*-\s*/i, '')
+      .replace(/Old Testament\s*-\s*/i, '')
+      .replace(/\s+[\d:~]+.*/, '').trim();
+    const full = normalizeBook(clean);
+    if (language === 'en') return full;
+    if (language === 'es') return ES_MAP[full] || full;
+    if (language === 'zh' || language === 'sc') return ZH_MAP[full] || full;
+    return full;
+  }
+
+  // Returns explicit per-chapter labels for cross-book titles like "1 King 22:51~2 King 2:18"
+  // e.g. ["\u738b\u4e0a \u7b2c22\u7ae0", "\u738b\u4e0b \u7b2c1\u7ae0", "\u738b\u4e0b \u7b2c2\u7ae0"]
+  // Returns null for normal same-book titles.
+  function getCrossBookChapterLabels(title, audioCount, language) {
+    if (!title || !audioCount) return null;
+    const clean = title.replace(/^(New|Old) Testament\s*-\s*/i, '').trim();
+    const m = clean.match(/^(.+?)\s+(\d+):\d+\s*[~\-]\s*(.+?)\s+(\d+):\d+\s*$/);
+    if (!m) return null;
+    const startBookFull = normalizeBook(m[1].trim());
+    const startChap    = parseInt(m[2]);
+    const endBookFull  = normalizeBook(m[3].trim());
+    const endChap      = parseInt(m[4]);
+    if (startBookFull === endBookFull) return null;
+    const book2Count = endChap;
+    const book1Count = audioCount - book2Count;
+    function bookL(fullName) {
+      if (language === 'zh' || language === 'sc') return ZH_MAP[fullName] || fullName;
+      if (language === 'es') return ES_MAP[fullName] || fullName;
+      return fullName;
+    }
+    function chapLbl(b, n) {
+      if (language === 'zh' || language === 'sc') return b + ' \u7b2c' + n + '\u7ae0';
+      if (language === 'es') return b + ' Cap. ' + n;
+      return b + ' Ch. ' + n;
+    }
+    const labels = [];
+    const b1 = bookL(startBookFull);
+    for (let i = 0; i < book1Count; i++) labels.push(chapLbl(b1, startChap + i));
+    const b2 = bookL(endBookFull);
+    for (let i = 1; i <= book2Count; i++) labels.push(chapLbl(b2, i));
+    return labels;
+  }
   const ui = {
     en: { hideVerses:'▲ Hide verses', readVerses:'▼ Read verses', finishNT:'Finish NT', finishOT:'Finish OT', finishedNT:'✓ Finished NT', finishedOT:'✓ Finished OT', saving:'Saving...', completed:'🎉 You completed both readings today!', readersTitle:"Today's Readers", discussion:'💬 Discussion', noComments:'No comments yet — be the first!', yourName:'Your name', shareThought:'Share a thought...', post:'Post Comment', posting:'Posting...', person:'person has', people:'people have', today:'today', text:'Text:', dayOf:'Day', of:'of' },
     es: { hideVerses:'▲ Ocultar', readVerses:'▼ Leer versículos', finishNT:'Terminar NT', finishOT:'Terminar AT', finishedNT:'✓ NT completado', finishedOT:'✓ AT completado', saving:'Guardando...', completed:'🎉 ¡Completaste ambas lecturas hoy!', readersTitle:'Lectores de hoy', discussion:'💬 Discusión', noComments:'¡Sé el primero!', yourName:'Tu nombre', shareThought:'Comparte un pensamiento...', post:'Publicar', posting:'Publicando...', person:'persona leyó', people:'personas leyeron', today:'', text:'Texto:', dayOf:'Día', of:'de' },
@@ -280,16 +424,18 @@ export default function Reading({ lang = 'en' }) {
           <div className={`reading-card ${ntDone ? 'done' : ''}`}>
             <div className="reading-card-header">
               <span className="reading-tag nt-tag">NT</span>
-              <span className="reading-portion">{reading.nt}</span>
+              <span className="reading-portion">{translatePortion(reading.nt, lang)}</span>
             </div>
             {getNtAudio() && (
-              <AudioPlayer
-                label="NT Audio"
-                book={verses.nt_title?.replace(/New Testament - /, '').replace(/\s[\d:~]+.*/, '').trim() || 'NT'}
-                audioJson={getNtAudio()}
-                startChap={parseInt(verses.nt_title?.match(/(\d+):/)?.[1] || '1', 10)}
-              />
-            )}
+  <AudioPlayer
+    key={`nt-${lang}`}
+    label={lang === 'zh' ? '新約音頻' : lang === 'sc' ? '新约音频' : lang === 'es' ? 'Audio NT' : 'NT Audio'}
+    book={getBookLabel(verses.nt_title, lang)}
+    audioJson={getNtAudio()}
+    startChap={parseInt(verses.nt_title?.match(/(\d+):/)?.[1] || '1', 10)}
+    lang={lang}
+  />
+)}
             <button className="verses-toggle" onClick={() => setShowNT(!showNT)}>
               {showNT ? t.hideVerses : t.readVerses}
             </button>
@@ -311,16 +457,19 @@ export default function Reading({ lang = 'en' }) {
           <div className={`reading-card ${otDone ? 'done' : ''}`}>
             <div className="reading-card-header">
               <span className="reading-tag ot-tag">OT</span>
-              <span className="reading-portion">{reading.ot}</span>
+              <span className="reading-portion">{translatePortion(reading.ot, lang)}</span>
             </div>
             {getOtAudio() && (
-              <AudioPlayer
-                label="OT Audio"
-                book={verses.ot_title?.replace(/Old Testament - /, '').replace(/\s[\d:~]+.*/, '').trim() || 'OT'}
-                audioJson={getOtAudio()}
-                startChap={parseInt(verses.ot_title?.match(/(\d+):/)?.[1] || '1', 10)}
-              />
-            )}
+  <AudioPlayer
+    key={`ot-${lang}`}
+    label={lang === 'zh' ? '舊約音頻' : lang === 'sc' ? '旧约音频' : lang === 'es' ? 'Audio AT' : 'OT Audio'}
+    book={getBookLabel(verses.ot_title, lang)}
+    audioJson={getOtAudio()}
+    startChap={parseInt(verses.ot_title?.match(/(\d+):/)?.[1] || '1', 10)}
+    lang={lang}
+    chapterLabels={getCrossBookChapterLabels(verses.ot_title, JSON.parse(getOtAudio() || '[]').length, lang)}
+  />
+)}
             <button className="verses-toggle" onClick={() => setShowOT(!showOT)}>
               {showOT ? t.hideVerses : t.readVerses}
             </button>
