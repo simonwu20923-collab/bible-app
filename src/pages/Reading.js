@@ -3,11 +3,16 @@ import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../supabase';
 import { getReadingForDate } from '../data/schedule';
 import AudioPlayer from '../components/AudioPlayer';
+import CommentsSection from '../components/CommentsSection';
 
 export default function Reading({ lang = 'en' }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const todayStr = new Date().toISOString().split('T')[0];
   const currentDate = searchParams.get('date') || todayStr;
+  // Map any year → 2026 for verse lookups (plan repeats annually)
+  // Leap year: Feb 29 → use Feb 28 instead
+  let queryDate = currentDate.replace(/^\d{4}/, '2026');
+  if (queryDate.endsWith('-02-29')) queryDate = '2026-02-28';
 
   const dateLabel = new Date(currentDate + 'T12:00:00').toLocaleDateString(
     lang === 'zh' || lang === 'sc' ? 'zh-TW' : lang === 'es' ? 'es-ES' : 'en-US',
@@ -28,23 +33,29 @@ export default function Reading({ lang = 'en' }) {
   const [showNT, setShowNT] = React.useState(true);
   const [showOT, setShowOT] = React.useState(true);
   const [fontSize, setFontSize] = React.useState(18);
-  const [comments, setComments] = React.useState([]);
-  const [commentName, setCommentName] = React.useState(() => localStorage.getItem('bibleAppName') || '');
-  const [commentText, setCommentText] = React.useState('');
-  const [posting, setPosting] = React.useState(false);
+
 
   React.useEffect(() => {
     setNtDone(false); setOtDone(false);
     setShowNT(true); setShowOT(true);
     setVerses(null); setTodayReaders([]); setBannerItems([]);
-    loadVerses(); loadComments();
+    loadVerses();
     if (name) loadReaders(name);
   }, [currentDate]);
+
+  function timeAgo(ts) {
+    const m = Math.floor((Date.now() - new Date(ts)) / 60000);
+    if (m < 1) return 'just now';
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    return `${Math.floor(h / 24)}d ago`;
+  }
 
   async function loadVerses() {
     const { data } = await supabase.from('verses')
       .select('nt_title,nt_text,ot_title,ot_text,nt_audio,ot_audio,nt_audio_zh,ot_audio_zh,nt_text_es,ot_text_es,nt_text_zh,ot_text_zh,nt_text_sc,ot_text_sc')
-      .eq('date', currentDate).single();
+      .eq('date', queryDate).single();
     if (data) setVerses(data);
   }
 
@@ -70,29 +81,6 @@ export default function Reading({ lang = 'en' }) {
     setBannerItems(recent.map(r => ({ name: r.name, portion: r.portion, time: timeAgo(r.created_at) })));
   }
 
-  async function loadComments() {
-    const { data } = await supabase.from('comments')
-      .select('id,name,text,created_at').eq('date', currentDate)
-      .order('created_at', { ascending: false });
-    if (data) setComments(data);
-  }
-
-  function timeAgo(ts) {
-    const m = Math.floor((Date.now() - new Date(ts)) / 60000);
-    if (m < 1) return 'just now';
-    if (m < 60) return `${m}m ago`;
-    const h = Math.floor(m / 60);
-    if (h < 24) return `${h}h ago`;
-    return `${Math.floor(h / 24)}d ago`;
-  }
-
-  function changeDate(days) {
-    const d = new Date(currentDate + 'T12:00:00');
-    d.setDate(d.getDate() + days);
-    const nd = d.toISOString().split('T')[0];
-    setSearchParams(nd === todayStr ? {} : { date: nd });
-  }
-
   async function handleCheckin(portion, done, setDone) {
     if (done || saving || !name) return;
     setSaving(portion);
@@ -104,20 +92,17 @@ export default function Reading({ lang = 'en' }) {
     setSaving('');
   }
 
-  async function postComment() {
-    if (!commentText.trim() || !commentName.trim() || posting) return;
-    setPosting(true);
-    const { error } = await supabase.from('comments').insert({
-      date: currentDate, name: commentName.trim(), text: commentText.trim()
-    });
-    if (!error) { setCommentText(''); localStorage.setItem('bibleAppName', commentName.trim()); loadComments(); }
-    setPosting(false);
+  function changeDate(delta) {
+    const d = new Date(currentDate + 'T12:00:00');
+    d.setDate(d.getDate() + delta);
+    const nd = d.toISOString().split('T')[0];
+    setSearchParams(nd === todayStr ? {} : { date: nd });
   }
 
   function saveName() {
     if (nameInput.trim()) {
       localStorage.setItem('bibleAppName', nameInput.trim());
-      setName(nameInput.trim()); setCommentName(nameInput.trim());
+      setName(nameInput.trim());
     }
   }
 
@@ -524,34 +509,7 @@ export default function Reading({ lang = 'en' }) {
           </div>
         )}
 
-        <div className="comments-section">
-          <div className="comments-title">{t.discussion}</div>
-          {comments.length === 0 && <div className="lb-empty">{t.noComments}</div>}
-          {comments.map(c => (
-            <div className="comment" key={c.id}>
-              <div className="comment-header">
-                <span className="comment-author">{c.name}</span>
-                <span className="comment-time">{timeAgo(c.created_at)}</span>
-              </div>
-              <p className="comment-text">{c.text}</p>
-            </div>
-          ))}
-          <div className="comment-form">
-            <input className="name-input" placeholder={t.yourName}
-              value={commentName} onChange={e => setCommentName(e.target.value)}
-              style={{ marginBottom: '8px' }} />
-            <textarea className="comment-input" placeholder={t.shareThought}
-              value={commentText} rows={3}
-              onChange={e => setCommentText(e.target.value.slice(0, 300))} />
-            <div className="comment-footer">
-              <span className="char-count">{commentText.length} / 300</span>
-              <button className="start-btn" onClick={postComment}
-                disabled={posting || !commentText.trim() || !commentName.trim()}>
-                {posting ? t.posting : t.post}
-              </button>
-            </div>
-          </div>
-        </div>
+        <CommentsSection queryDate={queryDate} lang={lang} />
       </div>
     </>
   );
