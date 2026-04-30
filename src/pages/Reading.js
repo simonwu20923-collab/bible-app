@@ -153,42 +153,26 @@ export default function Reading({ lang = 'en' }) {
     if (!title || lang === 'en') return title;
     // Normalize abbreviated book names to full names first
     let normalized = title;
-    Object.entries(ABBREV).forEach(([abbr, full]) => {
-      normalized = normalized.replace(new RegExp(abbr.replace(/\./g, '\\.'), 'g'), full);
+    Object.entries(ABBREV).sort((a,b) => b[0].length - a[0].length).forEach(([abbr, full]) => {
+      const escaped = abbr.replace(/\./g, '\\.');
+      const endsWithWordChar = /\w/.test(abbr[abbr.length - 1]);
+      const pattern = '\\b' + escaped + (endsWithWordChar ? '\\b' : '');
+      normalized = normalized.replace(new RegExp(pattern, 'g'), full);
     });
     if (lang === 'es') return normalized.replace('New Testament', 'Nuevo Testamento').replace('Old Testament', 'Antiguo Testamento');
     const isZh = lang === 'zh' || lang === 'sc';
     if (isZh) {
-      return normalized
+      const cmap = lang === 'sc' ? SC_MAP : ZH_MAP;
+      let r = normalized
         .replace('New Testament', lang === 'sc' ? '新约' : '新約')
-        .replace('Old Testament', lang === 'sc' ? '旧约' : '舊約')
-        .replace('Matthew','太').replace('Mark','可').replace('Luke','路')
-        .replace('John','约').replace('Acts','徒').replace('Romans','罗')
-        .replace('1 Corinthians','林前').replace('2 Corinthians','林后')
-        .replace('Galatians','加').replace('Ephesians','弗').replace('Philippians','腓')
-        .replace('Colossians','西').replace('1 Thessalonians','帖前').replace('2 Thessalonians','帖后')
-        .replace('1 Timothy','提前').replace('2 Timothy','提后').replace('Titus','多')
-        .replace('Philemon','门').replace('Hebrews','来').replace('James','雅')
-        .replace('1 Peter','彼前').replace('2 Peter','彼后')
-        .replace('1 John','约一').replace('2 John','约二').replace('3 John','约三')
-        .replace('Jude','犹').replace('Revelation','启')
-        .replace('Genesis','创').replace('Exodus','出').replace('Leviticus','利')
-        .replace('Numbers','民').replace('Deuteronomy','申').replace('Joshua','书')
-        .replace('Judges','士').replace('Ruth','得')
-        .replace('1 Samuel','撒上').replace('2 Samuel','撒下')
-        .replace('1 Sam','撒上').replace('2 Sam','撒下')
-        .replace('1 Kings','王上').replace('2 Kings','王下')
-        .replace('1 King','王上').replace('2 King','王下')
-        .replace('1 Chronicles','代上').replace('2 Chronicles','代下')
-        .replace('1 Chr','代上').replace('2 Chr','代下')
-        .replace('Ezra','拉').replace('Nehemiah','尼').replace('Esther','斯')
-        .replace('Job','伯').replace('Psalms','诗').replace('Proverbs','箴')
-        .replace('Ecclesiastes','传').replace('Song of Songs','歌')
-        .replace('Isaiah','赛').replace('Jeremiah','耶').replace('Lamentations','哀')
-        .replace('Ezekiel','结').replace('Daniel','但').replace('Hosea','何')
-        .replace('Joel','珥').replace('Amos','摩').replace('Micah','弥')
-        .replace('Nahum','鸿').replace('Habakkuk','哈').replace('Zephaniah','番')
-        .replace('Haggai','该').replace('Zechariah','亚').replace('Malachi','玛');
+        .replace('Old Testament', lang === 'sc' ? '旧约' : '舊約');
+      // Replace 1 King / 2 King (not in cmap, handle manually)
+      r = r.replace(/\b1 King\b/g, cmap['1 Kings'] || '王上')
+           .replace(/\b2 King\b/g, cmap['2 Kings'] || '王下');
+      Object.entries(cmap).sort((a,b) => b[0].length - a[0].length).forEach(([full, char]) => {
+        r = r.replace(new RegExp(full, 'g'), char);
+      });
+      return r;
     }
     return title;
   }
@@ -213,16 +197,16 @@ export default function Reading({ lang = 'en' }) {
   }
   // Normalize abbreviated book names to full English names
   const ABBREV = {
-    'Gen.':'Genesis','Ex.':'Exodus','Exod.':'Exodus','Lev.':'Leviticus',
+    'Gen.':'Genesis','Ex.':'Exodus','Exo.':'Exodus','Exod.':'Exodus','Lev.':'Leviticus',
     'Num.':'Numbers','Deut.':'Deuteronomy','Josh.':'Joshua','Judg.':'Judges',
     '1 Sam.':'1 Samuel','2 Sam.':'2 Samuel',
-    '1 Kgs.':'1 Kings','2 Kgs.':'2 Kings',
-    '1 King':'1 Kings','2 King':'2 Kings',
-    '1 Chr':'1 Chronicles','2 Chr':'2 Chronicles',
     '1 Sam':'1 Samuel','2 Sam':'2 Samuel',
+    '1 Kgs.':'1 Kings','2 Kgs.':'2 Kings',
     '1 Chr.':'1 Chronicles','2 Chr.':'2 Chronicles',
+    '1 Chron.':'1 Chronicles','2 Chron.':'2 Chronicles',
+    '1 King':'1 Kings','2 King':'2 Kings',
     'Neh.':'Nehemiah','Esth.':'Esther',
-    'Ps.':'Psalms','Pss.':'Psalms','Prov.':'Proverbs',
+    'Psa.':'Psalms','Ps.':'Psalms','Pss.':'Psalms','Prov.':'Proverbs',
     'Eccl.':'Ecclesiastes','Song.':'Song of Songs','Song of Sol.':'Song of Songs',
     'Isa.':'Isaiah','Jer.':'Jeremiah','Lam.':'Lamentations',
     'Ezek.':'Ezekiel','Dan.':'Daniel','Hos.':'Hosea',
@@ -239,7 +223,32 @@ export default function Reading({ lang = 'en' }) {
     '1 Jn.':'1 John','2 Jn.':'2 John','3 Jn.':'3 John','Rev.':'Revelation',
   };
 
+  // Traditional Chinese book abbreviations (繁體)
   const ZH_MAP = {
+    'Matthew':'太','Mark':'可','Luke':'路','John':'約',
+    'Acts':'徒','Romans':'羅','Genesis':'創','Exodus':'出',
+    'Leviticus':'利','Numbers':'民','Deuteronomy':'申',
+    'Psalms':'詩','Proverbs':'箴','Isaiah':'賽','Revelation':'啟',
+    '1 Samuel':'撒上','2 Samuel':'撒下','1 Kings':'王上','2 Kings':'王下',
+    '1 Chronicles':'代上','2 Chronicles':'代下',
+    'Jeremiah':'耶','Ezekiel':'結','Daniel':'但',
+    'Joshua':'書','Judges':'士','Ruth':'得','Ezra':'拉',
+    'Nehemiah':'尼','Esther':'斯','Job':'伯',
+    'Ecclesiastes':'傳','Song of Songs':'歌',
+    'Lamentations':'哀','Hosea':'何','Joel':'珥','Amos':'摩',
+    'Obadiah':'俄','Jonah':'拿','Micah':'彌','Nahum':'鴻',
+    'Habakkuk':'哈','Zephaniah':'番','Haggai':'該',
+    'Zechariah':'亞','Malachi':'瑪','Hebrews':'來','James':'雅',
+    '1 John':'約一','2 John':'約二','3 John':'約三',
+    '1 Peter':'彼前','2 Peter':'彼後','Jude':'猶',
+    '1 Corinthians':'林前','2 Corinthians':'林後',
+    'Galatians':'加','Ephesians':'弗','Philippians':'腓',
+    'Colossians':'西','1 Thessalonians':'帖前','2 Thessalonians':'帖後',
+    '1 Timothy':'提前','2 Timothy':'提後','Titus':'多','Philemon':'門',
+  };
+
+  // Simplified Chinese book abbreviations (簡體)
+  const SC_MAP = {
     'Matthew':'太','Mark':'可','Luke':'路','John':'约',
     'Acts':'徒','Romans':'罗','Genesis':'创','Exodus':'出',
     'Leviticus':'利','Numbers':'民','Deuteronomy':'申',
@@ -287,11 +296,18 @@ export default function Reading({ lang = 'en' }) {
     if (!portion || language === 'en') return portion;
     // First normalize abbreviations to full names
     let result = portion;
-    Object.entries(ABBREV).forEach(([abbr, full]) => {
-      result = result.replace(new RegExp(abbr.replace(/\./g, '\\.'), 'g'), full);
+    // Sort longest first to prevent '1 Sam.' being shadowed by '1 Sam'
+    // \b at start always; \b at end only if pattern ends with word char (prevents '1 Sam' matching '1 Samuel')
+    Object.entries(ABBREV).sort((a,b) => b[0].length - a[0].length).forEach(([abbr, full]) => {
+      // ABBREV keys only contain letters, digits, spaces, dots — only dots need escaping
+      const escaped = abbr.replace(/\./g, '\\.');
+      const endsWithWordChar = /\w/.test(abbr[abbr.length - 1]);
+      const pattern = '\\b' + escaped + (endsWithWordChar ? '\\b' : '');
+      result = result.replace(new RegExp(pattern, 'g'), full);
     });
     if (language === 'zh' || language === 'sc') {
-      Object.entries(ZH_MAP).forEach(([full, char]) => {
+      const cmap = language === 'sc' ? SC_MAP : ZH_MAP;
+      Object.entries(cmap).forEach(([full, char]) => {
         result = result.replace(new RegExp(full, 'g'), char);
       });
     } else if (language === 'es') {
@@ -312,7 +328,8 @@ export default function Reading({ lang = 'en' }) {
     const full = normalizeBook(clean);
     if (language === 'en') return full;
     if (language === 'es') return ES_MAP[full] || full;
-    if (language === 'zh' || language === 'sc') return ZH_MAP[full] || full;
+    if (language === 'zh') return ZH_MAP[full] || full;
+    if (language === 'sc') return SC_MAP[full] || full;
     return full;
   }
 
@@ -332,7 +349,8 @@ export default function Reading({ lang = 'en' }) {
     const book2Count = endChap;
     const book1Count = audioCount - book2Count;
     function bookL(fullName) {
-      if (language === 'zh' || language === 'sc') return ZH_MAP[fullName] || fullName;
+      if (language === 'zh') return ZH_MAP[fullName] || fullName;
+      if (language === 'sc') return SC_MAP[fullName] || fullName;
       if (language === 'es') return ES_MAP[fullName] || fullName;
       return fullName;
     }
