@@ -10,6 +10,20 @@ function App() {
   const [lang, setLang] = React.useState(
     () => localStorage.getItem('bibleAppLang') || 'en'
   );
+  const [darkMode, setDarkMode] = React.useState(
+    () => localStorage.getItem('bibleAppTheme') !== 'light'
+  );
+
+  // Apply theme class to body whenever darkMode changes
+  React.useEffect(() => {
+    if (darkMode) {
+      document.body.classList.remove('light');
+      localStorage.setItem('bibleAppTheme', 'dark');
+    } else {
+      document.body.classList.add('light');
+      localStorage.setItem('bibleAppTheme', 'light');
+    }
+  }, [darkMode]);
 
   function changeLang(l) {
     setLang(l);
@@ -35,28 +49,39 @@ function App() {
             <NavLink to="/schedule">{nav.schedule}</NavLink>
             <NavLink to="/admin">Admin</NavLink>
           </div>
-          <div className="lang-toggle">
-            {[
-              { code: 'en', label: '🇺🇸' },
-              { code: 'es', label: '🇪🇸' },
-              { code: 'zh', label: '繁' },
-              { code: 'sc', label: '简' },
-            ].map(({ code, label }) => (
-              <button
-                key={code}
-                className={`lang-btn ${lang === code ? 'lang-btn-active' : ''}`}
-                onClick={() => changeLang(code)}
-              >
-                {label}
-              </button>
-            ))}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {/* Theme toggle */}
+            <button
+              className="theme-toggle"
+              onClick={() => setDarkMode(d => !d)}
+              title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              {darkMode ? '☀️' : '🌙'}
+            </button>
+            {/* Language toggle */}
+            <div className="lang-toggle">
+              {[
+                { code: 'en', label: '🇺🇸' },
+                { code: 'es', label: '🇪🇸' },
+                { code: 'zh', label: '繁' },
+                { code: 'sc', label: '简' },
+              ].map(({ code, label }) => (
+                <button
+                  key={code}
+                  className={`lang-btn ${lang === code ? 'lang-btn-active' : ''}`}
+                  onClick={() => changeLang(code)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
         </nav>
         <Routes>
-          <Route path="/" element={<div className="main-content"><Home lang={lang} /></div>} />
+          <Route path="/"        element={<div className="main-content"><Home lang={lang} /></div>} />
           <Route path="/reading" element={<Reading lang={lang} />} />
           <Route path="/schedule" element={<div className="main-content"><Schedule lang={lang} /></div>} />
-          <Route path="/admin" element={<div className="main-content"><Admin /></div>} />
+          <Route path="/admin"   element={<div className="main-content"><Admin /></div>} />
         </Routes>
       </div>
     </BrowserRouter>
