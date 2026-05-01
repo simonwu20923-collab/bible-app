@@ -62,13 +62,25 @@ export default function Home({ lang = 'en' }) {
 
   async function loadMyStats(n) {
     // Filter to current year so stats reset each January
-    const { data } = await supabase
-      .from('checkins')
-      .select('date,portion')
-      .ilike('name', n)
-      .gte('date', yearStart)
-      .lte('date', yearEnd);
-    if (!data) return;
+    // Paginate to get ALL personal checkins
+    let allRows = [];
+    let p = 0;
+    const SZ = 1000;
+    while (true) {
+      const { data: batch } = await supabase
+        .from('checkins')
+        .select('date,portion')
+        .ilike('name', n)
+        .gte('date', yearStart)
+        .lte('date', yearEnd)
+        .range(p * SZ, (p + 1) * SZ - 1);
+      if (!batch || batch.length === 0) break;
+      allRows = allRows.concat(batch);
+      if (batch.length < SZ) break;
+      p++;
+    }
+    const data = allRows;
+    if (!data.length) return;
 
     const byDate = {};
     data.forEach(r => {
@@ -108,12 +120,23 @@ export default function Home({ lang = 'en' }) {
   async function loadLeaderboard() {
     setLoading(true);
 
-    // Filter to current year — leaderboard resets each January
-    const { data } = await supabase
-      .from('checkins')
-      .select('name,date,portion')
-      .gte('date', yearStart)
-      .lte('date', yearEnd);
+    // Paginate to get ALL checkins — Supabase defaults to 1000 row limit
+    let allData = [];
+    let page = 0;
+    const PAGE_SIZE = 1000;
+    while (true) {
+      const { data, error } = await supabase
+        .from('checkins')
+        .select('name,date,portion')
+        .gte('date', yearStart)
+        .lte('date', yearEnd)
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+      if (error || !data || data.length === 0) break;
+      allData = allData.concat(data);
+      if (data.length < PAGE_SIZE) break; // last page
+      page++;
+    }
+    const data = allData;
 
     if (data) {
       const today = new Date();
