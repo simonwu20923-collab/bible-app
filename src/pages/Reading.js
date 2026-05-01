@@ -33,9 +33,29 @@ export default function Reading({ lang = 'en' }) {
   const [showNT, setShowNT] = React.useState(true);
   const [showOT, setShowOT] = React.useState(true);
   const [fontSize, setFontSize] = React.useState(18);
+  const [navbarHeight, setNavbarHeight] = React.useState(54);
+  const [scrolled, setScrolled] = React.useState(false);
 
-
+  // Measure navbar height (handles mobile 2-row wrap)
   React.useEffect(() => {
+    const navbar = document.querySelector('.navbar');
+    if (!navbar) return;
+    const update = () => setNavbarHeight(navbar.offsetHeight);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(navbar);
+    return () => observer.disconnect();
+  }, []);
+
+  // Switch banner to top:0 once user scrolls past navbar
+  React.useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > navbarHeight);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [navbarHeight]);
+
+
+  React.useEffect(() => { // eslint-disable-line react-hooks/exhaustive-deps
     setNtDone(false); setOtDone(false);
     setShowNT(true); setShowOT(true);
     setVerses(null); setTodayReaders([]); setBannerItems([]);
@@ -324,7 +344,7 @@ export default function Reading({ lang = 'en' }) {
   function getCrossBookChapterLabels(title, audioCount, language) {
     if (!title || !audioCount) return null;
     const clean = title.replace(/^(New|Old) Testament\s*-\s*/i, '').trim();
-    const m = clean.match(/^(.+?)\s+(\d+):\d+\s*[~\-]\s*(.+?)\s+(\d+):\d+\s*$/);
+    const m = clean.match(/^(.+?)\s+(\d+):\d+\s*[~-]\s*(.+?)\s+(\d+):\d+\s*$/);
     if (!m) return null;
     const startBookFull = normalizeBook(m[1].trim());
     const startChap    = parseInt(m[2]);
@@ -387,7 +407,7 @@ export default function Reading({ lang = 'en' }) {
   return (
     <>
       {bannerItems.length > 0 && (
-        <div className="sticky-banner">
+        <div className="sticky-banner" style={{ top: scrolled ? 0 : navbarHeight }}>
           <div className="banner-track">
             {bannerContent.map((r, i) => (
               <span key={i} className="banner-item">

@@ -167,7 +167,7 @@ body {
 .reading-page-content {
   width: 100%;
   margin: 0 auto;
-  padding: 20px 24px;
+  padding: 54px 24px 20px;  /* navbar + banner height; fine-tuned by design */
   box-sizing: border-box;
 }
 .reading-cards { display: flex; flex-direction: row; gap: 16px; width: 100%; align-items: flex-start; }
@@ -312,14 +312,15 @@ body {
 /* Sticky banner */
 .sticky-banner {
   position: fixed;
-  top: 52px;
+  top: 54px; /* fallback — overridden by JS */
   left: 0; right: 0;
   z-index: 98;
   background: var(--banner-bg);
   border-bottom: 1px solid var(--border);
-  padding: 6px 0;
+  padding: 9px 0;
   overflow: hidden;
   white-space: nowrap;
+  transition: top 0.2s ease;
 }
 .banner-track { display: inline-flex; animation: scroll-left 25s linear infinite; }
 @keyframes scroll-left {
@@ -614,7 +615,7 @@ body {
   .nav-brand { font-size: 0.95rem; }
   .nav-links { gap: 2px; }
   .nav-links a { padding: 6px 10px; font-size: 0.78rem; }
-  .reading-page-content { padding: 10px 8px; }
+  .reading-page-content { padding: 58px 8px 10px; }  /* extra top for 2-row mobile navbar + banner */
   .date-nav { padding: 10px 12px; }
   .reading-date-label { font-size: 0.9rem; }
   .reading-cards { flex-direction: column; gap: 12px; }
@@ -629,6 +630,6 @@ body {
   .leaderboards { grid-template-columns: 1fr; }
   .admin-grid { grid-template-columns: 1fr; }
   .schedule-header { flex-direction: column; align-items: flex-start; }
-  .sticky-banner { top: 48px; }
+  /* .sticky-banner top set by JS on mobile */
   .lang-toggle { order: 3; width: 100%; justify-content: center; }
 }
