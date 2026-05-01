@@ -1,20 +1,40 @@
 /**
  * fixChineseAudioDates.js
- * Fixes missing Chinese audio for specific dates using local M3U files
- * Missing:
- *   NT: 2/19 (Mark 4), 2/23 (Mark 6), 2/25 (Mark 7)
- *   OT: 2/25 (Numbers 7), 3/12 (Deuteronomy 34), 7/4 (2 Chronicles 36)
+ * Fixes 4 dates with spreadsheet errors using Accept-Language: zh-CN
+ * NT 2/19: Mark ch.4, NT 2/23: Mark ch.6
+ * OT 3/12: Deuteronomy ch.34 (spreadsheet says 35, doesn't exist)
+ * OT 7/4: 2 Chronicles ch.36 (spreadsheet says Ezra ch.36, doesn't exist)
  */
 
 const { createClient } = require('@supabase/supabase-js');
-const fs = require('fs');
-const path = require('path');
+const https = require('https');
+const http = require('http');
 
 const SUPABASE_URL = 'https://lsvhmvkhernimxmzcyak.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_VC2J0-DqMbG87ANco-xAvA_7SslVPKc';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const M3U_DIR = path.join(__dirname, 'chinese-m3u');
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function fetchText(url) {
+  return new Promise((resolve, reject) => {
+    const lib = url.startsWith('https') ? https : http;
+    const chunks = [];
+    lib.get(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
+        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+      },
+      timeout: 20000
+    }, (res) => {
+      if ((res.statusCode === 301 || res.statusCode === 302) && res.headers.location)
+        return fetchText(res.headers.location).then(resolve).catch(reject);
+      res.on('data', chunk => chunks.push(chunk));
+      res.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+    }).on('error', reject)
+      .on('timeout', function() { this.destroy(); reject(new Error('Timeout')); });
+  });
+}
 
 function parseM3U(text) {
   text = text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
@@ -35,74 +55,51 @@ function parseM3U(text) {
   return chapters;
 }
 
-function readM3U(filename) {
-  const filePath = path.join(M3U_DIR, filename);
-  if (!fs.existsSync(filePath)) {
-    console.error(`File not found: ${filePath}`);
-    return {};
-  }
-  return parseM3U(fs.readFileSync(filePath, 'utf8'));
+async function getPlaylist(idx) {
+  const text = await fetchText(`https://www.churchinpiscataway.org/bible/playlist/${idx}`);
+  return parseM3U(text);
 }
 
-function getUrls(chapters, startChap, endChap) {
-  const urls = [];
-  for (let c = startChap; c <= endChap; c++) {
-    if (chapters[c]) urls.push(chapters[c]);
-    else console.warn(`  ⚠ Chapter ${c} not found`);
-  }
-  return urls.length > 0 ? JSON.stringify(urls) : null;
-}
-
-async function updateDate(date, updates) {
-  const { error } = await supabase.from('verses').update(updates).eq('date', date);
-  if (error) console.error(`  ✗ ${date}: ${error.message}`);
-  else console.log(`  ✓ ${date} updated`);
+async function update(date, field, urls) {
+  const { error } = await supabase.from('verses')
+    .update({ [field]: JSON.stringify(urls) }).eq('date', date);
+  console.log(error ? `  ✗ ${date}: ${error.message}` : `  ✓ ${date} ${field} updated`);
 }
 
 async function main() {
-  console.log('🔧 Fixing missing Chinese audio dates\n');
+  console.log('🔧 Fixing 4 missing Chinese audio dates\n');
 
-  // Load playlists
-  const markChaps = readM3U('Mark.m3u');
-  const numbersChaps = readM3U('Numbers.m3u');
-  const deutChaps = readM3U('Deuteronomy.m3u');
-  const chronChaps = readM3U('2+Chronicles.m3u');
+  // Mark = playlist 41
+  console.log('Fetching Mark (41)...');
+  const mark = await getPlaylist(41);
+  console.log(`  ${Object.keys(mark).length} chapters\n`);
 
-  console.log(`Mark: ${Object.keys(markChaps).length} chapters`);
-  console.log(`Numbers: ${Object.keys(numbersChaps).length} chapters`);
-  console.log(`Deuteronomy: ${Object.keys(deutChaps).length} chapters`);
-  console.log(`2 Chronicles: ${Object.keys(chronChaps).length} chapters\n`);
+  // NT 2/19: Mark ch.4
+  if (mark[4]) await update('2026-02-19', 'nt_audio_zh', [mark[4]]);
+  else console.log('  ⚠ Mark ch.4 not found');
+  await sleep(200);
 
-  // NT: 2/19 - Mark 4:21~4:34 (chapter 4)
-  console.log('Feb 19 - NT: Mark ch.4');
-  const mark4 = getUrls(markChaps, 4, 4);
-  if (mark4) await updateDate('2026-02-19', { nt_audio_zh: mark4 });
+  // NT 2/23: Mark ch.6
+  if (mark[6]) await update('2026-02-23', 'nt_audio_zh', [mark[6]]);
+  else console.log('  ⚠ Mark ch.6 not found');
+  await sleep(500);
 
-  // NT: 2/23 - Mark 6:1~6:29 (chapter 6)
-  console.log('Feb 23 - NT: Mark ch.6');
-  const mark6 = getUrls(markChaps, 6, 6);
-  if (mark6) await updateDate('2026-02-23', { nt_audio_zh: mark6 });
+  // Deuteronomy = playlist 5, use ch.34 (last chapter)
+  console.log('\nFetching Deuteronomy (5)...');
+  const deut = await getPlaylist(5);
+  console.log(`  ${Object.keys(deut).length} chapters\n`);
 
-  // NT+OT: 2/25 - NT: Mark ch.7, OT: Numbers ch.7
-  console.log('Feb 25 - NT: Mark ch.7, OT: Numbers ch.7');
-  const mark7 = getUrls(markChaps, 7, 7);
-  const num7 = getUrls(numbersChaps, 7, 7);
-  if (mark7 || num7) {
-    const updates = {};
-    if (mark7) updates.nt_audio_zh = mark7;
-    if (num7) updates.ot_audio_zh = num7;
-    await updateDate('2026-02-25', updates);
-  }
+  if (deut[34]) await update('2026-03-12', 'ot_audio_zh', [deut[34]]);
+  else console.log('  ⚠ Deuteronomy ch.34 not found');
+  await sleep(500);
 
-  // OT: 3/12 - Deuteronomy 34 (last chapter, spreadsheet had 35)
-  console.log('Mar 12 - OT: Deuteronomy ch.34');
-  const deut34 = getUrls(deutChaps, 34, 34);
-  if (deut34) await updateDate('2026-03-12', { ot_audio_zh: deut34 });
+  // 2 Chronicles = playlist 14, ch.36
+  console.log('\nFetching 2 Chronicles (14)...');
+  const chron = await getPlaylist(14);
+  console.log(`  ${Object.keys(chron).length} chapters\n`);
 
-  // OT: 7/4 - 2 Chronicles ch.36
-  console.log('Jul 4 - OT: 2 Chronicles ch.36');
-  const chron36 = getUrls(chronChaps, 36, 36);
-  if (chron36) await updateDate('2026-07-04', { ot_audio_zh: chron36 });
+  if (chron[36]) await update('2026-07-04', 'ot_audio_zh', [chron[36]]);
+  else console.log('  ⚠ 2 Chronicles ch.36 not found');
 
   console.log('\n✅ Done!');
 }

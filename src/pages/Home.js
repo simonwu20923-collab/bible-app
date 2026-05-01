@@ -2,10 +2,12 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 import { HomeThreadCard } from '../components/CommentsSection';
+import { useUser } from '../context/UserContext';
 
 export default function Home({ lang = 'en' }) {
-  const [name, setName] = React.useState(() => localStorage.getItem('bibleAppName') || '');
-  const [nameInput, setNameInput] = React.useState('');
+  const { user } = useUser();
+  const name = user?.name || '';
+
   const [stats, setStats] = React.useState(null);
   const [nextDate, setNextDate] = React.useState(null);
   const [topWeek, setTopWeek] = React.useState([]);
@@ -19,15 +21,21 @@ export default function Home({ lang = 'en' }) {
   const yearEnd   = `${year}-12-31`;
 
   const ui = {
-    en: { title:'Church in Cerritos', sub:`Bible Reading Tracker ${year}`, namePlaceholder:'Enter your name...', start:'Start →', streak:'Day Streak 🔥', fullDays:'Full Days ✓', daysRead:'Days Read', continueReading:'📖 Continue Reading', next:'Next:', todayReading:"📅 Today's Reading", goToDate:'Go to current date', viewSchedule:'🗓 View Schedule', calList:'Calendar & List', thisWeek:'🏆 This Week', allTime:'⭐ All Time', noReadings:'No readings this week yet', full:'full', days:'days', recentComments:'💬 Recent Comments', loading:'Loading...' },
-    es: { title:'Iglesia en Cerritos', sub:`Registro de Lectura Bíblica ${year}`, namePlaceholder:'Ingresa tu nombre...', start:'Comenzar →', streak:'Racha 🔥', fullDays:'Días Completos ✓', daysRead:'Días Leídos', continueReading:'📖 Continuar Leyendo', next:'Siguiente:', todayReading:'📅 Lectura de Hoy', goToDate:'Ir a la fecha actual', viewSchedule:'🗓 Ver Horario', calList:'Calendario y Lista', thisWeek:'🏆 Esta Semana', allTime:'⭐ Todo el Tiempo', noReadings:'Sin lecturas esta semana', full:'completo', days:'días', recentComments:'💬 Comentarios Recientes', loading:'Cargando...' },
-    zh: { title:'喜瑞都召會', sub:`${year}年聖經閱讀記錄`, namePlaceholder:'輸入你的名字...', start:'開始 →', streak:'連續天數 🔥', fullDays:'完整天數 ✓', daysRead:'已讀天數', continueReading:'📖 繼續閱讀', next:'下一個：', todayReading:'📅 今日閱讀', goToDate:'前往今天', viewSchedule:'🗓 閱讀計劃', calList:'日曆與列表', thisWeek:'🏆 本週', allTime:'⭐ 總排行', noReadings:'本週還沒有閱讀記錄', full:'全部', days:'天', recentComments:'💬 最近留言', loading:'載入中...' },
-    sc: { title:'喜瑞都召会', sub:`${year}年圣经阅读记录`, namePlaceholder:'输入你的名字...', start:'开始 →', streak:'连续天数 🔥', fullDays:'完整天数 ✓', daysRead:'已读天数', continueReading:'📖 继续阅读', next:'下一个：', todayReading:'📅 今日阅读', goToDate:'前往今天', viewSchedule:'🗓 阅读计划', calList:'日历与列表', thisWeek:'🏆 本周', allTime:'⭐ 总排行', noReadings:'本周还没有阅读记录', full:'全部', days:'天', recentComments:'💬 最近留言', loading:'加载中...' },
+    en: { title:'Church in Cerritos', sub:`Bible Reading Tracker ${year}`, streak:'Day Streak 🔥', fullDays:'Full Days ✓', daysRead:'Days Read', continueReading:'📖 Continue Reading', next:'Next:', todayReading:"📅 Today's Reading", goToDate:'Go to current date', viewSchedule:'🗓 View Schedule', calList:'Calendar & List', thisWeek:'🏆 This Week', allTime:'⭐ All Time', noReadings:'No readings this week yet', full:'full', days:'days', recentComments:'💬 Recent Comments', loading:'Loading...' },
+    es: { title:'Iglesia en Cerritos', sub:`Registro de Lectura Bíblica ${year}`, streak:'Racha 🔥', fullDays:'Días Completos ✓', daysRead:'Días Leídos', continueReading:'📖 Continuar Leyendo', next:'Siguiente:', todayReading:'📅 Lectura de Hoy', goToDate:'Ir a la fecha actual', viewSchedule:'🗓 Ver Horario', calList:'Calendario y Lista', thisWeek:'🏆 Esta Semana', allTime:'⭐ Todo el Tiempo', noReadings:'Sin lecturas esta semana', full:'completo', days:'días', recentComments:'💬 Comentarios Recientes', loading:'Cargando...' },
+    zh: { title:'喜瑞都召會', sub:`${year}年聖經閱讀記錄`, streak:'連續天數 🔥', fullDays:'完整天數 ✓', daysRead:'已讀天數', continueReading:'📖 繼續閱讀', next:'下一個：', todayReading:'📅 今日閱讀', goToDate:'前往今天', viewSchedule:'🗓 閱讀計劃', calList:'日曆與列表', thisWeek:'🏆 本週', allTime:'⭐ 總排行', noReadings:'本週還沒有閱讀記錄', full:'全部', days:'天', recentComments:'💬 最近留言', loading:'載入中...' },
+    sc: { title:'喜瑞都召会', sub:`${year}年圣经阅读记录`, streak:'连续天数 🔥', fullDays:'完整天数 ✓', daysRead:'已读天数', continueReading:'📖 继续阅读', next:'下一个：', todayReading:'📅 今日阅读', goToDate:'前往今天', viewSchedule:'🗓 阅读计划', calList:'日历与列表', thisWeek:'🏆 本周', allTime:'⭐ 总排行', noReadings:'本周还没有阅读记录', full:'全部', days:'天', recentComments:'💬 最近留言', loading:'加载中...' },
   };
   const t = ui[lang] || ui.en;
 
   React.useEffect(() => { loadLeaderboard(); loadRecentComments(); }, []);
-  React.useEffect(() => { if (name) loadMyStats(name); }, [name]);
+
+  // Re-run stats whenever the logged-in user changes
+  React.useEffect(() => {
+    setStats(null);
+    setNextDate(null);
+    if (name) loadMyStats(name);
+  }, [name]);
 
   async function loadRecentComments() {
     const { data } = await supabase
@@ -37,12 +45,9 @@ export default function Home({ lang = 'en' }) {
       .limit(300);
     if (!data) return;
 
-    // Group all comments by thread (root comment id)
-    const threadMap = {}; // rootId -> [all comments in thread]
-    const rootMap = {}; // rootId -> root comment
-    data.forEach(c => {
-      if (!c.parent_id) rootMap[c.id] = c;
-    });
+    const threadMap = {};
+    const rootMap = {};
+    data.forEach(c => { if (!c.parent_id) rootMap[c.id] = c; });
     data.forEach(c => {
       const rootId = c.parent_id
         ? (rootMap[c.parent_id] ? c.parent_id : data.find(x => x.id === c.parent_id)?.parent_id || c.parent_id)
@@ -51,7 +56,6 @@ export default function Home({ lang = 'en' }) {
       threadMap[rootId].push(c);
     });
 
-    // Find latest activity per thread and sort
     const threads = Object.entries(threadMap).map(([rootId, comments]) => {
       const latest = Math.max(...comments.map(c => new Date(c.created_at).getTime()));
       return { rootId, comments, latest };
@@ -61,38 +65,41 @@ export default function Home({ lang = 'en' }) {
   }
 
   async function loadMyStats(n) {
-    // Filter to current year so stats reset each January
-    // Paginate to get ALL personal checkins
-    let allRows = [];
-    let p = 0;
-    const SZ = 1000;
-    while (true) {
-      const { data: batch } = await supabase
-        .from('checkins')
-        .select('date,portion')
-        .ilike('name', n)
-        .gte('date', yearStart)
-        .lte('date', yearEnd)
-        .range(p * SZ, (p + 1) * SZ - 1);
-      if (!batch || batch.length === 0) break;
-      allRows = allRows.concat(batch);
-      if (batch.length < SZ) break;
-      p++;
+    const { data: rpcRows, error: rpcErr } = await supabase.rpc('get_personal_stats', {
+      person_name: n, date_from: yearStart, date_to: yearEnd,
+    });
+    let data;
+    if (!rpcErr && rpcRows) {
+      data = rpcRows.map(r => ({ date: r.date, nt: r.has_nt, ot: r.has_ot, _fromRpc: true }));
+    } else {
+      let allRows = [];
+      let p = 0;
+      while (true) {
+        const { data: batch } = await supabase.from('checkins').select('date,portion')
+          .ilike('name', n).gte('date', yearStart).lte('date', yearEnd)
+          .range(p * 1000, (p + 1) * 1000 - 1);
+        if (!batch || batch.length === 0) break;
+        allRows = allRows.concat(batch);
+        if (batch.length < 1000) break;
+        p++;
+      }
+      data = allRows;
     }
-    const data = allRows;
-    if (!data.length) return;
+    if (!data || !data.length) return;
 
     const byDate = {};
     data.forEach(r => {
       if (!byDate[r.date]) byDate[r.date] = { nt: false, ot: false };
-      if (r.portion === 'NT') byDate[r.date].nt = true;
-      if (r.portion === 'OT') byDate[r.date].ot = true;
+      if (r._fromRpc) { byDate[r.date].nt = r.nt; byDate[r.date].ot = r.ot; }
+      else {
+        if (r.portion === 'NT') byDate[r.date].nt = true;
+        if (r.portion === 'OT') byDate[r.date].ot = true;
+      }
     });
 
     const fullDays  = Object.values(byDate).filter(d => d.nt && d.ot).length;
     const totalDays = Object.keys(byDate).length;
 
-    // Streak: consecutive days from today going backwards
     let streak = 0;
     const today = new Date();
     for (let i = 0; i < 365; i++) {
@@ -102,8 +109,6 @@ export default function Home({ lang = 'en' }) {
       else break;
     }
 
-    // Next unfinished date (for "Continue Reading" button)
-    // Continue Reading = day AFTER the last date that was read
     const readDates = Object.keys(byDate).sort();
     if (readDates.length > 0) {
       const lastRead = readDates[readDates.length - 1];
@@ -119,56 +124,57 @@ export default function Home({ lang = 'en' }) {
 
   async function loadLeaderboard() {
     setLoading(true);
+    const { data: rpcData, error: rpcError } = await supabase.rpc('get_leaderboard', {
+      date_from: yearStart, date_to: yearEnd,
+    });
 
-    // Paginate to get ALL checkins — Supabase defaults to 1000 row limit
-    let allData = [];
-    let page = 0;
-    const PAGE_SIZE = 1000;
-    while (true) {
-      const { data, error } = await supabase
-        .from('checkins')
-        .select('name,date,portion')
-        .gte('date', yearStart)
-        .lte('date', yearEnd)
-        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
-      if (error || !data || data.length === 0) break;
-      allData = allData.concat(data);
-      if (data.length < PAGE_SIZE) break; // last page
-      page++;
-    }
-    const data = allData;
-
-    if (data) {
+    if (!rpcError && rpcData) {
       const today = new Date();
       const weekAgo = new Date(); weekAgo.setDate(today.getDate() - 7);
-
-      const buildStats = (rows) => {
-        const map = {};
-        rows.forEach(r => {
-          const k = r.name.toLowerCase();
-          if (!map[k]) map[k] = { name: r.name, dates: {} };
-          if (!map[k].dates[r.date]) map[k].dates[r.date] = { nt: false, ot: false };
-          if (r.portion === 'NT') map[k].dates[r.date].nt = true;
-          if (r.portion === 'OT') map[k].dates[r.date].ot = true;
-        });
-        return Object.values(map).map(p => {
-          const full  = Object.values(p.dates).filter(d => d.nt && d.ot).length;
-          const total = Object.keys(p.dates).length;
-          return { name: p.name, full, total };
-        }).sort((a, b) => b.full - a.full || b.total - a.total).slice(0, 10);
-      };
-
-      setTopAllTime(buildStats(data));
-      setTopWeek(buildStats(data.filter(r => new Date(r.date) >= weekAgo)));
+      const weekStart = weekAgo.toISOString().split('T')[0];
+      const { data: weekData } = await supabase.rpc('get_leaderboard', {
+        date_from: weekStart, date_to: yearEnd,
+      });
+      setTopAllTime((rpcData || []).map(r => ({
+        name: r.name, full: Number(r.full_days), total: Number(r.total_days),
+      })));
+      setTopWeek((weekData || []).map(r => ({
+        name: r.name, full: Number(r.full_days), total: Number(r.total_days),
+      })));
+    } else {
+      let allData = [];
+      let page = 0;
+      while (true) {
+        const { data: batch } = await supabase.from('checkins').select('name,date,portion')
+          .gte('date', yearStart).lte('date', yearEnd)
+          .range(page * 1000, (page + 1) * 1000 - 1);
+        if (!batch || batch.length === 0) break;
+        allData = allData.concat(batch);
+        if (batch.length < 1000) break;
+        page++;
+      }
+      if (allData.length) {
+        const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
+        const buildStats = (rows) => {
+          const map = {};
+          rows.forEach(r => {
+            const k = r.name.toLowerCase();
+            if (!map[k]) map[k] = { name: r.name, dates: {} };
+            if (!map[k].dates[r.date]) map[k].dates[r.date] = { nt: false, ot: false };
+            if (r.portion === 'NT') map[k].dates[r.date].nt = true;
+            if (r.portion === 'OT') map[k].dates[r.date].ot = true;
+          });
+          return Object.values(map).map(p => ({
+            name: p.name,
+            full: Object.values(p.dates).filter(d => d.nt && d.ot).length,
+            total: Object.keys(p.dates).length,
+          })).sort((a, b) => b.full - a.full || b.total - a.total).slice(0, 10);
+        };
+        setTopAllTime(buildStats(allData));
+        setTopWeek(buildStats(allData.filter(r => new Date(r.date) >= weekAgo)));
+      }
     }
     setLoading(false);
-  }
-
-  function saveName() {
-    if (nameInput.trim()) {
-      localStorage.setItem('bibleAppName', nameInput.trim());
-      setName(nameInput.trim());
-    }
   }
 
   function formatDate(dateStr) {
@@ -178,34 +184,8 @@ export default function Home({ lang = 'en' }) {
     );
   }
 
-
-
   const medals = ['🥇', '🥈', '🥉'];
 
-  // ── Welcome screen (no name set) ─────────────────────────────────────────────
-  if (!name) {
-    return (
-      <div className="page">
-        <div className="welcome-card">
-          <div className="welcome-emoji">📖</div>
-          <h1>{t.title}</h1>
-          <p className="welcome-sub">{t.sub}</p>
-          <div className="name-input-row">
-            <input
-              className="name-input"
-              placeholder={t.namePlaceholder}
-              value={nameInput}
-              onChange={e => setNameInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && saveName()}
-            />
-            <button className="start-btn" onClick={saveName}>{t.start}</button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Main home screen ─────────────────────────────────────────────────────────
   return (
     <div className="page">
       {/* Personal stats */}
@@ -281,7 +261,7 @@ export default function Home({ lang = 'en' }) {
         </div>
       )}
 
-      {/* Recent comments preview */}
+      {/* Recent comments */}
       {recentComments.length > 0 && (
         <div className="recent-comments-section">
           <div className="comments-title">{t.recentComments}</div>

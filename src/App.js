@@ -5,8 +5,12 @@ import Reading from './pages/Reading';
 import Home from './pages/Home';
 import Schedule from './pages/Schedule';
 import Admin from './pages/Admin';
+import { UserProvider, useUser } from './context/UserContext';
+import LoginModal from './components/LoginModal';
 
-function App() {
+function AppInner() {
+  const { user, logout } = useUser();
+
   const [lang, setLang] = React.useState(
     () => localStorage.getItem('bibleAppLang') || 'en'
   );
@@ -14,7 +18,6 @@ function App() {
     () => localStorage.getItem('bibleAppTheme') !== 'light'
   );
 
-  // Apply theme class to body whenever darkMode changes
   React.useEffect(() => {
     if (darkMode) {
       document.body.classList.remove('light');
@@ -39,51 +42,95 @@ function App() {
   const nav = navLabels[lang] || navLabels.en;
 
   return (
-    <BrowserRouter>
-      <div className="app">
-        <nav className="navbar">
-          <div className="nav-brand">📖 Bible Reading</div>
-          <div className="nav-links">
-            <NavLink to="/" end>{nav.home}</NavLink>
-            <NavLink to="/reading">{nav.reading}</NavLink>
-            <NavLink to="/schedule">{nav.schedule}</NavLink>
-            <NavLink to="/admin">Admin</NavLink>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {/* Theme toggle */}
-            <button
-              className="theme-toggle"
-              onClick={() => setDarkMode(d => !d)}
-              title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-            >
-              {darkMode ? '☀️' : '🌙'}
-            </button>
-            {/* Language toggle */}
-            <div className="lang-toggle">
-              {[
-                { code: 'en', label: '🇺🇸' },
-                { code: 'es', label: '🇪🇸' },
-                { code: 'zh', label: '繁' },
-                { code: 'sc', label: '简' },
-              ].map(({ code, label }) => (
-                <button
-                  key={code}
-                  className={`lang-btn ${lang === code ? 'lang-btn-active' : ''}`}
-                  onClick={() => changeLang(code)}
-                >
-                  {label}
-                </button>
-              ))}
+    <div className="app">
+      {/* Show login modal if not logged in */}
+      {!user && <LoginModal />}
+
+      <nav className="navbar">
+        <div className="nav-brand">📖 Bible Reading</div>
+        <div className="nav-links">
+          <NavLink to="/" end>{nav.home}</NavLink>
+          <NavLink to="/reading">{nav.reading}</NavLink>
+          <NavLink to="/schedule">{nav.schedule}</NavLink>
+          <NavLink to="/admin">Admin</NavLink>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* Logged-in user display + logout */}
+          {user && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{
+                fontSize: '13px',
+                opacity: 0.75,
+                maxWidth: '120px',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}>
+                👤 {user.name}
+              </span>
+              <button
+                onClick={logout}
+                style={{
+                  fontSize: '12px',
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  border: '1px solid var(--border, #ccc)',
+                  background: 'transparent',
+                  color: 'var(--text, #333)',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Log out
+              </button>
             </div>
+          )}
+
+          {/* Theme toggle */}
+          <button
+            className="theme-toggle"
+            onClick={() => setDarkMode(d => !d)}
+            title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {darkMode ? '☀️' : '🌙'}
+          </button>
+
+          {/* Language toggle */}
+          <div className="lang-toggle">
+            {[
+              { code: 'en', label: '🇺🇸' },
+              { code: 'es', label: '🇪🇸' },
+              { code: 'zh', label: '繁' },
+              { code: 'sc', label: '简' },
+            ].map(({ code, label }) => (
+              <button
+                key={code}
+                className={`lang-btn ${lang === code ? 'lang-btn-active' : ''}`}
+                onClick={() => changeLang(code)}
+              >
+                {label}
+              </button>
+            ))}
           </div>
-        </nav>
-        <Routes>
-          <Route path="/"        element={<div className="main-content"><Home lang={lang} /></div>} />
-          <Route path="/reading" element={<Reading lang={lang} />} />
-          <Route path="/schedule" element={<div className="main-content"><Schedule lang={lang} /></div>} />
-          <Route path="/admin"   element={<div className="main-content"><Admin /></div>} />
-        </Routes>
-      </div>
+        </div>
+      </nav>
+
+      <Routes>
+        <Route path="/"        element={<div className="main-content"><Home lang={lang} /></div>} />
+        <Route path="/reading" element={<Reading lang={lang} />} />
+        <Route path="/schedule" element={<div className="main-content"><Schedule lang={lang} /></div>} />
+        <Route path="/admin"   element={<div className="main-content"><Admin /></div>} />
+      </Routes>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <UserProvider>
+        <AppInner />
+      </UserProvider>
     </BrowserRouter>
   );
 }

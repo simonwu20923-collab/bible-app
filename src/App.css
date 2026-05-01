@@ -633,3 +633,19 @@ body {
   /* .sticky-banner top set by JS on mobile */
   .lang-toggle { order: 3; width: 100%; justify-content: center; }
 }
+
+.cal-dots-row {
+  display: flex;
+  gap: 2px;
+  justify-content: center;
+  margin-top: 2px;
+}
+
+.cal-dot.dot-empty {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.15);
+}
+
+.dot-full { background: #34d399; }
+.dot-nt   { background: #34d399; }   /* teal */
+.dot-ot   { background: #a78bfa; }   /* purple */

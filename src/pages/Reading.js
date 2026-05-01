@@ -4,13 +4,15 @@ import { supabase } from '../supabase';
 import { getReadingForDate } from '../data/schedule';
 import AudioPlayer from '../components/AudioPlayer';
 import CommentsSection from '../components/CommentsSection';
+import { useUser } from '../context/UserContext';
 
 export default function Reading({ lang = 'en' }) {
+  const { user } = useUser();
+  const name = user?.name || '';
+
   const [searchParams, setSearchParams] = useSearchParams();
   const todayStr = new Date().toISOString().split('T')[0];
   const currentDate = searchParams.get('date') || todayStr;
-  // Map any year → 2026 for verse lookups (plan repeats annually)
-  // Leap year: Feb 29 → use Feb 28 instead
   let queryDate = currentDate.replace(/^\d{4}/, '2026');
   if (queryDate.endsWith('-02-29')) queryDate = '2026-02-28';
 
@@ -22,8 +24,6 @@ export default function Reading({ lang = 'en' }) {
   const dayOfYear = Math.floor((new Date(currentDate + 'T12:00:00') - startOfYear) / 86400000);
   const reading = getReadingForDate(currentDate);
 
-  const [name, setName] = React.useState(() => localStorage.getItem('bibleAppName') || '');
-  const [nameInput, setNameInput] = React.useState('');
   const [ntDone, setNtDone] = React.useState(false);
   const [otDone, setOtDone] = React.useState(false);
   const [saving, setSaving] = React.useState('');
@@ -36,7 +36,6 @@ export default function Reading({ lang = 'en' }) {
   const [navbarHeight, setNavbarHeight] = React.useState(54);
   const [scrolled, setScrolled] = React.useState(false);
 
-  // Measure navbar height (handles mobile 2-row wrap)
   React.useEffect(() => {
     const navbar = document.querySelector('.navbar');
     if (!navbar) return;
@@ -47,13 +46,11 @@ export default function Reading({ lang = 'en' }) {
     return () => observer.disconnect();
   }, []);
 
-  // Switch banner to top:0 once user scrolls past navbar
   React.useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > navbarHeight);
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, [navbarHeight]);
-
 
   React.useEffect(() => { // eslint-disable-line react-hooks/exhaustive-deps
     setNtDone(false); setOtDone(false);
@@ -61,7 +58,7 @@ export default function Reading({ lang = 'en' }) {
     setVerses(null); setTodayReaders([]); setBannerItems([]);
     loadVerses();
     if (name) loadReaders(name);
-  }, [currentDate]);
+  }, [currentDate, name]);
 
   function timeAgo(ts) {
     const m = Math.floor((Date.now() - new Date(ts)) / 60000);
@@ -119,14 +116,6 @@ export default function Reading({ lang = 'en' }) {
     setSearchParams(nd === todayStr ? {} : { date: nd });
   }
 
-  function saveName() {
-    if (nameInput.trim()) {
-      localStorage.setItem('bibleAppName', nameInput.trim());
-      setName(nameInput.trim());
-    }
-  }
-
-  // Get text for current language
   function getNtText() {
     if (!verses) return null;
     if (lang === 'es' && verses.nt_text_es) return verses.nt_text_es;
@@ -141,7 +130,6 @@ export default function Reading({ lang = 'en' }) {
     if (lang === 'sc' && verses.ot_text_sc) return verses.ot_text_sc;
     return verses.ot_text;
   }
-  // Both zh and sc use same audio
   function getNtAudio() {
     if (!verses) return null;
     if ((lang === 'zh' || lang === 'sc') && verses.nt_audio_zh) return verses.nt_audio_zh;
@@ -153,10 +141,8 @@ export default function Reading({ lang = 'en' }) {
     return verses.ot_audio;
   }
 
-  // Translate section title
   function getTitle(title) {
     if (!title || lang === 'en') return title;
-    // Normalize abbreviated book names to full names first
     let normalized = title;
     Object.entries(ABBREV).sort((a,b) => b[0].length - a[0].length).forEach(([abbr, full]) => {
       const escaped = abbr.replace(/\./g, '\\.');
@@ -171,7 +157,6 @@ export default function Reading({ lang = 'en' }) {
       let r = normalized
         .replace('New Testament', lang === 'sc' ? '新约' : '新約')
         .replace('Old Testament', lang === 'sc' ? '旧约' : '舊約');
-      // Replace 1 King / 2 King (not in cmap, handle manually)
       r = r.replace(/\b1 King\b/g, cmap['1 Kings'] || '王上')
            .replace(/\b2 King\b/g, cmap['2 Kings'] || '王下');
       Object.entries(cmap).sort((a,b) => b[0].length - a[0].length).forEach(([full, char]) => {
@@ -200,7 +185,7 @@ export default function Reading({ lang = 'en' }) {
       return line ? <p key={i} className="verse-line" style={{ fontSize: fontSize + 'px' }}>{line}</p> : null;
     });
   }
-  // Normalize abbreviated book names to full English names
+
   const ABBREV = {
     'Gen.':'Genesis','Ex.':'Exodus','Exo.':'Exodus','Exod.':'Exodus','Lev.':'Leviticus',
     'Num.':'Numbers','Deut.':'Deuteronomy','Josh.':'Joshua','Judg.':'Judges',
@@ -228,7 +213,6 @@ export default function Reading({ lang = 'en' }) {
     '1 Jn.':'1 John','2 Jn.':'2 John','3 Jn.':'3 John','Rev.':'Revelation',
   };
 
-  // Traditional Chinese book abbreviations (繁體)
   const ZH_MAP = {
     'Matthew':'太','Mark':'可','Luke':'路','John':'約',
     'Acts':'徒','Romans':'羅','Genesis':'創','Exodus':'出',
@@ -252,7 +236,6 @@ export default function Reading({ lang = 'en' }) {
     '1 Timothy':'提前','2 Timothy':'提後','Titus':'多','Philemon':'門',
   };
 
-  // Simplified Chinese book abbreviations (簡體)
   const SC_MAP = {
     'Matthew':'太','Mark':'可','Luke':'路','John':'约',
     'Acts':'徒','Romans':'罗','Genesis':'创','Exodus':'出',
@@ -296,15 +279,10 @@ export default function Reading({ lang = 'en' }) {
     return ABBREV[abbrev] || abbrev;
   }
 
-  // Translate a portion string like "Matt. 28:1-28:20" into the target language
   function translatePortion(portion, language) {
     if (!portion || language === 'en') return portion;
-    // First normalize abbreviations to full names
     let result = portion;
-    // Sort longest first to prevent '1 Sam.' being shadowed by '1 Sam'
-    // \b at start always; \b at end only if pattern ends with word char (prevents '1 Sam' matching '1 Samuel')
     Object.entries(ABBREV).sort((a,b) => b[0].length - a[0].length).forEach(([abbr, full]) => {
-      // ABBREV keys only contain letters, digits, spaces, dots — only dots need escaping
       const escaped = abbr.replace(/\./g, '\\.');
       const endsWithWordChar = /\w/.test(abbr[abbr.length - 1]);
       const pattern = '\\b' + escaped + (endsWithWordChar ? '\\b' : '');
@@ -325,7 +303,6 @@ export default function Reading({ lang = 'en' }) {
 
   function getBookLabel(title, language) {
     if (!title) return '';
-    // Extract book name from title like "New Testament - Luke 21:5~21:36"
     const clean = title
       .replace(/New Testament\s*-\s*/i, '')
       .replace(/Old Testament\s*-\s*/i, '')
@@ -338,9 +315,6 @@ export default function Reading({ lang = 'en' }) {
     return full;
   }
 
-  // Returns explicit per-chapter labels for cross-book titles like "1 King 22:51~2 King 2:18"
-  // e.g. ["\u738b\u4e0a \u7b2c22\u7ae0", "\u738b\u4e0b \u7b2c1\u7ae0", "\u738b\u4e0b \u7b2c2\u7ae0"]
-  // Returns null for normal same-book titles.
   function getCrossBookChapterLabels(title, audioCount, language) {
     if (!title || !audioCount) return null;
     const clean = title.replace(/^(New|Old) Testament\s*-\s*/i, '').trim();
@@ -371,6 +345,7 @@ export default function Reading({ lang = 'en' }) {
     for (let i = 1; i <= book2Count; i++) labels.push(chapLbl(b2, i));
     return labels;
   }
+
   const ui = {
     en: { hideVerses:'▲ Hide verses', readVerses:'▼ Read verses', finishNT:'Finish NT', finishOT:'Finish OT', finishedNT:'✓ Finished NT', finishedOT:'✓ Finished OT', saving:'Saving...', completed:'🎉 You completed both readings today!', readersTitle:"Today's Readers", discussion:'💬 Discussion', noComments:'No comments yet — be the first!', yourName:'Your name', shareThought:'Share a thought...', post:'Post Comment', posting:'Posting...', person:'person has', people:'people have', today:'today', text:'Text:', dayOf:'Day', of:'of' },
     es: { hideVerses:'▲ Ocultar', readVerses:'▼ Leer versículos', finishNT:'Terminar NT', finishOT:'Terminar AT', finishedNT:'✓ NT completado', finishedOT:'✓ AT completado', saving:'Guardando...', completed:'🎉 ¡Completaste ambas lecturas hoy!', readersTitle:'Lectores de hoy', discussion:'💬 Discusión', noComments:'¡Sé el primero!', yourName:'Tu nombre', shareThought:'Comparte un pensamiento...', post:'Publicar', posting:'Publicando...', person:'persona leyó', people:'personas leyeron', today:'', text:'Texto:', dayOf:'Día', of:'de' },
@@ -378,28 +353,6 @@ export default function Reading({ lang = 'en' }) {
     sc: { hideVerses:'▲ 隐藏经文', readVerses:'▼ 阅读经文', finishNT:'完成新约', finishOT:'完成旧约', finishedNT:'✓ 新约完成', finishedOT:'✓ 旧约完成', saving:'保存中...', completed:'🎉 你今天完成了两篇阅读！', readersTitle:'今日读者', discussion:'💬 讨论', noComments:'还没有留言', yourName:'你的名字', shareThought:'分享你的想法...', post:'发表留言', posting:'发布中...', person:'人已阅读', people:'人已阅读', today:'', text:'字体：', dayOf:'第', of:'天/365' },
   };
   const t = ui[lang] || ui.en;
-
-  if (!name) {
-    const placeholder = { en:'Enter your name...', es:'Ingresa tu nombre...', zh:'輸入你的名字...', sc:'输入你的名字...' };
-    const title = { en:"What's your name?", es:'¿Cuál es tu nombre?', zh:'你叫什麼名字？', sc:'你叫什么名字？' };
-    const sub = { en:'So we can track your reading', es:'Para registrar tu lectura', zh:'記錄你的閱讀進度', sc:'记录你的阅读进度' };
-    const btn = { en:'Save →', es:'Guardar →', zh:'儲存 →', sc:'保存 →' };
-    return (
-      <div className="page">
-        <div className="welcome-card">
-          <div className="welcome-emoji">📖</div>
-          <h1>{title[lang] || title.en}</h1>
-          <p className="welcome-sub">{sub[lang] || sub.en}</p>
-          <div className="name-input-row">
-            <input className="name-input" placeholder={placeholder[lang] || placeholder.en}
-              value={nameInput} onChange={e => setNameInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && saveName()} />
-            <button className="start-btn" onClick={saveName}>{btn[lang] || btn.en}</button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   const bannerContent = [...bannerItems, ...bannerItems];
   const dateShort = currentDate.slice(5).replace('-', '/');
@@ -450,15 +403,15 @@ export default function Reading({ lang = 'en' }) {
               <span className="reading-portion">{translatePortion(reading.nt, lang)}</span>
             </div>
             {getNtAudio() && (
-  <AudioPlayer
-    key={`nt-${lang}`}
-    label={lang === 'zh' ? '新約音頻' : lang === 'sc' ? '新约音频' : lang === 'es' ? 'Audio NT' : 'NT Audio'}
-    book={getBookLabel(verses.nt_title, lang)}
-    audioJson={getNtAudio()}
-    startChap={parseInt(verses.nt_title?.match(/(\d+):/)?.[1] || '1', 10)}
-    lang={lang}
-  />
-)}
+              <AudioPlayer
+                key={`nt-${lang}`}
+                label={lang === 'zh' ? '新約音頻' : lang === 'sc' ? '新约音频' : lang === 'es' ? 'Audio NT' : 'NT Audio'}
+                book={getBookLabel(verses.nt_title, lang)}
+                audioJson={getNtAudio()}
+                startChap={parseInt(verses.nt_title?.match(/(\d+):/)?.[1] || '1', 10)}
+                lang={lang}
+              />
+            )}
             <button className="verses-toggle" onClick={() => setShowNT(!showNT)}>
               {showNT ? t.hideVerses : t.readVerses}
             </button>
@@ -483,16 +436,16 @@ export default function Reading({ lang = 'en' }) {
               <span className="reading-portion">{translatePortion(reading.ot, lang)}</span>
             </div>
             {getOtAudio() && (
-  <AudioPlayer
-    key={`ot-${lang}`}
-    label={lang === 'zh' ? '舊約音頻' : lang === 'sc' ? '旧约音频' : lang === 'es' ? 'Audio AT' : 'OT Audio'}
-    book={getBookLabel(verses.ot_title, lang)}
-    audioJson={getOtAudio()}
-    startChap={parseInt(verses.ot_title?.match(/(\d+):/)?.[1] || '1', 10)}
-    lang={lang}
-    chapterLabels={getCrossBookChapterLabels(verses.ot_title, JSON.parse(getOtAudio() || '[]').length, lang)}
-  />
-)}
+              <AudioPlayer
+                key={`ot-${lang}`}
+                label={lang === 'zh' ? '舊約音頻' : lang === 'sc' ? '旧约音频' : lang === 'es' ? 'Audio AT' : 'OT Audio'}
+                book={getBookLabel(verses.ot_title, lang)}
+                audioJson={getOtAudio()}
+                startChap={parseInt(verses.ot_title?.match(/(\d+):/)?.[1] || '1', 10)}
+                lang={lang}
+                chapterLabels={getCrossBookChapterLabels(verses.ot_title, JSON.parse(getOtAudio() || '[]').length, lang)}
+              />
+            )}
             <button className="verses-toggle" onClick={() => setShowOT(!showOT)}>
               {showOT ? t.hideVerses : t.readVerses}
             </button>
@@ -517,7 +470,10 @@ export default function Reading({ lang = 'en' }) {
           <div className="readers-section">
             <div className="readers-title">{t.readersTitle} ({todayReaders.length})</div>
             <div className="readers-table">
-              <div className="readers-header"><span>{lang === 'en' ? 'Name' : lang === 'es' ? 'Nombre' : '姓名'}</span><span>NT</span><span>OT</span></div>
+              <div className="readers-header">
+                <span>{lang === 'en' ? 'Name' : lang === 'es' ? 'Nombre' : '姓名'}</span>
+                <span>NT</span><span>OT</span>
+              </div>
               {todayReaders.map(r => (
                 <div className="readers-row" key={r.name}>
                   <span>{r.name}</span>

@@ -1,0 +1,459 @@
+
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0, user-scalable=yes">
+    <title></title>
+    <link rel="stylesheet" href="https://code.jquery.com/mobile/1.4.2/jquery.mobile-1.4.2.min.css" />
+    <link rel="stylesheet" href="/Content/css/desktop.css" />
+    <link rel="stylesheet" href="/Content/css/morning.light/jplayer.morning.light.simple.css" />
+    <link rel="stylesheet" href="/Content/css/icon-moon/style.css" />
+    <link rel="stylesheet" href="/Content/css/audioplayer.css" />
+    <link rel="stylesheet" href="/Content/css/site.css" />
+
+    <script src="https://code.jquery.com/jquery-1.9.1.min.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jplayer/2.9.2/jplayer/jquery.jplayer.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jplayer/2.9.2/add-on/jplayer.playlist.min.js"></script>
+    <script src="/Content/js/site.js"></script>
+
+    <script src="/Content/js/audioplayer.js"></script>
+
+    <script type="text/javascript" src="/Content/js/jquery.transform2d.js"></script>
+    <script type="text/javascript" src="/Content/js/jquery.grab.js"></script>
+    <script type="text/javascript" src="/Content/js/mod.csstransforms.min.js"></script>
+
+
+    <script src="https://code.jquery.com/mobile/1.4.2/jquery.mobile-1.4.2.min.js"></script>
+    <script id="panel-init">
+        $(function () {
+            $("[data-role='panel']").panel();
+            $("[data-role='listview']").listview({ "icon": "" });
+        });
+
+
+        $(document).on('pagebeforecreate', function (ev) {
+            $(ev.target).find("[data-role=header]").addClass("jqm-header");
+            var content = $(ev.target).find("[data-role=content]");
+            var clone = $("[data-role=side-bar]").clone();
+            var parent = $(clone.children()[1]).children()[0];
+            $(parent).html($(content).html());
+            clone.css("display", "block");
+            $(content).empty();
+            $(content).html(clone.html());
+        });
+
+        $(document).on('pagecreate', function (ev) {
+            $(ev.target).find("[data-icon=bars]").remove();
+        });
+
+        $(document).on("pageshow", function () {
+            if ($("#jsCode").length > 0) {
+                $.globalEval($("#jsCode").text());
+            }
+        });
+    </script>
+</head>
+<body>
+    <div data-role="side-bar" class="ui-grid-a" style="margin-top: 0px; width: 100%; height:100%;display: none">
+        <div class="ui-block-a" style="max-width: 230px; width: 15%;">
+            <ul style="padding-left:5px" data-role="listview">
+                
+
+<li data-filtertext="wai-aria voiceover accessibility screen reader">
+    <a href="/" data-ajax="false">&#x4E3B;&#x9875;</a>
+</li>
+<li data-filtertext="accordions collapsible set collapsible-set collapsed">
+    <a href="/AboutUs" data-ajax="false">&#x5173;&#x4E8E;&#x6211;&#x4EEC;</a>
+</li>
+<li data-filtertext="accordions collapsible set collapsible-set collapsed">
+    <a href="/WeeklyNews" data-ajax="false">&#x53EC;&#x4F1A;&#x5468;&#x8BAF;</a>
+</li>
+<li data-filtertext="accordions collapsible set collapsible-set collapsed">
+    <a href="https://www.google.com/calendar/embed?src=churchinpiscataway@gmail.com" target="_blank" data-ajax="false">&#x805A;&#x4F1A;&#x65F6;&#x95F4;&#x8868;</a>
+</li>
+<li data-filtertext="accordions collapsible set collapsible-set collapsed">
+    <a href="/Bible/Books" data-ajax="false">&#x5723;&#x7ECF;</a>
+</li>
+<li data-filtertext="ajax navigation model" class="ui-btn-b" data-icon="carat-d">
+    <a href="#" onclick="toggleSaint(this);">&#x5723;&#x5F92;&#x8D44;&#x6599;</a>
+    <div id="saint" class="ui-collapsible-content ui-body-inherit ui-collapsible-content-collapsed" aria-hidden="true">
+        <ul data-role="listview">
+            <li data-filtertext="accordions collapsible set collapsible-set collapsed">
+                <a style="padding-left:25px" href="/Media/Audio" data-ajax="false">&#x5F55;&#x97F3;&#x4FE1;&#x606F;</a>
+            </li>
+            <li data-filtertext="accordions collapsible set collapsible-set collapsed">
+                <a style="padding-left:25px" href="/Media/Video" data-ajax="false">&#x5F71;&#x50CF;&#x8D44;&#x6599;</a>
+            </li>
+            <li data-filtertext="ajax navigation model" class="ui-btn-b">
+                <a style="padding-left:25px" href="/Document/Saint" data-ajax="false">&#x5723;&#x5F92;&#x8BFB;&#x7269;</a>
+            </li>
+        </ul>
+    </div>
+</li>
+<li data-filtertext="accordions collapsible set collapsible-set collapsed">
+    <a href="/ChildrenService" data-ajax="false">&#x513F;&#x7AE5;&#x670D;&#x4F8D;</a>
+</li>
+<li data-filtertext="ajax navigation model" class="ui-btn-b">
+    <a href="/Links" data-ajax="false">&#x7F51;&#x7AD9;&#x94FE;&#x63A5;</a>
+</li>
+            </ul>
+            <!-- panel content goes here -->
+        </div>
+        <div class="ui-block-b" style="width: 85%; padding-left: 50px">
+            <div data-role="main" class="mainPage">  
+            </div>
+        </div>
+    </div>
+
+<div data-role="panel" data-position="right" data-position-fixed="false" data-display="overlay" id="setting-panel" data-theme="a" style="width:220px">
+    <ul data-role="listview" data-theme="a" data-divider-theme="a" style="margin-top:-16px;" class="nav-search">
+        <li data-icon="delete" style="background-color:rgba(255,255,255,0.15);">
+            &nbsp;
+        </li>
+            <li data-filtertext="ajax navigation model">
+        <a href="/Account/Login/" rel="external" data-ajax="false">Login</a>
+    </li>
+
+        
+    <li data-filtertext="accordions collapsible set collapsible-set collapsed">
+        <a href="#" onclick="changeLang('en-US')" rel="external" data-ajax="false">English</a>
+    </li>
+
+
+
+        <li data-filtertext="ajax navigation model">
+            <a href="#" onclick="changeVersion('Mobile')" rel="external" data-ajax="false">&#x624B;&#x673A;&#x7248;</a>
+        </li>
+            <script language="javascript">
+        $(document).ready(function() {
+            setScale(1);
+        });
+    </script>
+
+<li data-filtertext="ajax navigation model" class="ui-btn-b" data-icon="gear">
+    <a href="#" onclick="">&#x5B57;&#x4F53;&#x5927;&#x5C0F;</a>
+    <div id="fontScale" aria-hidden="true">
+        <ul data-role="listview">
+            <li class="fontScale" data-icon="false"  id="fontScale95">
+                <a style="padding-left: 50px;" href="#" onclick="setScale(0.95, this);return false;" data-ajax="false"><span style="font-size:15px;">&#x5C0F;&#x53F7;</span></a>
+            </li>
+            <li class="fontScale" data-icon="false"  id="fontScale100" >
+                <a style="padding-left: 50px;" href="#" onclick="setScale(1, this);return false;" data-ajax="false"><span style="font-size:16px;">&#x6B63;&#x5E38;</span></a>
+            </li>
+            <li class="fontScale" data-icon="false"  id="fontScale105">
+                <a style="padding-left: 50px;" href="#" onclick="setScale(1.05, this);return false;" data-ajax="false"><span style="font-size:17px;">&#x4E2D;&#x53F7;</span></a>
+            </li>
+            <li class="fontScale" data-icon="false" id="fontScale110">
+                <a style="padding-left:50px;" href="#" onclick="setScale(1.1, this);return false;" data-ajax="false"><span style="font-size:18px;">&#x5927;&#x53F7;</span></a>
+            </li>
+        </ul>
+    </div>
+</li>
+    </ul>
+    <!-- panel content goes here -->
+</div><!-- /panel -->
+
+
+
+
+<div data-role="page" class="jqm-demos" id="aboutus">
+    <div data-role="header" data-position="fixed">
+        <a href="#nav-panel" data-icon="bars" data-iconpos="notext">Navigation</a>
+        <h3>&#x5723;&#x7ECF;</h3>
+        <a href="#setting-panel" data-icon="gear" data-iconpos="notext">Settings</a>
+    </div><!-- /header -->
+
+    <div data-role="content" id="bible-books">
+        <div style="height:35px">
+            <span style="float:right"><a href="/Bible/Schedule">&#x8BFB;&#x7ECF;&#x65E5;&#x7A0B;</a></span>
+        </div>
+        <div data-role="tabs" id="tabs">
+            <div data-role="navbar">
+                <ul>
+                    <li><a href="#old" class="ui-btn-active">&#x65E7;&#x7EA6;&#x5723;&#x7ECF;</a></li>
+                    <li><a href="#new">&#x65B0;&#x7EA6;&#x5723;&#x7ECF;</a></li>
+                </ul>
+            </div>
+            <div id="old">
+                <ul data-role="listview" data-inset="true">
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/1">01 &#x521B;&#x4E16;&#x8BB0; (&#x521B;)<span class="ui-li-count">50</span></a>
+                            <a href="/Bible/PlayList/1" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/2">02 &#x51FA;&#x57C3;&#x53CA;&#x8BB0; (&#x51FA;)<span class="ui-li-count">40</span></a>
+                            <a href="/Bible/PlayList/2" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/3">03 &#x5229;&#x672A;&#x8BB0; (&#x5229;)<span class="ui-li-count">27</span></a>
+                            <a href="/Bible/PlayList/3" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/4">04 &#x6C11;&#x6570;&#x8BB0; (&#x6C11;)<span class="ui-li-count">36</span></a>
+                            <a href="/Bible/PlayList/4" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/5">05 &#x7533;&#x547D;&#x8BB0; (&#x7533;)<span class="ui-li-count">34</span></a>
+                            <a href="/Bible/PlayList/5" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/6">06 &#x7EA6;&#x4E66;&#x4E9A;&#x8BB0; (&#x4E66;)<span class="ui-li-count">24</span></a>
+                            <a href="/Bible/PlayList/6" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/7">07 &#x58EB;&#x5E08;&#x8BB0; (&#x58EB;)<span class="ui-li-count">21</span></a>
+                            <a href="/Bible/PlayList/7" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/8">08 &#x8DEF;&#x5F97;&#x8BB0; (&#x5F97;)<span class="ui-li-count">4</span></a>
+                            <a href="/Bible/PlayList/8" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/9">09 &#x6492;&#x6BCD;&#x8033;&#x8BB0;&#x4E0A; (&#x6492;&#x4E0A;)<span class="ui-li-count">31</span></a>
+                            <a href="/Bible/PlayList/9" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/10">10 &#x6492;&#x6BCD;&#x8033;&#x8BB0;&#x4E0B; (&#x6492;&#x4E0B;)<span class="ui-li-count">24</span></a>
+                            <a href="/Bible/PlayList/10" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/11">11 &#x5217;&#x738B;&#x8BB0;&#x4E0A; (&#x738B;&#x4E0A;)<span class="ui-li-count">22</span></a>
+                            <a href="/Bible/PlayList/11" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/12">12 &#x5217;&#x738B;&#x8BB0;&#x4E0B; (&#x738B;&#x4E0B;)<span class="ui-li-count">25</span></a>
+                            <a href="/Bible/PlayList/12" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/13">13 &#x5386;&#x4EE3;&#x5FD7;&#x4E0A; (&#x4EE3;&#x4E0A;)<span class="ui-li-count">29</span></a>
+                            <a href="/Bible/PlayList/13" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/14">14 &#x5386;&#x4EE3;&#x5FD7;&#x4E0B; (&#x4EE3;&#x4E0B;)<span class="ui-li-count">36</span></a>
+                            <a href="/Bible/PlayList/14" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/15">15 &#x4EE5;&#x65AF;&#x62C9;&#x8BB0; (&#x62C9;)<span class="ui-li-count">10</span></a>
+                            <a href="/Bible/PlayList/15" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/16">16 &#x5C3C;&#x5E0C;&#x7C73;&#x8BB0; (&#x5C3C;)<span class="ui-li-count">13</span></a>
+                            <a href="/Bible/PlayList/16" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/17">17 &#x4EE5;&#x65AF;&#x5E16;&#x8BB0; (&#x65AF;)<span class="ui-li-count">10</span></a>
+                            <a href="/Bible/PlayList/17" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/18">18 &#x7EA6;&#x4F2F;&#x8BB0; (&#x4F2F;)<span class="ui-li-count">42</span></a>
+                            <a href="/Bible/PlayList/18" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/19">19 &#x8BD7;&#x7BC7; (&#x8BD7;)<span class="ui-li-count">150</span></a>
+                            <a href="/Bible/PlayList/19" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/20">20 &#x7BB4;&#x8A00; (&#x7BB4;)<span class="ui-li-count">31</span></a>
+                            <a href="/Bible/PlayList/20" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/21">21 &#x4F20;&#x9053;&#x4E66; (&#x4F20;)<span class="ui-li-count">12</span></a>
+                            <a href="/Bible/PlayList/21" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/22">22 &#x96C5;&#x6B4C; (&#x6B4C;)<span class="ui-li-count">8</span></a>
+                            <a href="/Bible/PlayList/22" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/23">23 &#x4EE5;&#x8D5B;&#x4E9A;&#x4E66; (&#x8D5B;)<span class="ui-li-count">66</span></a>
+                            <a href="/Bible/PlayList/23" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/24">24 &#x8036;&#x5229;&#x7C73;&#x4E66; (&#x8036;)<span class="ui-li-count">52</span></a>
+                            <a href="/Bible/PlayList/24" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/25">25 &#x8036;&#x5229;&#x7C73;&#x54C0;&#x6B4C; (&#x54C0;)<span class="ui-li-count">5</span></a>
+                            <a href="/Bible/PlayList/25" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/26">26 &#x4EE5;&#x897F;&#x7ED3;&#x4E66; (&#x7ED3;)<span class="ui-li-count">48</span></a>
+                            <a href="/Bible/PlayList/26" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/27">27 &#x4F46;&#x4EE5;&#x7406;&#x4E66; (&#x4F46;)<span class="ui-li-count">12</span></a>
+                            <a href="/Bible/PlayList/27" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/28">28 &#x4F55;&#x897F;&#x963F;&#x4E66; (&#x4F55;)<span class="ui-li-count">14</span></a>
+                            <a href="/Bible/PlayList/28" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/29">29 &#x7EA6;&#x73E5;&#x4E66; (&#x73E5;)<span class="ui-li-count">3</span></a>
+                            <a href="/Bible/PlayList/29" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/30">30 &#x963F;&#x6469;&#x53F8;&#x4E66; (&#x6469;)<span class="ui-li-count">9</span></a>
+                            <a href="/Bible/PlayList/30" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/31">31 &#x4FC4;&#x5DF4;&#x5E95;&#x4E9A;&#x4E66; (&#x4FC4;)<span class="ui-li-count">1</span></a>
+                            <a href="/Bible/PlayList/31" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/32">32 &#x7EA6;&#x62FF;&#x4E66; (&#x62FF;)<span class="ui-li-count">4</span></a>
+                            <a href="/Bible/PlayList/32" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/33">33 &#x5F25;&#x8FE6;&#x4E66; (&#x5F25;)<span class="ui-li-count">7</span></a>
+                            <a href="/Bible/PlayList/33" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/34">34 &#x90A3;&#x9E3F;&#x4E66; (&#x9E3F;)<span class="ui-li-count">3</span></a>
+                            <a href="/Bible/PlayList/34" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/35">35 &#x54C8;&#x5DF4;&#x8C37;&#x4E66; (&#x54C8;)<span class="ui-li-count">3</span></a>
+                            <a href="/Bible/PlayList/35" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/36">36 &#x897F;&#x756A;&#x96C5;&#x4E66; (&#x756A;)<span class="ui-li-count">3</span></a>
+                            <a href="/Bible/PlayList/36" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/37">37 &#x54C8;&#x8BE5;&#x4E66; (&#x8BE5;)<span class="ui-li-count">2</span></a>
+                            <a href="/Bible/PlayList/37" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/38">38 &#x6492;&#x8FE6;&#x5229;&#x4E9A;&#x4E66; (&#x4E9A;)<span class="ui-li-count">14</span></a>
+                            <a href="/Bible/PlayList/38" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/39">39 &#x739B;&#x62C9;&#x57FA;&#x4E66; (&#x739B;)<span class="ui-li-count">4</span></a>
+                            <a href="/Bible/PlayList/39" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                </ul>
+            </div>
+            <div id="new">
+                <ul data-role="listview" data-inset="true">
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/40">40 &#x9A6C;&#x592A;&#x798F;&#x97F3; (&#x592A;)<span class="ui-li-count">28</span></a>
+                            <a href="/Bible/PlayList/40" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/41">41 &#x9A6C;&#x53EF;&#x798F;&#x97F3; (&#x53EF;)<span class="ui-li-count">16</span></a>
+                            <a href="/Bible/PlayList/41" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/42">42 &#x8DEF;&#x52A0;&#x798F;&#x97F3; (&#x8DEF;)<span class="ui-li-count">24</span></a>
+                            <a href="/Bible/PlayList/42" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/43">43 &#x7EA6;&#x7FF0;&#x798F;&#x97F3; (&#x7EA6;)<span class="ui-li-count">21</span></a>
+                            <a href="/Bible/PlayList/43" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/44">44 &#x4F7F;&#x5F92;&#x884C;&#x4F20; (&#x5F92;)<span class="ui-li-count">28</span></a>
+                            <a href="/Bible/PlayList/44" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/45">45 &#x7F57;&#x9A6C;&#x4E66; (&#x7F57;)<span class="ui-li-count">16</span></a>
+                            <a href="/Bible/PlayList/45" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/46">46 &#x54E5;&#x6797;&#x591A;&#x524D;&#x4E66; (&#x6797;&#x524D;)<span class="ui-li-count">16</span></a>
+                            <a href="/Bible/PlayList/46" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/47">47 &#x54E5;&#x6797;&#x591A;&#x540E;&#x4E66; (&#x6797;&#x540E;)<span class="ui-li-count">13</span></a>
+                            <a href="/Bible/PlayList/47" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/48">48 &#x52A0;&#x62C9;&#x592A;&#x4E66; (&#x52A0;)<span class="ui-li-count">6</span></a>
+                            <a href="/Bible/PlayList/48" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/49">49 &#x4EE5;&#x5F17;&#x6240;&#x4E66; (&#x5F17;)<span class="ui-li-count">6</span></a>
+                            <a href="/Bible/PlayList/49" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/50">50 &#x8153;&#x7ACB;&#x6BD4;&#x4E66; (&#x8153;)<span class="ui-li-count">4</span></a>
+                            <a href="/Bible/PlayList/50" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/51">51 &#x6B4C;&#x7F57;&#x897F;&#x4E66; (&#x897F;)<span class="ui-li-count">4</span></a>
+                            <a href="/Bible/PlayList/51" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/52">52 &#x5E16;&#x6492;&#x7F57;&#x5C3C;&#x8FE6;&#x524D;&#x4E66; (&#x5E16;&#x524D;)<span class="ui-li-count">5</span></a>
+                            <a href="/Bible/PlayList/52" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/53">53 &#x5E16;&#x6492;&#x7F57;&#x5C3C;&#x8FE6;&#x540E;&#x4E66; (&#x5E16;&#x540E;)<span class="ui-li-count">3</span></a>
+                            <a href="/Bible/PlayList/53" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/54">54 &#x63D0;&#x6469;&#x592A;&#x524D;&#x4E66; (&#x63D0;&#x524D;)<span class="ui-li-count">6</span></a>
+                            <a href="/Bible/PlayList/54" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/55">55 &#x63D0;&#x6469;&#x592A;&#x540E;&#x4E66; (&#x63D0;&#x540E;)<span class="ui-li-count">4</span></a>
+                            <a href="/Bible/PlayList/55" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/56">56 &#x63D0;&#x591A;&#x4E66; (&#x591A;)<span class="ui-li-count">3</span></a>
+                            <a href="/Bible/PlayList/56" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/57">57 &#x8153;&#x5229;&#x95E8;&#x4E66; (&#x95E8;)<span class="ui-li-count">1</span></a>
+                            <a href="/Bible/PlayList/57" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/58">58 &#x5E0C;&#x4F2F;&#x6765;&#x4E66; (&#x6765;)<span class="ui-li-count">13</span></a>
+                            <a href="/Bible/PlayList/58" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/59">59 &#x96C5;&#x5404;&#x4E66; (&#x96C5;)<span class="ui-li-count">5</span></a>
+                            <a href="/Bible/PlayList/59" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/60">60 &#x5F7C;&#x5F97;&#x524D;&#x4E66; (&#x5F7C;&#x524D;)<span class="ui-li-count">5</span></a>
+                            <a href="/Bible/PlayList/60" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/61">61 &#x5F7C;&#x5F97;&#x540E;&#x4E66; (&#x5F7C;&#x540E;)<span class="ui-li-count">3</span></a>
+                            <a href="/Bible/PlayList/61" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/62">62 &#x7EA6;&#x7FF0;&#x4E00;&#x4E66; (&#x7EA6;&#x58F9;)<span class="ui-li-count">5</span></a>
+                            <a href="/Bible/PlayList/62" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/63">63 &#x7EA6;&#x7FF0;&#x4E8C;&#x4E66; (&#x7EA6;&#x8D30;)<span class="ui-li-count">1</span></a>
+                            <a href="/Bible/PlayList/63" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/64">64 &#x7EA6;&#x7FF0;&#x4E09;&#x4E66; (&#x7EA6;&#x53C2;)<span class="ui-li-count">1</span></a>
+                            <a href="/Bible/PlayList/64" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/65">65 &#x72B9;&#x5927;&#x4E66; (&#x72B9;)<span class="ui-li-count">1</span></a>
+                            <a href="/Bible/PlayList/65" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                        <li>
+                            <a data-ajax="false" href="/Bible/Books/66">66 &#x542F;&#x793A;&#x5F55; (&#x542F;)<span class="ui-li-count">22</span></a>
+                            <a href="/Bible/PlayList/66" data-iconpos="notext" data-icon="headphone" target="_blank">Play List</a>
+                        </li>
+                </ul>
+            </div>
+        </div>
+    </div><!-- /content -->
+</div><!-- /page -->
+
+
+</body>
+</html>
