@@ -1,6 +1,7 @@
 // src/components/CommentsSection.js
 import React from 'react';
 import { supabase } from '../supabase';
+import { useUser } from '../context/UserContext';
 
 const EMOJIS = ['❤️', '🙏', '😊', '🔥', '💪', '😮'];
 
@@ -98,8 +99,6 @@ export function ReactionBar({ comment, currentName, onReact, lang }) {
 }
 
 // ── CommentNode ───────────────────────────────────────────────────────────────
-// collapsed = true: shows only header line (avatar + name + time + [+] N hidden)
-// childrenCollapsed = true: shows body but hides children
 export function CommentNode({ comment, allComments, currentName, depth, onReact, onReply, lang }) {
   const [collapsed, setCollapsed] = React.useState(false);
   const [childrenCollapsed, setChildrenCollapsed] = React.useState(false);
@@ -111,12 +110,11 @@ export function CommentNode({ comment, allComments, currentName, depth, onReact,
     .filter(c => c.parent_id === comment.id)
     .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
-  // Count ALL descendants
   function countAll(id) {
     const kids = allComments.filter(c => c.parent_id === id);
     return kids.reduce((n, k) => n + 1 + countAll(k.id), 0);
   }
-  const totalHidden = 1 + countAll(comment.id); // self + all descendants
+  const totalHidden = 1 + countAll(comment.id);
 
   const replyLabel  = lang === 'zh' ? '回覆' : lang === 'sc' ? '回复' : lang === 'es' ? 'Responder' : 'Reply';
   const submitLabel = lang === 'zh' ? '送出' : lang === 'sc' ? '提交' : lang === 'es' ? 'Enviar' : 'Submit';
@@ -134,24 +132,15 @@ export function CommentNode({ comment, allComments, currentName, depth, onReact,
 
   return (
     <div>
-      {/* Always-visible header row */}
       <div style={{
         display: 'flex', alignItems: 'flex-start', gap: 7, paddingTop: depth === 0 ? 10 : 6,
         borderTop: depth === 0 ? '1px solid rgba(255,255,255,0.07)' : 'none',
       }}>
-        {/* Reddit-style [−]/[+] inline collapse button */}
-        <button
-          className="collapse-btn"
-          onClick={() => setCollapsed(c => !c)}
-          style={{ marginTop: 7 }}
-        >
+        <button className="collapse-btn" onClick={() => setCollapsed(c => !c)} style={{ marginTop: 7 }}>
           {collapsed ? '+' : '−'}
         </button>
-
         <Avatar name={comment.name} size={28} />
-
         <div style={{ flex: 1, minWidth: 0 }}>
-          {/* Header: name + time + hidden count if collapsed */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
             <span style={{ color: 'var(--text)', fontWeight: 600, fontSize: 13 }}>{comment.name}</span>
             <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>{timeAgo(comment.created_at)}</span>
@@ -161,16 +150,12 @@ export function CommentNode({ comment, allComments, currentName, depth, onReact,
               </span>
             )}
           </div>
-
-          {/* Body — hidden when collapsed */}
           {!collapsed && (
             <>
               <p style={{ color: 'var(--text)', fontSize: 14, lineHeight: 1.55, margin: '4px 0 0', wordBreak: 'break-word' }}>
                 {comment.text}
               </p>
-
               <ReactionBar comment={comment} currentName={currentName} onReact={onReact} lang={lang} />
-
               <div style={{ display: 'flex', gap: 12, marginTop: 5, alignItems: 'center' }}>
                 <button onClick={() => setReplyOpen(r => !r)}
                   style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', padding: 0, fontWeight: 600 }}>
@@ -183,7 +168,6 @@ export function CommentNode({ comment, allComments, currentName, depth, onReact,
                   </button>
                 )}
               </div>
-
               {replyOpen && (
                 <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
                   <Avatar name={currentName || '?'} size={24} />
@@ -209,8 +193,6 @@ export function CommentNode({ comment, allComments, currentName, depth, onReact,
           )}
         </div>
       </div>
-
-      {/* Children — indented with clickable vertical line */}
       {!collapsed && !childrenCollapsed && children.length > 0 && (
         <div style={{ display: 'flex', marginLeft: 16 }}>
           <div className="thread-line-wrap" onClick={() => setChildrenCollapsed(true)} title="Collapse">
@@ -230,20 +212,21 @@ export function CommentNode({ comment, allComments, currentName, depth, onReact,
 }
 
 // ── Main CommentsSection ──────────────────────────────────────────────────────
-
 export default function CommentsSection({ queryDate, lang = 'en' }) {
+  const { user } = useUser();
+  const currentName = user?.name || '';
+
   const [comments, setComments] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [text, setText] = React.useState('');
   const [submitting, setSubmitting] = React.useState(false);
   const [showForm, setShowForm] = React.useState(false);
-  const currentName = localStorage.getItem('bibleAppName') || '';
 
   const ui = {
-    en: { title:'💬 Discussion', add:'+ Add Comment', submit:'Post', cancel:'Cancel', placeholder:'Share your thoughts...', noComments:'Be the first to comment!', loginPrompt:'Enter your name on the Home page to comment.' },
-    es: { title:'💬 Discusión', add:'+ Comentar', submit:'Publicar', cancel:'Cancelar', placeholder:'Comparte tus pensamientos...', noComments:'¡Sé el primero en comentar!', loginPrompt:'Ingresa tu nombre en la página de inicio.' },
-    zh: { title:'💬 討論', add:'+ 新增留言', submit:'發送', cancel:'取消', placeholder:'分享你的想法...', noComments:'成為第一個留言的人！', loginPrompt:'請先在主頁輸入你的名字。' },
-    sc: { title:'💬 讨论', add:'+ 添加评论', submit:'发送', cancel:'取消', placeholder:'分享你的想法...', noComments:'成为第一个评论的人！', loginPrompt:'请先在主页输入你的名字。' },
+    en: { title:'💬 Discussion', add:'+ Add Comment', submit:'Post', cancel:'Cancel', placeholder:'Share your thoughts...', noComments:'Be the first to comment!', loginPrompt:'Please log in to comment.' },
+    es: { title:'💬 Discusión', add:'+ Comentar', submit:'Publicar', cancel:'Cancelar', placeholder:'Comparte tus pensamientos...', noComments:'¡Sé el primero en comentar!', loginPrompt:'Por favor inicia sesión para comentar.' },
+    zh: { title:'💬 討論', add:'+ 新增留言', submit:'發送', cancel:'取消', placeholder:'分享你的想法...', noComments:'成為第一個留言的人！', loginPrompt:'請先登入以留言。' },
+    sc: { title:'💬 讨论', add:'+ 添加评论', submit:'发送', cancel:'取消', placeholder:'分享你的想法...', noComments:'成为第一个评论的人！', loginPrompt:'请先登录以评论。' },
   };
   const t = ui[lang] || ui.en;
 
@@ -288,7 +271,6 @@ export default function CommentsSection({ queryDate, lang = 'en' }) {
     setComments(prev => prev.map(c => c.id === comment.id ? { ...c, reactions } : c));
   }
 
-  // Sort top-level threads by most recent activity
   const activityMap = {};
   comments.forEach(c => {
     const rootId = c.parent_id || c.id;
@@ -350,12 +332,12 @@ export default function CommentsSection({ queryDate, lang = 'en' }) {
   );
 }
 
-// ── HomeThreadCard — full interactive thread for Home page ────────────────────
-// Shows up to 5 most recent comments in a thread, fully interactive
-
+// ── HomeThreadCard ────────────────────────────────────────────────────────────
 export function HomeThreadCard({ threadComments, lang = 'en', onNavigate }) {
+  const { user } = useUser();
+  const currentName = user?.name || '';
+
   const [allComments, setAllComments] = React.useState(threadComments);
-  const currentName = localStorage.getItem('bibleAppName') || '';
 
   const root = allComments.find(c => !c.parent_id);
   if (!root) return null;
@@ -363,7 +345,6 @@ export function HomeThreadCard({ threadComments, lang = 'en', onNavigate }) {
   const viewLabel = lang === 'zh' ? '查看完整討論 →' : lang === 'sc' ? '查看完整讨论 →' : lang === 'es' ? 'Ver discusión completa →' : 'View full thread →';
   const replyLabel = lang === 'zh' ? '則留言' : lang === 'sc' ? '则留言' : lang === 'es' ? 'comentarios' : 'comments';
 
-  // Sort all comments by time, pick most recent 5 total (always include root)
   const sorted = [...allComments].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   const top5ids = new Set([root.id, ...sorted.slice(0, 5).map(c => c.id)]);
   const shown = allComments.filter(c => top5ids.has(c.id));
@@ -394,7 +375,6 @@ export function HomeThreadCard({ threadComments, lang = 'en', onNavigate }) {
     if (result.data) setAllComments(prev => [...prev, result.data[0]]);
   }
 
-  // Sort top-level for display
   const activityMap = {};
   shown.forEach(c => {
     const rootId = c.parent_id || c.id;
