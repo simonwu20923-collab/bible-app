@@ -584,6 +584,13 @@ body {
 .comment-footer { display: flex; justify-content: space-between; align-items: center; }
 .char-count { color: var(--text-muted); font-size: 0.8rem; }
 
+/* ── Nav Right ───────────────────────────────────────────── */
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 /* ── Language Toggle ─────────────────────────────────────── */
 .lang-toggle {
   display: flex;
@@ -631,6 +638,7 @@ body {
   .admin-grid { grid-template-columns: 1fr; }
   .schedule-header { flex-direction: column; align-items: flex-start; }
   /* .sticky-banner top set by JS on mobile */
+  .nav-right { flex-wrap: wrap; justify-content: flex-end; }
   .lang-toggle { order: 3; width: 100%; justify-content: center; }
 }
 

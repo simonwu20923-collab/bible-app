@@ -54,7 +54,7 @@ function AppInner() {
           <NavLink to="/schedule">{nav.schedule}</NavLink>
           <NavLink to="/admin">Admin</NavLink>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="nav-right">
           {/* Logged-in user display + logout */}
           {user && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

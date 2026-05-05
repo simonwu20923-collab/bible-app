@@ -220,13 +220,12 @@ export default function CommentsSection({ queryDate, lang = 'en' }) {
   const [loading, setLoading] = React.useState(true);
   const [text, setText] = React.useState('');
   const [submitting, setSubmitting] = React.useState(false);
-  const [showForm, setShowForm] = React.useState(false);
 
   const ui = {
-    en: { title:'💬 Discussion', add:'+ Add Comment', submit:'Post', cancel:'Cancel', placeholder:'Share your thoughts...', noComments:'Be the first to comment!', loginPrompt:'Please log in to comment.' },
-    es: { title:'💬 Discusión', add:'+ Comentar', submit:'Publicar', cancel:'Cancelar', placeholder:'Comparte tus pensamientos...', noComments:'¡Sé el primero en comentar!', loginPrompt:'Por favor inicia sesión para comentar.' },
-    zh: { title:'💬 討論', add:'+ 新增留言', submit:'發送', cancel:'取消', placeholder:'分享你的想法...', noComments:'成為第一個留言的人！', loginPrompt:'請先登入以留言。' },
-    sc: { title:'💬 讨论', add:'+ 添加评论', submit:'发送', cancel:'取消', placeholder:'分享你的想法...', noComments:'成为第一个评论的人！', loginPrompt:'请先登录以评论。' },
+    en: { title:'💬 Discussion', submit:'Post', placeholder:'Share your thoughts...', noComments:'Be the first to comment!', loginPrompt:'Please log in to comment.' },
+    es: { title:'💬 Discusión', submit:'Publicar', placeholder:'Comparte tus pensamientos...', noComments:'¡Sé el primero en comentar!', loginPrompt:'Por favor inicia sesión para comentar.' },
+    zh: { title:'💬 討論', submit:'發送', placeholder:'分享你的想法...', noComments:'成為第一個留言的人！', loginPrompt:'請先登入以留言。' },
+    sc: { title:'💬 讨论', submit:'发送', placeholder:'分享你的想法...', noComments:'成为第一个评论的人！', loginPrompt:'请先登录以评论。' },
   };
   const t = ui[lang] || ui.en;
 
@@ -244,7 +243,7 @@ export default function CommentsSection({ queryDate, lang = 'en' }) {
     if (!text.trim() || !currentName) return;
     setSubmitting(true);
     await supabase.from('comments').insert({ date: queryDate, name: currentName.trim(), text: text.trim(), parent_id: null, reactions: {} });
-    setText(''); setShowForm(false);
+    setText('');
     await fetchComments();
     setSubmitting(false);
   }
@@ -283,27 +282,19 @@ export default function CommentsSection({ queryDate, lang = 'en' }) {
 
   return (
     <div style={{ marginTop: 24 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+      <div style={{ marginBottom: 12 }}>
         <span style={{ color: 'var(--text-sec)', fontWeight: 600, fontSize: 14 }}>
           {t.title} {comments.length > 0 && `(${comments.length})`}
         </span>
-        {currentName && (
-          <button onClick={() => setShowForm(f => !f)}
-            style={{ background: showForm ? 'var(--border)' : '#7c3aed', border: 'none', borderRadius: 8, color: 'white', fontSize: 12, padding: '6px 12px', cursor: 'pointer', fontWeight: 600 }}>
-            {showForm ? t.cancel : t.add}
-          </button>
-        )}
       </div>
 
-      {showForm && currentName && (
+      {currentName ? (
         <div style={{ display: 'flex', gap: 10, marginBottom: 16, background: 'var(--surface2)', borderRadius: 10, padding: '10px 12px', border: '1px solid var(--border)' }}>
           <Avatar name={currentName} />
           <div style={{ flex: 1 }}>
-            <textarea value={text} onChange={e => setText(e.target.value)} placeholder={t.placeholder} rows={3} autoFocus
+            <textarea value={text} onChange={e => setText(e.target.value)} placeholder={t.placeholder} rows={3}
               style={{ width: '100%', background: 'transparent', border: 'none', color: 'var(--text)', fontSize: 14, resize: 'none', outline: 'none', boxSizing: 'border-box', lineHeight: 1.5 }} />
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-              <button onClick={() => { setShowForm(false); setText(''); }}
-                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}>{t.cancel}</button>
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <button onClick={submitComment} disabled={submitting || !text.trim()}
                 style={{ background: '#7c3aed', border: 'none', borderRadius: 6, color: 'white', fontSize: 13, fontWeight: 600, padding: '5px 16px', cursor: 'pointer', opacity: submitting || !text.trim() ? 0.5 : 1 }}>
                 {t.submit}
@@ -311,9 +302,9 @@ export default function CommentsSection({ queryDate, lang = 'en' }) {
             </div>
           </div>
         </div>
+      ) : (
+        <p style={{ color: 'var(--text-muted)', fontSize: 13, fontStyle: 'italic' }}>{t.loginPrompt}</p>
       )}
-
-      {!currentName && <p style={{ color: 'var(--text-muted)', fontSize: 13, fontStyle: 'italic' }}>{t.loginPrompt}</p>}
 
       {loading ? (
         <div style={{ color: 'var(--text-muted)', fontSize: 13, padding: '12px 0' }}>Loading...</div>
