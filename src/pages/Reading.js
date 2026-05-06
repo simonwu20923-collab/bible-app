@@ -35,6 +35,15 @@ export default function Reading({ lang = 'en' }) {
   const [fontSize, setFontSize] = React.useState(18);
   const [navbarHeight, setNavbarHeight] = React.useState(54);
   const [scrolled, setScrolled] = React.useState(false);
+  const [parallelMode, setParallelMode] = React.useState(() =>
+    localStorage.getItem('parallelMode') === 'true'
+  );
+  const [parallelLangA, setParallelLangA] = React.useState(() =>
+    localStorage.getItem('parallelLangA') || lang
+  );
+  const [parallelLangB, setParallelLangB] = React.useState(() =>
+    localStorage.getItem('parallelLangB') || 'zh'
+  );
 
   React.useEffect(() => {
     const navbar = document.querySelector('.navbar');
@@ -51,6 +60,7 @@ export default function Reading({ lang = 'en' }) {
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, [navbarHeight]);
+
 
   React.useEffect(() => { // eslint-disable-line react-hooks/exhaustive-deps
     setNtDone(false); setOtDone(false);
@@ -116,20 +126,16 @@ export default function Reading({ lang = 'en' }) {
     setSearchParams(nd === todayStr ? {} : { date: nd });
   }
 
-  function getNtText() {
+  function getTextForLang(langCode, portion) {
     if (!verses) return null;
-    if (lang === 'es' && verses.nt_text_es) return verses.nt_text_es;
-    if (lang === 'zh' && verses.nt_text_zh) return verses.nt_text_zh;
-    if (lang === 'sc' && verses.nt_text_sc) return verses.nt_text_sc;
-    return verses.nt_text;
+    const base = portion === 'nt' ? verses.nt_text : verses.ot_text;
+    if (langCode === 'es') return (portion === 'nt' ? verses.nt_text_es : verses.ot_text_es) || base;
+    if (langCode === 'zh') return (portion === 'nt' ? verses.nt_text_zh : verses.ot_text_zh) || base;
+    if (langCode === 'sc') return (portion === 'nt' ? verses.nt_text_sc : verses.ot_text_sc) || base;
+    return base;
   }
-  function getOtText() {
-    if (!verses) return null;
-    if (lang === 'es' && verses.ot_text_es) return verses.ot_text_es;
-    if (lang === 'zh' && verses.ot_text_zh) return verses.ot_text_zh;
-    if (lang === 'sc' && verses.ot_text_sc) return verses.ot_text_sc;
-    return verses.ot_text;
-  }
+  function getNtText() { return getTextForLang(lang, 'nt'); }
+  function getOtText() { return getTextForLang(lang, 'ot'); }
   function getNtAudio() {
     if (!verses) return null;
     if ((lang === 'zh' || lang === 'sc') && verses.nt_audio_zh) return verses.nt_audio_zh;
@@ -141,8 +147,8 @@ export default function Reading({ lang = 'en' }) {
     return verses.ot_audio;
   }
 
-  function getTitle(title) {
-    if (!title || lang === 'en') return title;
+  function getTitle(title, langCode = lang) {
+    if (!title || langCode === 'en') return title;
     let normalized = title;
     Object.entries(ABBREV).sort((a,b) => b[0].length - a[0].length).forEach(([abbr, full]) => {
       const escaped = abbr.replace(/\./g, '\\.');
@@ -150,13 +156,13 @@ export default function Reading({ lang = 'en' }) {
       const pattern = '\\b' + escaped + (endsWithWordChar ? '\\b' : '');
       normalized = normalized.replace(new RegExp(pattern, 'g'), full);
     });
-    if (lang === 'es') return normalized.replace('New Testament', 'Nuevo Testamento').replace('Old Testament', 'Antiguo Testamento');
-    const isZh = lang === 'zh' || lang === 'sc';
+    if (langCode === 'es') return normalized.replace('New Testament', 'Nuevo Testamento').replace('Old Testament', 'Antiguo Testamento');
+    const isZh = langCode === 'zh' || langCode === 'sc';
     if (isZh) {
-      const cmap = lang === 'sc' ? SC_MAP : ZH_MAP;
+      const cmap = langCode === 'sc' ? SC_MAP : ZH_MAP;
       let r = normalized
-        .replace('New Testament', lang === 'sc' ? '新约' : '新約')
-        .replace('Old Testament', lang === 'sc' ? '旧约' : '舊約');
+        .replace('New Testament', langCode === 'sc' ? '新约' : '新約')
+        .replace('Old Testament', langCode === 'sc' ? '旧约' : '舊約');
       r = r.replace(/\b1 King\b/g, cmap['1 Kings'] || '王上')
            .replace(/\b2 King\b/g, cmap['2 Kings'] || '王下');
       Object.entries(cmap).sort((a,b) => b[0].length - a[0].length).forEach(([full, char]) => {
@@ -167,23 +173,38 @@ export default function Reading({ lang = 'en' }) {
     return title;
   }
 
+  function formatVerseLine(line, key) {
+    if (!line) return null;
+    const mEn = line.match(/^([A-Z][a-z]+ \d+ :\d+)\s+(.*)/);
+    if (mEn) return (
+      <p key={key} className="verse-line" style={{ fontSize: fontSize + 'px' }}>
+        <span className="verse-ref">{mEn[1]}</span><span className="verse-body"> {mEn[2]}</span>
+      </p>
+    );
+    const mOther = line.match(/^([\w\u4e00-\u9fff]+\.?\s*\d+:\d+)\s+(.*)/);
+    if (mOther) return (
+      <p key={key} className="verse-line" style={{ fontSize: fontSize + 'px' }}>
+        <span className="verse-ref">{mOther[1]}</span><span className="verse-body"> {mOther[2]}</span>
+      </p>
+    );
+    return line ? <p key={key} className="verse-line" style={{ fontSize: fontSize + 'px' }}>{line}</p> : null;
+  }
+
   function formatVerses(text) {
     if (!text) return null;
-    return text.split('\n').map((line, i) => {
-      const mEn = line.match(/^([A-Z][a-z]+ \d+ :\d+)\s+(.*)/);
-      if (mEn) return (
-        <p key={i} className="verse-line" style={{ fontSize: fontSize + 'px' }}>
-          <span className="verse-ref">{mEn[1]}</span><span className="verse-body"> {mEn[2]}</span>
-        </p>
-      );
-      const mOther = line.match(/^([\w\u4e00-\u9fff]+\.?\s*\d+:\d+)\s+(.*)/);
-      if (mOther) return (
-        <p key={i} className="verse-line" style={{ fontSize: fontSize + 'px' }}>
-          <span className="verse-ref">{mOther[1]}</span><span className="verse-body"> {mOther[2]}</span>
-        </p>
-      );
-      return line ? <p key={i} className="verse-line" style={{ fontSize: fontSize + 'px' }}>{line}</p> : null;
-    });
+    return text.split('\n').map((line, i) => formatVerseLine(line, i));
+  }
+
+  function formatVersesParallel(textA, textB) {
+    if (!textA) return null;
+    const linesA = textA.split('\n');
+    const linesB = (textB || '').split('\n');
+    return linesA.map((lineA, i) => (
+      <div key={i} className="parallel-row">
+        <div className="parallel-col">{formatVerseLine(lineA, 0)}</div>
+        <div className="parallel-col">{formatVerseLine(linesB[i] || '', 0)}</div>
+      </div>
+    ));
   }
 
   const ABBREV = {
@@ -354,6 +375,14 @@ export default function Reading({ lang = 'en' }) {
   };
   const t = ui[lang] || ui.en;
 
+  function getAudioForLang(langCode, portion) {
+    if (!verses) return null;
+    const zhAudio = verses[`${portion}_audio_zh`];
+    const enAudio = verses[`${portion}_audio`];
+    if ((langCode === 'zh' || langCode === 'sc') && zhAudio) return zhAudio;
+    return enAudio || null;
+  }
+
   const bannerContent = [...bannerItems, ...bannerItems];
   const dateShort = currentDate.slice(5).replace('-', '/');
 
@@ -393,16 +422,81 @@ export default function Reading({ lang = 'en' }) {
             <button className="font-btn" onClick={() => setFontSize(18)}>A</button>
             <button className="font-btn" onClick={() => setFontSize(f => Math.min(26, f + 2))}>A+</button>
           </div>
+          <button
+            className={`parallel-btn${parallelMode ? ' active' : ''}`}
+            onClick={() => {
+              const next = !parallelMode;
+              setParallelMode(next);
+              localStorage.setItem('parallelMode', next);
+              if (next) {
+                setParallelLangA(lang);
+                localStorage.setItem('parallelLangA', lang);
+              }
+            }}
+          >
+            ⇔ {lang === 'zh' ? '對照' : lang === 'sc' ? '对照' : lang === 'es' ? 'Paralelo' : 'Parallel'}
+          </button>
         </div>
 
-        <div className="reading-cards">
+        {parallelMode && (
+          <div className="parallel-lang-bar">
+            <select
+              className="parallel-lang-select"
+              value={parallelLangA}
+              onChange={e => { setParallelLangA(e.target.value); localStorage.setItem('parallelLangA', e.target.value); }}
+            >
+              {[
+                { code: 'en', label: '🇺🇸 English' },
+                { code: 'es', label: '🇪🇸 Español' },
+                { code: 'zh', label: '繁 Traditional' },
+                { code: 'sc', label: '简 Simplified' },
+              ].map(opt => <option key={opt.code} value={opt.code}>{opt.label}</option>)}
+            </select>
+            <span className="parallel-sep">⇔</span>
+            <select
+              className="parallel-lang-select"
+              value={parallelLangB}
+              onChange={e => { setParallelLangB(e.target.value); localStorage.setItem('parallelLangB', e.target.value); }}
+            >
+              {[
+                { code: 'en', label: '🇺🇸 English' },
+                { code: 'es', label: '🇪🇸 Español' },
+                { code: 'zh', label: '繁 Traditional' },
+                { code: 'sc', label: '简 Simplified' },
+              ].map(opt => <option key={opt.code} value={opt.code}>{opt.label}</option>)}
+            </select>
+          </div>
+        )}
+
+        <div className={`reading-cards${parallelMode ? ' reading-cards-parallel' : ''}`}>
           {/* NT Card */}
           <div className={`reading-card ${ntDone ? 'done' : ''}`}>
             <div className="reading-card-header">
               <span className="reading-tag nt-tag">NT</span>
               <span className="reading-portion">{translatePortion(reading.nt, lang)}</span>
             </div>
-            {getNtAudio() && (
+            {parallelMode ? (
+              <div className="parallel-audio-row">
+                {getAudioForLang(parallelLangA, 'nt') && (
+                  <AudioPlayer key={`nt-${parallelLangA}`}
+                    label={parallelLangA === 'zh' ? '新約音頻' : parallelLangA === 'sc' ? '新约音频' : parallelLangA === 'es' ? 'Audio NT' : 'NT Audio'}
+                    book={getBookLabel(verses.nt_title, parallelLangA)}
+                    audioJson={getAudioForLang(parallelLangA, 'nt')}
+                    startChap={parseInt(verses.nt_title?.match(/(\d+):/)?.[1] || '1', 10)}
+                    lang={parallelLangA}
+                  />
+                )}
+                {getAudioForLang(parallelLangB, 'nt') && (
+                  <AudioPlayer key={`nt-${parallelLangB}`}
+                    label={parallelLangB === 'zh' ? '新約音頻' : parallelLangB === 'sc' ? '新约音频' : parallelLangB === 'es' ? 'Audio NT' : 'NT Audio'}
+                    book={getBookLabel(verses.nt_title, parallelLangB)}
+                    audioJson={getAudioForLang(parallelLangB, 'nt')}
+                    startChap={parseInt(verses.nt_title?.match(/(\d+):/)?.[1] || '1', 10)}
+                    lang={parallelLangB}
+                  />
+                )}
+              </div>
+            ) : getNtAudio() && (
               <AudioPlayer
                 key={`nt-${lang}`}
                 label={lang === 'zh' ? '新約音頻' : lang === 'sc' ? '新约音频' : lang === 'es' ? 'Audio NT' : 'NT Audio'}
@@ -416,8 +510,18 @@ export default function Reading({ lang = 'en' }) {
               {showNT ? t.hideVerses : t.readVerses}
             </button>
             {showNT && (
-              <div className="verses-box">
-                {verses ? (
+              <div className={`verses-box${parallelMode ? ' verses-box-parallel' : ''}`}>
+                {verses ? parallelMode ? (
+                  <>
+                    <div className="parallel-titles-row">
+                      <div className="verses-title">{getTitle(verses.nt_title, parallelLangA)}</div>
+                      <div className="verses-title">{getTitle(verses.nt_title, parallelLangB)}</div>
+                    </div>
+                    <div className="verses-text">
+                      {formatVersesParallel(getTextForLang(parallelLangA, 'nt'), getTextForLang(parallelLangB, 'nt'))}
+                    </div>
+                  </>
+                ) : (
                   <><div className="verses-title">{getTitle(verses.nt_title)}</div>
                   <div className="verses-text">{formatVerses(getNtText())}</div></>
                 ) : <div className="loading">Loading...</div>}
@@ -435,7 +539,30 @@ export default function Reading({ lang = 'en' }) {
               <span className="reading-tag ot-tag">OT</span>
               <span className="reading-portion">{translatePortion(reading.ot, lang)}</span>
             </div>
-            {getOtAudio() && (
+            {parallelMode ? (
+              <div className="parallel-audio-row">
+                {getAudioForLang(parallelLangA, 'ot') && (
+                  <AudioPlayer key={`ot-${parallelLangA}`}
+                    label={parallelLangA === 'zh' ? '舊約音頻' : parallelLangA === 'sc' ? '旧约音频' : parallelLangA === 'es' ? 'Audio AT' : 'OT Audio'}
+                    book={getBookLabel(verses.ot_title, parallelLangA)}
+                    audioJson={getAudioForLang(parallelLangA, 'ot')}
+                    startChap={parseInt(verses.ot_title?.match(/(\d+):/)?.[1] || '1', 10)}
+                    lang={parallelLangA}
+                    chapterLabels={getCrossBookChapterLabels(verses.ot_title, JSON.parse(getAudioForLang(parallelLangA, 'ot') || '[]').length, parallelLangA)}
+                  />
+                )}
+                {getAudioForLang(parallelLangB, 'ot') && (
+                  <AudioPlayer key={`ot-${parallelLangB}`}
+                    label={parallelLangB === 'zh' ? '舊約音頻' : parallelLangB === 'sc' ? '旧约音频' : parallelLangB === 'es' ? 'Audio AT' : 'OT Audio'}
+                    book={getBookLabel(verses.ot_title, parallelLangB)}
+                    audioJson={getAudioForLang(parallelLangB, 'ot')}
+                    startChap={parseInt(verses.ot_title?.match(/(\d+):/)?.[1] || '1', 10)}
+                    lang={parallelLangB}
+                    chapterLabels={getCrossBookChapterLabels(verses.ot_title, JSON.parse(getAudioForLang(parallelLangB, 'ot') || '[]').length, parallelLangB)}
+                  />
+                )}
+              </div>
+            ) : getOtAudio() && (
               <AudioPlayer
                 key={`ot-${lang}`}
                 label={lang === 'zh' ? '舊約音頻' : lang === 'sc' ? '旧约音频' : lang === 'es' ? 'Audio AT' : 'OT Audio'}
@@ -450,8 +577,18 @@ export default function Reading({ lang = 'en' }) {
               {showOT ? t.hideVerses : t.readVerses}
             </button>
             {showOT && (
-              <div className="verses-box">
-                {verses ? (
+              <div className={`verses-box${parallelMode ? ' verses-box-parallel' : ''}`}>
+                {verses ? parallelMode ? (
+                  <>
+                    <div className="parallel-titles-row">
+                      <div className="verses-title">{getTitle(verses.ot_title, parallelLangA)}</div>
+                      <div className="verses-title">{getTitle(verses.ot_title, parallelLangB)}</div>
+                    </div>
+                    <div className="verses-text">
+                      {formatVersesParallel(getTextForLang(parallelLangA, 'ot'), getTextForLang(parallelLangB, 'ot'))}
+                    </div>
+                  </>
+                ) : (
                   <><div className="verses-title">{getTitle(verses.ot_title)}</div>
                   <div className="verses-text">{formatVerses(getOtText())}</div></>
                 ) : <div className="loading">Loading...</div>}

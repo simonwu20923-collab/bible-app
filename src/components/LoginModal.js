@@ -100,7 +100,7 @@ export default function LoginModal({ onLangChange }) {
     try {
       const { data: existing, error: fetchError } = await supabase
         .from('users')
-        .select('name, email')
+        .select('name, email, is_admin')
         .ilike('name', trimmedName)
         .maybeSingle();
 
@@ -108,7 +108,7 @@ export default function LoginModal({ onLangChange }) {
 
       if (existing) {
         if (existing.email.toLowerCase() === trimmedEmail) {
-          login({ name: existing.name, email: existing.email });
+          login({ name: existing.name, email: existing.email, isAdmin: existing.is_admin || false });
         } else {
           setError(t.errorTaken);
           setLoading(false);
@@ -119,7 +119,7 @@ export default function LoginModal({ onLangChange }) {
           .from('users')
           .insert([{ name: trimmedName, email: trimmedEmail }]);
         if (insertError) throw insertError;
-        login({ name: trimmedName, email: trimmedEmail });
+        login({ name: trimmedName, email: trimmedEmail, isAdmin: false });
       }
     } catch (err) {
       console.error(err);

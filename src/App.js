@@ -5,6 +5,7 @@ import Reading from './pages/Reading';
 import Home from './pages/Home';
 import Schedule from './pages/Schedule';
 import Admin from './pages/Admin';
+import Bible from './pages/Bible';
 import { UserProvider, useUser } from './context/UserContext';
 import LoginModal from './components/LoginModal';
 
@@ -34,10 +35,10 @@ function AppInner() {
   }
 
   const navLabels = {
-    en: { home: 'Home', reading: 'Reading', schedule: 'Schedule' },
-    es: { home: 'Inicio', reading: 'Lectura', schedule: 'Horario' },
-    zh: { home: '首頁', reading: '閱讀', schedule: '計劃' },
-    sc: { home: '首页', reading: '阅读', schedule: '计划' },
+    en: { home: 'Home', reading: 'Reading', schedule: 'Schedule', bible: 'The Bible' },
+    es: { home: 'Inicio', reading: 'Lectura', schedule: 'Horario', bible: 'La Biblia' },
+    zh: { home: '首頁', reading: '閱讀', schedule: '計劃', bible: '聖經' },
+    sc: { home: '首页', reading: '阅读', schedule: '计划', bible: '圣经' },
   };
   const nav = navLabels[lang] || navLabels.en;
 
@@ -52,7 +53,8 @@ function AppInner() {
           <NavLink to="/" end>{nav.home}</NavLink>
           <NavLink to="/reading">{nav.reading}</NavLink>
           <NavLink to="/schedule">{nav.schedule}</NavLink>
-          <NavLink to="/admin">Admin</NavLink>
+          <NavLink to="/bible">{nav.bible}</NavLink>
+          {user?.isAdmin && <NavLink to="/admin">Admin</NavLink>}
         </div>
         <div className="nav-right">
           {/* Logged-in user display + logout */}
@@ -119,6 +121,7 @@ function AppInner() {
         <Route path="/"        element={<div className="main-content"><Home lang={lang} /></div>} />
         <Route path="/reading" element={<Reading lang={lang} />} />
         <Route path="/schedule" element={<div className="main-content"><Schedule lang={lang} /></div>} />
+        <Route path="/bible"   element={<Bible lang={lang} />} />
         <Route path="/admin"   element={<div className="main-content"><Admin /></div>} />
       </Routes>
     </div>
