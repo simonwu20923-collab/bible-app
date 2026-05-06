@@ -257,7 +257,9 @@ function buildChapterMap(rows) {
         }
       }
 
-      // Merge verse lines into map
+      // Merge verse lines into map — accumulate per verse number so chapters
+      // that span multiple reading-day rows get ALL their verses, not just
+      // the first row's partial set.
       for (const [key, lines] of Object.entries(verseBuf)) {
         const [abbr, chStr, lang] = key.split('_');
         const chapter = parseInt(chStr, 10);
@@ -265,9 +267,15 @@ function buildChapterMap(rows) {
         if (!map[abbr]) map[abbr] = {};
         if (!map[abbr][chapter]) map[abbr][chapter] = {};
 
-        const fieldName = `text_${lang}`;
-        if (!map[abbr][chapter][fieldName]) {
-          map[abbr][chapter][fieldName] = lines.join('\n');
+        // Use a verse-number keyed object so we can accumulate across rows
+        // and deduplicate without losing any verse.
+        const verseKey = `_vs_${lang}`;
+        if (!map[abbr][chapter][verseKey]) map[abbr][chapter][verseKey] = {};
+        for (const line of lines) {
+          const vNum = parseInt(line, 10); // "N text" — parseInt stops at space
+          if (!map[abbr][chapter][verseKey][vNum]) {
+            map[abbr][chapter][verseKey][vNum] = line;
+          }
         }
       }
 
@@ -304,6 +312,20 @@ async function main() {
 
   console.log('Parsing and building chapter map...');
   const chapterMap = buildChapterMap(rows);
+
+  // Finalise verse accumulation: convert _vs_<lang> objects → sorted text strings
+  for (const chapters of Object.values(chapterMap)) {
+    for (const data of Object.values(chapters)) {
+      for (const lang of ['en', 'es', 'zh', 'sc']) {
+        const verseKey = `_vs_${lang}`;
+        if (data[verseKey]) {
+          const sorted = Object.keys(data[verseKey]).map(Number).sort((a, b) => a - b);
+          data[`text_${lang}`] = sorted.map(n => data[verseKey][n]).join('\n');
+          delete data[verseKey];
+        }
+      }
+    }
+  }
 
   // Flatten map into insert rows
   const insertRows = [];
