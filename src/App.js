@@ -6,6 +6,7 @@ import Home from './pages/Home';
 import Schedule from './pages/Schedule';
 import Admin from './pages/Admin';
 import Bible from './pages/Bible';
+import SearchOverlay from './components/SearchOverlay';
 import { UserProvider, useUser } from './context/UserContext';
 import LoginModal from './components/LoginModal';
 
@@ -40,6 +41,7 @@ function AppInner() {
     zh: { home: '首頁', reading: '閱讀', schedule: '計劃', bible: '聖經' },
     sc: { home: '首页', reading: '阅读', schedule: '计划', bible: '圣经' },
   };
+  const [searchOpen, setSearchOpen] = React.useState(false);
   const nav = navLabels[lang] || navLabels.en;
 
   return (
@@ -88,6 +90,19 @@ function AppInner() {
             </div>
           )}
 
+          {/* Search icon */}
+          <button
+            className={`nav-search-btn${searchOpen ? ' active' : ''}`}
+            onClick={() => setSearchOpen(o => !o)}
+            aria-label="Search the Bible"
+            title="Search the Bible"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="7"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+          </button>
+
           {/* Theme toggle */}
           <button
             className="theme-toggle"
@@ -116,6 +131,8 @@ function AppInner() {
           </div>
         </div>
       </nav>
+
+      {searchOpen && <SearchOverlay onClose={() => setSearchOpen(false)} />}
 
       <Routes>
         <Route path="/"        element={<div className="main-content"><Home lang={lang} /></div>} />
