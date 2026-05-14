@@ -76,6 +76,13 @@ body {
   transition: background 0.2s, color 0.2s;
 }
 
+/* Flex column so child pages can fill remaining viewport height */
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
 /* ── Navbar ────────────────────────────────────────────────── */
 .navbar {
   background: var(--surface);
@@ -850,7 +857,8 @@ body {
 /* ── Bible Browser ───────────────────────────────────────── */
 .bible-layout {
   display: flex;
-  height: calc(100vh - 56px);
+  flex: 1;          /* fills remaining viewport after the navbar, any height */
+  min-height: 0;    /* allows flex children to shrink / scroll correctly */
   overflow: hidden;
 }
 
@@ -1171,17 +1179,16 @@ body {
 /* Mobile */
 @media (max-width: 700px) {
   .bible-layout {
-    display: block;
-    height: auto;
-    overflow: visible;
+    flex-direction: column; /* stack sidebar / main vertically on mobile */
+    overflow: hidden;       /* keeps each panel scrollable within its space */
   }
   .bible-sidebar {
     width: 100%;
     min-width: 0;
     border-right: none;
     border-bottom: 1px solid var(--border);
-    max-height: 45vh;
     overflow-y: auto;
+    /* no max-height cap — sidebar fills all available space when it's the only visible panel */
   }
   .bible-hidden-mobile { display: none !important; }
   .bible-mobile-nav { display: block; }
