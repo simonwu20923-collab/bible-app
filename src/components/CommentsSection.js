@@ -220,12 +220,13 @@ export default function CommentsSection({ queryDate, lang = 'en' }) {
   const [loading, setLoading] = React.useState(true);
   const [text, setText] = React.useState('');
   const [submitting, setSubmitting] = React.useState(false);
+  const [showForm, setShowForm] = React.useState(false);
 
   const ui = {
-    en: { title:'💬 Discussion', submit:'Post', placeholder:'Share your thoughts...', noComments:'Be the first to comment!', loginPrompt:'Please log in to comment.' },
-    es: { title:'💬 Discusión', submit:'Publicar', placeholder:'Comparte tus pensamientos...', noComments:'¡Sé el primero en comentar!', loginPrompt:'Por favor inicia sesión para comentar.' },
-    zh: { title:'💬 討論', submit:'發送', placeholder:'分享你的想法...', noComments:'成為第一個留言的人！', loginPrompt:'請先登入以留言。' },
-    sc: { title:'💬 讨论', submit:'发送', placeholder:'分享你的想法...', noComments:'成为第一个评论的人！', loginPrompt:'请先登录以评论。' },
+    en: { title:'💬 Discussion', add:'+ Add Comment', submit:'Post', cancel:'Cancel', placeholder:'Share your thoughts...', noComments:'Be the first to comment!', loginPrompt:'Please log in to comment.' },
+    es: { title:'💬 Discusión', add:'+ Comentar', submit:'Publicar', cancel:'Cancelar', placeholder:'Comparte tus pensamientos...', noComments:'¡Sé el primero en comentar!', loginPrompt:'Por favor inicia sesión para comentar.' },
+    zh: { title:'💬 討論', add:'+ 新增留言', submit:'發送', cancel:'取消', placeholder:'分享你的想法...', noComments:'成為第一個留言的人！', loginPrompt:'請先登入以留言。' },
+    sc: { title:'💬 讨论', add:'+ 添加评论', submit:'发送', cancel:'取消', placeholder:'分享你的想法...', noComments:'成为第一个评论的人！', loginPrompt:'请先登录以评论。' },
   };
   const t = ui[lang] || ui.en;
 

@@ -101,13 +101,16 @@ export default function Home({ lang = 'en' }) {
     const totalDays = Object.keys(byDate).length;
 
     let streak = 0;
-    const today = new Date();
-    for (let i = 0; i < 365; i++) {
-      const d = new Date(today); d.setDate(today.getDate() - i);
-      const key = d.toISOString().split('T')[0];
-      if (byDate[key] && (byDate[key].nt || byDate[key].ot)) streak++;
-      else break;
-    }
+const today = new Date(); // keep this — used below for nextDate too
+const todayKey = today.toLocaleDateString('en-CA');
+const sortedDates = Object.keys(byDate).sort().reverse();
+for (let i = 0; i < sortedDates.length; i++) {
+  const expected = new Date(todayKey + 'T12:00:00');
+  expected.setDate(expected.getDate() - i);
+  const expectedKey = expected.toISOString().split('T')[0];
+  if (byDate[expectedKey] && (byDate[expectedKey].nt || byDate[expectedKey].ot)) streak++;
+  else break;
+}
 
     const readDates = Object.keys(byDate).sort();
     if (readDates.length > 0) {
@@ -168,7 +171,7 @@ export default function Home({ lang = 'en' }) {
             name: p.name,
             full: Object.values(p.dates).filter(d => d.nt && d.ot).length,
             total: Object.keys(p.dates).length,
-          })).sort((a, b) => b.full - a.full || b.total - a.total).slice(0, 10);
+          })).sort((a, b) => b.total - a.total || b.full - a.full).slice(0, 10);
         };
         setTopAllTime(buildStats(allData));
         setTopWeek(buildStats(allData.filter(r => new Date(r.date) >= weekAgo)));
