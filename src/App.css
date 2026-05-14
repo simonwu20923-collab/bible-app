@@ -1814,6 +1814,123 @@ body {
   max-height: 380px;
   overflow-y: auto;
 }
+/* ── Mobile bottom sheet ────────────────────────────────────────────────────
+   Replaces draggable popups on screens < 768 px.
+   ─────────────────────────────────────────────────────────────────────────── */
+.mobile-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 9998;
+  animation: msFadeIn 0.18s ease;
+}
+.mobile-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  border-radius: 18px 18px 0 0;
+  box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.55);
+  display: flex;
+  flex-direction: column;
+  max-height: 62vh;
+  animation: msSlideUp 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* drag handle pill */
+.mobile-sheet::before {
+  content: '';
+  display: block;
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  margin: 10px auto 0;
+  flex-shrink: 0;
+}
+.mobile-sheet-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px 10px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.mobile-sheet-nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.mobile-sheet-nav-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 20px;
+  line-height: 1;
+  width: 32px;
+  height: 32px;
+  border-radius: 7px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s;
+  padding: 0;
+}
+.mobile-sheet-nav-btn:disabled { opacity: 0.28; cursor: default; }
+.mobile-sheet-nav-btn:not(:disabled):active { background: rgba(128,128,128,0.18); }
+.mobile-sheet-nav-pos {
+  font-size: 11px;
+  color: var(--text-muted);
+  min-width: 26px;
+  text-align: center;
+}
+.mobile-sheet-title {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-sec);
+  letter-spacing: 0.03em;
+  text-align: center;
+  padding: 0 4px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.mobile-sheet-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 5px 7px;
+  border-radius: 7px;
+  flex-shrink: 0;
+  transition: background 0.12s, color 0.12s;
+}
+.mobile-sheet-close:active { background: rgba(128,128,128,0.18); color: var(--text); }
+.mobile-sheet-body {
+  padding: 14px 16px 24px;   /* extra bottom padding for home-bar area */
+  font-size: 15px;
+  line-height: 1.8;
+  color: var(--text);
+  overflow-y: auto;
+  flex: 1;
+  -webkit-overflow-scrolling: touch;
+}
+@keyframes msSlideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0);    }
+}
+@keyframes msFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
 /* ── Ref links (blue, clickable Bible references) ────────────────────────── */
 .bible-ref-link {
   display: inline;

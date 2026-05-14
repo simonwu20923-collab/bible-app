@@ -618,6 +618,56 @@ function DraggablePopup({ popup, idx, onClose, onCloseAll, totalCount, children 
   );
 }
 
+// ── Mobile bottom sheet ──────────────────────────────────────────────────────
+// Shown on narrow screens instead of draggable popups.
+// history = [{id, kind, title, ...}], idx = current position.
+function MobileBottomSheet({ history, idx, onNavigate, onClose }) {
+  const current = history[idx];
+  if (!current) return null;
+  const canBack = idx > 0;
+  const canFwd  = idx < history.length - 1;
+  return (
+    <>
+      <div className="mobile-sheet-backdrop" onClick={onClose} />
+      <div className="mobile-sheet">
+        <div className="mobile-sheet-header">
+          <div className="mobile-sheet-nav">
+            <button className="mobile-sheet-nav-btn" disabled={!canBack}
+              onClick={() => onNavigate(idx - 1)} aria-label="Back">‹</button>
+            {history.length > 1 && (
+              <span className="mobile-sheet-nav-pos">{idx + 1}/{history.length}</span>
+            )}
+            <button className="mobile-sheet-nav-btn" disabled={!canFwd}
+              onClick={() => onNavigate(idx + 1)} aria-label="Forward">›</button>
+          </div>
+          <span className="mobile-sheet-title">{current.title}</span>
+          <button className="mobile-sheet-close" onClick={onClose} aria-label="Close">✕</button>
+        </div>
+        <div className="mobile-sheet-body">
+          {current.kind === 'note' && (
+            <RefContent content={current.content} lang={current.contentLang}
+              contextBook={current.contextBook} contextChapter={current.contextChapter} />
+          )}
+          {current.kind === 'verse' && (
+            <div className="bible-ref-verse-stack">
+              {current.verses.map(v => (
+                <div key={v.verse} className="bible-ref-verse-row">
+                  <span className="bible-ref-verse-num">{v.verse}</span>
+                  <span className="bible-ref-verse-text">
+                    <VerseWithMarkers verseNum={v.verse} plainText={v.text}
+                      markedText={current.markedTexts[v.verse]}
+                      refsMap={current.refsMap} verseLang={current.verseLang || 'en'} />
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ── Split "[marker]" tokens from marked-text string ──────────────────────────
 function parseMarkerParts(text) {
   const parts = [];
@@ -832,27 +882,49 @@ export default function Bible({ lang }) {
   const [markedTexts, setMarkedTexts] = useState({});  // column A: { verseNum: markedString }
   const [refsMapB, setRefsMapB]       = useState({});  // column B (parallel)
   const [markedTextsB, setMarkedTextsB] = useState({}); // column B (parallel)
-  const [popupStack, setPopupStack]   = useState([]); // [{ id, kind, title, x, y, ... }]
+  const [popupStack, setPopupStack]   = useState([]); // desktop: [{ id, kind, title, x, y, ... }]
+  const [mobileSheet, setMobileSheet] = useState({ history: [], idx: -1 }); // mobile bottom sheet
+  const [isMobile, setIsMobile]       = useState(() => window.innerWidth < 768);
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   const mainRef         = useRef(null);
   const verseContentRef = useRef(null);
 
-  // Push a new popup onto the stack, cascading position
+  // Push a note/verse popup — routes to bottom sheet on mobile, draggable stack on desktop
   const pushPopup = useCallback((popup) => {
-    setPopupStack(prev => {
-      const offset = prev.length * 30;
-      const baseX  = popup.x ?? (prev.length ? prev[0].x + offset : 120);
-      const baseY  = popup.y ?? (prev.length ? prev[0].y + offset : 120);
-      return [...prev, {
-        id: Date.now() + Math.random(),
-        ...popup,
-        x: Math.min(Math.max(baseX, 8), window.innerWidth  - 384),
-        y: Math.min(Math.max(baseY, 8), window.innerHeight - 460),
-      }];
-    });
+    if (window.innerWidth < 768) {
+      // Mobile: add to sheet history (truncate any forward history first)
+      setMobileSheet(prev => {
+        const history = [
+          ...prev.history.slice(0, prev.idx + 1),
+          { id: Date.now() + Math.random(), ...popup },
+        ];
+        return { history, idx: history.length - 1 };
+      });
+    } else {
+      // Desktop: cascading draggable popups
+      setPopupStack(prev => {
+        const offset = prev.length * 30;
+        const baseX  = popup.x ?? (prev.length ? prev[0].x + offset : 120);
+        const baseY  = popup.y ?? (prev.length ? prev[0].y + offset : 120);
+        return [...prev, {
+          id: Date.now() + Math.random(),
+          ...popup,
+          x: Math.min(Math.max(baseX, 8), window.innerWidth  - 384),
+          y: Math.min(Math.max(baseY, 8), window.innerHeight - 460),
+        }];
+      });
+    }
   }, []);
 
   const closeAllPopups = useCallback(() => setPopupStack([]), []);
+  const closeSheet     = useCallback(() => setMobileSheet({ history: [], idx: -1 }), []);
+  const navigateSheet  = useCallback((idx) => setMobileSheet(prev => ({ ...prev, idx })), []);
 
   // Which refs lang is active — null means no refs for that lang (e.g. Spanish)
   const activeRefsLang = useMemo(() => {
@@ -1190,8 +1262,17 @@ export default function Bible({ lang }) {
   return (
     <PopupContext.Provider value={{ pushPopup }}>
     <>
-    {/* ── Popup stack (fixed, cascaded, draggable) ──────────────────── */}
-    {popupStack.map((popup, idx) => (
+    {/* ── Mobile bottom sheet (< 768 px) ───────────────────────────── */}
+    {isMobile && mobileSheet.idx >= 0 && (
+      <MobileBottomSheet
+        history={mobileSheet.history}
+        idx={mobileSheet.idx}
+        onNavigate={navigateSheet}
+        onClose={closeSheet}
+      />
+    )}
+    {/* ── Desktop popup stack (≥ 768 px) — fixed, cascaded, draggable ─ */}
+    {!isMobile && popupStack.map((popup, idx) => (
       <DraggablePopup key={popup.id} popup={popup} idx={idx}
         onClose={handlePopupAction} onCloseAll={closeAllPopups}
         totalCount={popupStack.length}
