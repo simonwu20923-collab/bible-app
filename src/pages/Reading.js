@@ -32,7 +32,7 @@ export default function Reading({ lang = 'en' }) {
   const [verses, setVerses] = React.useState(null);
   const [showNT, setShowNT] = React.useState(true);
   const [showOT, setShowOT] = React.useState(true);
-  const [fontSize, setFontSize] = React.useState(18);
+  const [fontSize, setFontSize] = React.useState(() => parseInt(localStorage.getItem('readingFontSize'), 10) || 18);
   const [navbarHeight, setNavbarHeight] = React.useState(54);
   const [scrolled, setScrolled] = React.useState(false);
   const [parallelMode, setParallelMode] = React.useState(() =>
@@ -62,6 +62,8 @@ export default function Reading({ lang = 'en' }) {
   }, [navbarHeight]);
 
 
+  React.useEffect(() => { localStorage.setItem('readingFontSize', String(fontSize)); }, [fontSize]);
+
   React.useEffect(() => { // eslint-disable-line react-hooks/exhaustive-deps
     setNtDone(false); setOtDone(false);
     setShowNT(true); setShowOT(true);
@@ -80,8 +82,16 @@ export default function Reading({ lang = 'en' }) {
   }
 
   async function loadVerses() {
+    // Only fetch columns needed for the active language(s)
+    const activeLangs = new Set([lang || 'en']);
+    if (parallelMode) { activeLangs.add(parallelLangA || 'en'); activeLangs.add(parallelLangB || 'zh'); }
+    const cols = new Set(['nt_title', 'ot_title', 'nt_text', 'ot_text', 'nt_audio', 'ot_audio']);
+    if (activeLangs.has('zh') || activeLangs.has('sc')) { cols.add('nt_audio_zh'); cols.add('ot_audio_zh'); }
+    if (activeLangs.has('zh'))  { cols.add('nt_text_zh');  cols.add('ot_text_zh'); }
+    if (activeLangs.has('sc'))  { cols.add('nt_text_sc');  cols.add('ot_text_sc'); }
+    if (activeLangs.has('es'))  { cols.add('nt_text_es');  cols.add('ot_text_es'); }
     const { data } = await supabase.from('verses')
-      .select('nt_title,nt_text,ot_title,ot_text,nt_audio,ot_audio,nt_audio_zh,ot_audio_zh,nt_text_es,ot_text_es,nt_text_zh,ot_text_zh,nt_text_sc,ot_text_sc')
+      .select([...cols].join(','))
       .eq('date', queryDate).single();
     if (data) setVerses(data);
   }

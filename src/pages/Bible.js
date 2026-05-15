@@ -865,15 +865,31 @@ async function fetchChaptersForBook(bookAbbr) {
   return data.map(r => r.chapter);
 }
 
-async function fetchChapterData(bookAbbr, chapter) {
+// ── Chapter data cache (sessionStorage, keyed per book+chapter) ────────────
+function getChapterCache(bookAbbr, chapter) {
+  try { const r = sessionStorage.getItem(`bch_${bookAbbr}_${chapter}`); return r ? JSON.parse(r) : null; }
+  catch { return null; }
+}
+function mergeChapterCache(bookAbbr, chapter, newData) {
+  const merged = { ...(getChapterCache(bookAbbr, chapter) || {}), ...newData };
+  try { sessionStorage.setItem(`bch_${bookAbbr}_${chapter}`, JSON.stringify(merged)); } catch (_) {}
+  return merged;
+}
+
+// Only fetches columns not already in cache; merges result back into cache.
+async function fetchChapterData(bookAbbr, chapter, cols) {
+  const cached  = getChapterCache(bookAbbr, chapter);
+  const colArr  = cols.split(',');
+  if (cached && colArr.every(c => cached[c] !== undefined)) return cached; // full cache hit
+  const toFetch = cached ? colArr.filter(c => cached[c] === undefined) : colArr;
   const { data, error } = await supabase
     .from('bible_chapters')
-    .select('text_en,text_es,text_zh,text_sc,audio_en,audio_zh,audio_es')
+    .select(toFetch.join(','))
     .eq('book_abbr', bookAbbr)
     .eq('chapter', chapter)
     .single();
   if (error) throw error;
-  return data;
+  return mergeChapterCache(bookAbbr, chapter, data);
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
@@ -888,7 +904,7 @@ export default function Bible({ lang }) {
   const [chapterLoading, setChapterLoading] = useState(false);
 
   const [displayLang, setDisplayLang]       = useState(() => localStorage.getItem('bibleAppLang') || 'en');
-  const [fontSize, setFontSize]             = useState(18);
+  const [fontSize, setFontSize]             = useState(() => parseInt(localStorage.getItem('bibleFontSize'), 10) || 18);
   const [parallelMode, setParallelMode]     = useState(false);
   const [parallelLangA, setParallelLangA]   = useState(() => lang || 'en');
   const [parallelLangB, setParallelLangB]   = useState('zh');
@@ -901,7 +917,7 @@ export default function Bible({ lang }) {
   // ── Sidebar expandable books + intro/outline state ───────────────────────
   const [expandedBooks, setExpandedBooks] = useState(new Set());
   const [sidebarChapters, setSidebarChapters] = useState({});
-  const [bookView, setBookView] = useState(null); // 'intro' | null
+  const [showIntro, setShowIntro] = useState(false);
   const [bookIntro, setBookIntro] = useState(null);
   const [bookOutline, setBookOutline] = useState([]);
   const [outlineLoading, setOutlineLoading] = useState(false);
@@ -994,17 +1010,42 @@ export default function Bible({ lang }) {
     return lang === outlineLangA ? null : lang;
   }, [parallelMode, parallelLangB, outlineLangA]);
 
-  // Fetch primary outlines reactively (language or chapter changes)
-  useEffect(() => {
-    if (!selectedBook || !selectedChapter) {
-      setChapterOutlines([]);
-      return;
+  // Persist font size preference
+  useEffect(() => { localStorage.setItem('bibleFontSize', String(fontSize)); }, [fontSize]);
+
+  // Columns to fetch for chapter text — only what the current display config needs
+  const chapterCols = useMemo(() => {
+    const audioCol = l => (l === 'sc' || l === 'zh') ? 'audio_zh' : l === 'es' ? 'audio_es' : 'audio_en';
+    const cols = new Set();
+    if (parallelMode) {
+      cols.add(`text_${parallelLangA}`); cols.add(`text_${parallelLangB}`);
+      cols.add(audioCol(parallelLangA));  cols.add(audioCol(parallelLangB));
+    } else {
+      cols.add(`text_${displayLang}`);
+      cols.add(audioCol(displayLang));
     }
+    return [...cols].join(',');
+  }, [displayLang, parallelMode, parallelLangA, parallelLangB]);
+
+  // Re-fetch chapter data when language/mode changes and the needed column isn't cached yet
+  useEffect(() => {
+    if (!selectedBook || !selectedChapter || !chapterData) return;
+    const colArr = chapterCols.split(',');
+    if (colArr.every(c => chapterData[c] !== undefined)) return; // already have all needed cols
+    fetchChapterData(selectedBook, selectedChapter, chapterCols)
+      .then(data => setChapterData(data))
+      .catch(() => {});
+  }, [chapterCols]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fetch primary outlines reactively — deferred until outline panel is open
+  useEffect(() => {
+    if (!selectedBook || !selectedChapter) { setChapterOutlines([]); return; }
+    if (!showOutline) return; // don't fetch while panel is hidden; fires when user opens it
     supabase.from('bible_outlines').select('*')
       .eq('book_abbr', selectedBook).eq('lang', outlineLangA).eq('start_chapter', selectedChapter)
       .order('sort_order')
       .then(({ data }) => setChapterOutlines(data || []));
-  }, [outlineLangA, selectedBook, selectedChapter]);
+  }, [outlineLangA, selectedBook, selectedChapter, showOutline]);
 
   // Fetch secondary outlines when parallel mode or chapter changes
   useEffect(() => {
@@ -1054,11 +1095,11 @@ export default function Bible({ lang }) {
   }, [selectedBook, introLang]);
 
   async function selectBook(abbr) {
-    if (abbr === selectedBook && bookView === 'intro') return;
+    if (abbr === selectedBook && showIntro) return;
     setSelectedBook(abbr);
     setSelectedChapter(null);
     setChapterData(null);
-    setBookView('intro');
+    setShowIntro(true);
     setMobileView('chapters');
     try {
       const chs = await fetchChaptersForBook(abbr);
@@ -1074,12 +1115,14 @@ export default function Bible({ lang }) {
     setSelectedChapter(ch);
     setChapterData(null);
     setChapterLoading(true);
-    setBookView(null);
+    setShowIntro(false);
     setMobileView('verses');
+    setChapterOutlines([]);
+    setChapterOutlinesB([]);
     // Scroll verse area to top
     setTimeout(() => verseContentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
     try {
-      const chData = await fetchChapterData(bookAbbr, ch);
+      const chData = await fetchChapterData(bookAbbr, ch, chapterCols);
       setChapterData(chData);
     } catch { setChapterData(null); }
     setChapterLoading(false);
@@ -1299,9 +1342,10 @@ export default function Bible({ lang }) {
   // Verse count for the jump strip
   const verseCount = useMemo(() => {
     if (!chapterData) return 0;
-    const text = chapterData[`text_en`] || chapterData[`text_zh`] || '';
+    const col = parallelMode ? `text_${parallelLangA}` : `text_${displayLang}`;
+    const text = chapterData[col] || '';
     return parseStoredVerses(text).length;
-  }, [chapterData]);
+  }, [chapterData, displayLang, parallelMode, parallelLangA]);
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -1437,7 +1481,7 @@ export default function Bible({ lang }) {
 
         {/* Book selected */}
         {selectedBook && (
-          bookView === 'intro' ? (
+          showIntro ? (
             /* ── Book intro page ── */
             <div className="bible-intro-page">
               {/* Chapter grid at top */}
