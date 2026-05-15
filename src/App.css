@@ -960,6 +960,33 @@ body {
 .outline-level-4 .outline-item-content { font-style: italic; font-size: 12px; opacity: 0.9; }
 .outline-level-5 .outline-item-content { font-size: 12px; opacity: 0.85; }
 
+/* ── Standalone chapter outline block (above verse content) ───────────── */
+.bible-chapter-outline-block {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px 6px;
+  margin-bottom: 14px;
+  background: var(--surface-alt, rgba(0,0,0,0.03));
+}
+.light .bible-chapter-outline-block { background: rgba(0,0,0,0.025); }
+
+/* Inside the block, items are left-aligned and clickable */
+.bible-chapter-outline-block .bible-inline-outline {
+  padding: 3px 6px;
+  text-align: left;
+  border-radius: 4px;
+  transition: background 0.12s;
+}
+.bible-chapter-outline-block .bible-inline-outline[style*="pointer"]:hover {
+  background: var(--hover, rgba(99,102,241,0.08));
+}
+.bible-chapter-outline-block .bible-inline-outline-lv1 { padding-top: 6px; padding-left: 0; }
+.bible-chapter-outline-block .bible-inline-outline-lv2 { padding-left: 14px; }
+.bible-chapter-outline-block .bible-inline-outline-lv3 { padding-left: 28px; }
+.bible-chapter-outline-block .bible-inline-outline-lv4 { padding-left: 42px; }
+.bible-chapter-outline-block .bible-inline-outline-lv5 { padding-left: 56px; }
+.bible-chapter-outline-block .bible-inline-outline-lv6 { padding-left: 70px; }
+
 /* ── Inline outline headers in reading ────────────────────────────────── */
 .bible-inline-outline { text-align: center; padding: 16px 8px 4px; }
 .bible-inline-outline-title { font-weight: 600; }

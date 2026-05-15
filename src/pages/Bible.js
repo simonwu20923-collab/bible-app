@@ -1192,39 +1192,17 @@ export default function Bible({ lang }) {
   function renderVerses(text) {
     const verses = parseStoredVerses(text);
     if (verses.length === 0) return <p style={{ opacity: 0.5, padding: '12px 0' }}>{t.noText}</p>;
-    // Build verse → outline items map (use enriched items so end refs are shown)
-    const outlineByVerse = {};
-    (chapterOutlines || []).forEach(ol => {
-      const enriched = enrichedOutlineById.get(ol.id) || ol;
-      const v = enriched.start_verse;
-      if (!outlineByVerse[v]) outlineByVerse[v] = [];
-      outlineByVerse[v].push(enriched);
-    });
     return verses.map(({ verse, text: vt }) => {
       // In refs mode, use marked text if available
       const useMarked = showRefs && markedTexts[verse];
       const content   = useMarked ? parseMarkedText(markedTexts[verse], verse) : vt;
-      const headers   = showOutline ? outlineByVerse[verse] : null;
       return (
-        <React.Fragment key={verse}>
-          {headers && headers.map((ol, hi) => (
-            <div key={`ol-${ol.id || hi}`} className={`bible-inline-outline bible-inline-outline-lv${ol.level}`}>
-              <div className="bible-inline-outline-title">
-                {ol.prefix && <span>{ol.prefix} </span>}
-                {ol.title}
-              </div>
-              {formatOutlineRange(ol) && (
-                <div className="bible-inline-outline-range">{formatOutlineRange(ol)}</div>
-              )}
-            </div>
-          ))}
-          <div id={`bible-verse-${verse}`} style={{ display: 'flex', gap: '10px', marginBottom: '8px', lineHeight: 1.75, fontSize: fontSize + 'px' }}>
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)', minWidth: '22px', paddingTop: '4px', fontWeight: 600, flexShrink: 0 }}>
-              {verse}
-            </span>
-            <span>{content}</span>
-          </div>
-        </React.Fragment>
+        <div id={`bible-verse-${verse}`} key={verse} style={{ display: 'flex', gap: '10px', marginBottom: '8px', lineHeight: 1.75, fontSize: fontSize + 'px' }}>
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)', minWidth: '22px', paddingTop: '4px', fontWeight: 600, flexShrink: 0 }}>
+            {verse}
+          </span>
+          <span>{content}</span>
+        </div>
       );
     });
   }
@@ -1605,6 +1583,31 @@ export default function Bible({ lang }) {
                           </button>
                         ))}
                       </div>
+                    </div>
+                  )}
+
+                  {/* ── Chapter outline block (standalone, works alongside parallel mode) ── */}
+                  {showOutline && chapterOutlines.length > 0 && !chapterLoading && (
+                    <div className="bible-chapter-outline-block">
+                      {chapterOutlines.map((ol, hi) => {
+                        const enriched = enrichedOutlineById.get(ol.id) || ol;
+                        return (
+                          <div
+                            key={`col-${ol.id || hi}`}
+                            className={`bible-inline-outline bible-inline-outline-lv${enriched.level}`}
+                            style={{ cursor: enriched.start_verse ? 'pointer' : 'default' }}
+                            onClick={enriched.start_verse ? () => scrollToVerse(enriched.start_verse) : undefined}
+                          >
+                            <div className="bible-inline-outline-title">
+                              {enriched.prefix && <span>{enriched.prefix} </span>}
+                              {enriched.title}
+                            </div>
+                            {formatOutlineRange(enriched) && (
+                              <div className="bible-inline-outline-range">{formatOutlineRange(enriched)}</div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
 
