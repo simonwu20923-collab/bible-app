@@ -82,16 +82,11 @@ export default function Reading({ lang = 'en' }) {
   }
 
   async function loadVerses() {
-    // Only fetch columns needed for the active language(s)
-    const activeLangs = new Set([lang || 'en']);
-    if (parallelMode) { activeLangs.add(parallelLangA || 'en'); activeLangs.add(parallelLangB || 'zh'); }
-    const cols = new Set(['nt_title', 'ot_title', 'nt_text', 'ot_text', 'nt_audio', 'ot_audio']);
-    if (activeLangs.has('zh') || activeLangs.has('sc')) { cols.add('nt_audio_zh'); cols.add('ot_audio_zh'); }
-    if (activeLangs.has('zh'))  { cols.add('nt_text_zh');  cols.add('ot_text_zh'); }
-    if (activeLangs.has('sc'))  { cols.add('nt_text_sc');  cols.add('ot_text_sc'); }
-    if (activeLangs.has('es'))  { cols.add('nt_text_es');  cols.add('ot_text_es'); }
+    // Always fetch all language columns so switching parallel langs never shows a fallback.
+    // The daily verse row is tiny (~20-30 verses × 4 langs) — fetching everything upfront
+    // is cheaper than a re-fetch every time the user changes language in parallel mode.
     const { data } = await supabase.from('verses')
-      .select([...cols].join(','))
+      .select('nt_title,ot_title,nt_text,ot_text,nt_text_zh,ot_text_zh,nt_text_sc,ot_text_sc,nt_text_es,ot_text_es,nt_audio,ot_audio,nt_audio_zh,ot_audio_zh')
       .eq('date', queryDate).single();
     if (data) setVerses(data);
   }

@@ -1482,17 +1482,6 @@ export default function Bible({ lang }) {
   }, [showRefs, markedTexts, markedTextsB, refsMapB, fontSize, t, scrollToVerse, parseMarkedText,
       activeRefsLang, activeRefsLangB, parallelLangA, parallelLangB]);
 
-  // Memoised rendered output — rebuilds only when verse data, outline maps, font, or refs change.
-  // Popup opens / mobileSheet changes / isMobile flips no longer re-reconcile the verse list.
-  const renderedVerses = useMemo(
-    () => renderVerses(parsedVerses, outlinesByVerse),
-    [renderVerses, parsedVerses, outlinesByVerse]
-  );
-  const renderedVersesParallel = useMemo(
-    () => renderVersesParallel(parsedVersesA, outlinesByVerse, outlinesByVerseB, verseMapB),
-    [renderVersesParallel, parsedVersesA, outlinesByVerse, outlinesByVerseB, verseMapB]
-  );
-
   // ── Outline tree (memoised) ──────────────────────────────────────────────
   // Enrich all outline items with inferred end refs (once, for reuse in both tree and inline view)
   const enrichedBookOutline = useMemo(() => inferEndRefs(bookOutline), [bookOutline]);
@@ -1508,6 +1497,17 @@ export default function Bible({ lang }) {
   const outlinesByVerseB = useMemo(
     () => showOutline && parallelMode && enrichedChapterOutlinesB.length ? buildOutlinesByVerse(enrichedChapterOutlinesB) : {},
     [showOutline, parallelMode, enrichedChapterOutlinesB]
+  );
+
+  // Memoised rendered output — rebuilds only when verse data, outline maps, font, or refs change.
+  // Popup opens / mobileSheet / isMobile changes no longer re-reconcile the verse list.
+  const renderedVerses = useMemo(
+    () => renderVerses(parsedVerses, outlinesByVerse),
+    [renderVerses, parsedVerses, outlinesByVerse]
+  );
+  const renderedVersesParallel = useMemo(
+    () => renderVersesParallel(parsedVersesA, outlinesByVerse, outlinesByVerseB, verseMapB),
+    [renderVersesParallel, parsedVersesA, outlinesByVerse, outlinesByVerseB, verseMapB]
   );
 
   // Stable context value — prevents all PopupContext consumers re-rendering on unrelated state changes

@@ -339,10 +339,21 @@ export default function Admin() {
 
   async function loadAdminData() {
     setLoading(true);
-    const { data: all } = await supabase
-      .from('checkins').select('name, date, portion, created_at')
-      .order('created_at', { ascending: false });
-    if (!all) { setLoading(false); return; }
+    // Supabase default row limit is 1000 — paginate to get all check-ins
+    const PAGE = 1000;
+    let all = [];
+    let page = 0;
+    while (true) {
+      const { data: batch } = await supabase
+        .from('checkins').select('name, date, portion, created_at')
+        .order('created_at', { ascending: false })
+        .range(page * PAGE, (page + 1) * PAGE - 1);
+      if (!batch || batch.length === 0) break;
+      all = all.concat(batch);
+      if (batch.length < PAGE) break;
+      page++;
+    }
+    if (all.length === 0) { setLoading(false); return; }
 
     const today = new Date().toISOString().split('T')[0];
     const todayCheckins = all.filter(r => r.date === selectedDate);
