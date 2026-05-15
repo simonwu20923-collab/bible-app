@@ -1163,10 +1163,11 @@ export default function Bible({ lang }) {
       .catch(() => {});
   }, [chapterCols]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Fetch primary outlines — deferred until outline toggle is on; caches in sessionStorage
+  // Fetch primary outlines whenever chapter/lang changes; caches in sessionStorage.
+  // Always fetched (data is tiny) so the toggle button can appear; rendering is
+  // gated on showOutline separately inside renderVerses / renderVersesParallel.
   useEffect(() => {
     if (!selectedBook || !selectedChapter) { setChapterOutlines([]); return; }
-    if (!showOutline) return;
     const cached = getOutlineCache(selectedBook, selectedChapter, outlineLangA);
     if (cached) { setChapterOutlines(cached); return; }
     supabase.from('bible_outlines').select('*')
@@ -1177,7 +1178,7 @@ export default function Bible({ lang }) {
         setOutlineCache(selectedBook, selectedChapter, outlineLangA, result);
         setChapterOutlines(result);
       });
-  }, [outlineLangA, selectedBook, selectedChapter, showOutline]);
+  }, [outlineLangA, selectedBook, selectedChapter]);
 
   // Fetch secondary outlines (parallel column B); caches in sessionStorage
   useEffect(() => {
