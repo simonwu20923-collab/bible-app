@@ -205,14 +205,14 @@ export default function Reading({ lang = 'en' }) {
     return text.split('\n').map((line, i) => formatVerseLine(line, i));
   }
 
-  function formatVersesParallel(textA, textB) {
+  function formatVersesParallel(textA, textB, langA = 'en', langB = 'zh') {
     if (!textA) return null;
     const linesA = textA.split('\n');
     const linesB = (textB || '').split('\n');
     return linesA.map((lineA, i) => (
       <div key={i} className="parallel-row">
-        <div className="parallel-col">{formatVerseLine(lineA, 0)}</div>
-        <div className="parallel-col">{formatVerseLine(linesB[i] || '', 0)}</div>
+        <div className={`parallel-col bible-text-${langA}`}>{formatVerseLine(lineA, 0)}</div>
+        <div className={`parallel-col bible-text-${langB}`}>{formatVerseLine(linesB[i] || '', 0)}</div>
       </div>
     ));
   }
@@ -528,12 +528,12 @@ export default function Reading({ lang = 'en' }) {
                       <div className="verses-title">{getTitle(verses.nt_title, parallelLangB)}</div>
                     </div>
                     <div className="verses-text">
-                      {formatVersesParallel(getTextForLang(parallelLangA, 'nt'), getTextForLang(parallelLangB, 'nt'))}
+                      {formatVersesParallel(getTextForLang(parallelLangA, 'nt'), getTextForLang(parallelLangB, 'nt'), parallelLangA, parallelLangB)}
                     </div>
                   </>
                 ) : (
                   <><div className="verses-title">{getTitle(verses.nt_title)}</div>
-                  <div className="verses-text">{formatVerses(getNtText())}</div></>
+                  <div className={`verses-text bible-text-${lang}`}>{formatVerses(getNtText())}</div></>
                 ) : <div className="loading">Loading...</div>}
               </div>
             )}
@@ -595,12 +595,12 @@ export default function Reading({ lang = 'en' }) {
                       <div className="verses-title">{getTitle(verses.ot_title, parallelLangB)}</div>
                     </div>
                     <div className="verses-text">
-                      {formatVersesParallel(getTextForLang(parallelLangA, 'ot'), getTextForLang(parallelLangB, 'ot'))}
+                      {formatVersesParallel(getTextForLang(parallelLangA, 'ot'), getTextForLang(parallelLangB, 'ot'), parallelLangA, parallelLangB)}
                     </div>
                   </>
                 ) : (
                   <><div className="verses-title">{getTitle(verses.ot_title)}</div>
-                  <div className="verses-text">{formatVerses(getOtText())}</div></>
+                  <div className={`verses-text bible-text-${lang}`}>{formatVerses(getOtText())}</div></>
                 ) : <div className="loading">Loading...</div>}
               </div>
             )}

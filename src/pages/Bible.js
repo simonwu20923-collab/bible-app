@@ -964,33 +964,35 @@ function chaptersForBook(abbr) {
 }
 
 // ── sessionStorage caches ──────────────────────────────────────────────────
+// Bump CACHE_V when the stored format changes so stale entries are ignored.
+const CACHE_V = 'v2';
 
 // Chapter outlines cache — keyed per book + chapter + lang
 function getOutlineCache(bookAbbr, chapter, lang) {
-  try { const r = sessionStorage.getItem(`bol_${bookAbbr}_${chapter}_${lang}`); return r ? JSON.parse(r) : null; }
+  try { const r = sessionStorage.getItem(`bol_${CACHE_V}_${bookAbbr}_${chapter}_${lang}`); return r ? JSON.parse(r) : null; }
   catch { return null; }
 }
 function setOutlineCache(bookAbbr, chapter, lang, data) {
-  try { sessionStorage.setItem(`bol_${bookAbbr}_${chapter}_${lang}`, JSON.stringify(data)); } catch (_) {}
+  try { sessionStorage.setItem(`bol_${CACHE_V}_${bookAbbr}_${chapter}_${lang}`, JSON.stringify(data)); } catch (_) {}
 }
 
 // Book intro + full outline cache — keyed per book + lang
 function getBookIntroCache(bookAbbr, lang) {
-  try { const r = sessionStorage.getItem(`bi_${bookAbbr}_${lang}`); return r ? JSON.parse(r) : null; }
+  try { const r = sessionStorage.getItem(`bi_${CACHE_V}_${bookAbbr}_${lang}`); return r ? JSON.parse(r) : null; }
   catch { return null; }
 }
 function setBookIntroCache(bookAbbr, lang, intro, outline) {
-  try { sessionStorage.setItem(`bi_${bookAbbr}_${lang}`, JSON.stringify({ intro, outline })); } catch (_) {}
+  try { sessionStorage.setItem(`bi_${CACHE_V}_${bookAbbr}_${lang}`, JSON.stringify({ intro, outline })); } catch (_) {}
 }
 
 // ── Chapter data cache (sessionStorage, keyed per book+chapter) ────────────
 function getChapterCache(bookAbbr, chapter) {
-  try { const r = sessionStorage.getItem(`bch_${bookAbbr}_${chapter}`); return r ? JSON.parse(r) : null; }
+  try { const r = sessionStorage.getItem(`bch_${CACHE_V}_${bookAbbr}_${chapter}`); return r ? JSON.parse(r) : null; }
   catch { return null; }
 }
 function mergeChapterCache(bookAbbr, chapter, newData) {
   const merged = { ...(getChapterCache(bookAbbr, chapter) || {}), ...newData };
-  try { sessionStorage.setItem(`bch_${bookAbbr}_${chapter}`, JSON.stringify(merged)); } catch (_) {}
+  try { sessionStorage.setItem(`bch_${CACHE_V}_${bookAbbr}_${chapter}`, JSON.stringify(merged)); } catch (_) {}
   return merged;
 }
 
@@ -1048,7 +1050,9 @@ export default function Bible({ lang }) {
   const pendingScrollVerse = useRef(null);
 
   // ── Admin refs mode ─────────────────────────────────────────────────────
-  const isAdmin = sessionStorage.getItem('adminAuthed') === 'true';
+  // useRef so sessionStorage is read once at mount, not on every render
+  const isAdminRef = useRef(sessionStorage.getItem('adminAuthed') === 'true');
+  const isAdmin = isAdminRef.current;
   const [showRefs, setShowRefs]       = useState(false);
   const [refsMap, setRefsMap]         = useState({});  // column A: { "verse_marker": {type,content} }
   const [markedTexts, setMarkedTexts] = useState({});  // column A: { verseNum: markedString }
@@ -1064,7 +1068,6 @@ export default function Bible({ lang }) {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  const mainRef         = useRef(null);
   const verseContentRef = useRef(null);
 
   // Push a note/verse popup — routes to bottom sheet on mobile, draggable stack on desktop
@@ -1237,7 +1240,7 @@ export default function Bible({ lang }) {
     setMobileView('chapters');
   }, [selectedBook, showIntro]);
 
-  async function selectChapter(ch, bookOverride) {
+  const selectChapter = useCallback(async (ch, bookOverride) => {
     const bookAbbr = bookOverride || selectedBook;
     setSelectedChapter(ch);
     setChapterData(null);
@@ -1253,7 +1256,10 @@ export default function Bible({ lang }) {
       setChapterData(chData);
     } catch { setChapterData(null); }
     setChapterLoading(false);
-  }
+  }, [selectedBook, chapterCols]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const toggleNt = useCallback(() => setNtExpanded(e => !e), []);
+  const toggleOt = useCallback(() => setOtExpanded(e => !e), []);
 
   const toggleBookExpand = useCallback((abbr) => {
     setExpandedBooks(prev => {
@@ -1269,16 +1275,16 @@ export default function Bible({ lang }) {
     await selectChapter(ch, abbr);
   }, [selectedBook, selectChapter]);
 
-  function scrollToVerse(n) {
+  const scrollToVerse = useCallback((n) => {
     const el = document.getElementById(`bible-verse-${n}`);
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
+  }, []);
 
-  function getAudioSrc(l) {
+  const getAudioSrc = useCallback((l) => {
     if (!chapterData) return null;
     if (l === 'sc') return chapterData.audio_zh || null;
     return chapterData[`audio_${l}`] || null;
-  }
+  }, [chapterData]);
 
   // ── Refs data fetching (admin only) ────────────────────────────────────────
   useEffect(() => {
@@ -1387,8 +1393,8 @@ export default function Bible({ lang }) {
 
   // ── Memoised parsed verse arrays — avoids re-parsing on font/popup/ref changes ──
   const parsedVerses  = useMemo(() => parseStoredVerses(chapterData?.[`text_${displayLang}`]),   [chapterData, displayLang]);
-  const parsedVersesA = useMemo(() => parseStoredVerses(chapterData?.[`text_${parallelLangA}`]), [chapterData, parallelLangA]);
-  const parsedVersesB = useMemo(() => parseStoredVerses(chapterData?.[`text_${parallelLangB}`]), [chapterData, parallelLangB]);
+  const parsedVersesA = useMemo(() => parallelMode ? parseStoredVerses(chapterData?.[`text_${parallelLangA}`]) : [], [parallelMode, chapterData, parallelLangA]);
+  const parsedVersesB = useMemo(() => parallelMode ? parseStoredVerses(chapterData?.[`text_${parallelLangB}`]) : [], [parallelMode, chapterData, parallelLangB]);
 
   // ── Verse renderers — receive pre-parsed verse arrays ─────────────────────
 
@@ -1443,11 +1449,11 @@ export default function Bible({ lang }) {
             </div>
           )}
           <div id={`bible-verse-${verse}`} className="parallel-row" style={{ marginBottom: '8px' }}>
-            <div className="parallel-col" style={{ display: 'flex', gap: '10px', lineHeight: 1.75, fontSize: fontSize + 'px' }}>
+            <div className={`parallel-col bible-text-${parallelLangA}`} style={{ display: 'flex', gap: '10px', lineHeight: 1.75, fontSize: fontSize + 'px' }}>
               <span style={{ fontSize: '11px', color: 'var(--text-muted)', minWidth: '22px', paddingTop: '4px', fontWeight: 600, flexShrink: 0 }}>{verse}</span>
               <span>{contentA}</span>
             </div>
-            <div className="parallel-col" style={{ display: 'flex', gap: '10px', lineHeight: 1.75, fontSize: fontSize + 'px' }}>
+            <div className={`parallel-col bible-text-${parallelLangB}`} style={{ display: 'flex', gap: '10px', lineHeight: 1.75, fontSize: fontSize + 'px' }}>
               <span style={{ fontSize: '11px', color: 'var(--text-muted)', minWidth: '22px', paddingTop: '4px', fontWeight: 600, flexShrink: 0 }}>{verse}</span>
               <span>{contentB}</span>
             </div>
@@ -1464,7 +1470,10 @@ export default function Bible({ lang }) {
   // Build an id-keyed map so inline chapter outlines can look up enriched items
   // Enrich chapter outlines independently (so ranges show even if book intro hasn't been loaded)
   const enrichedChapterOutlines  = useMemo(() => inferEndRefs(chapterOutlines),  [chapterOutlines]);
-  const enrichedChapterOutlinesB = useMemo(() => inferEndRefs(chapterOutlinesB), [chapterOutlinesB]);
+  const enrichedChapterOutlinesB = useMemo(() => parallelMode ? inferEndRefs(chapterOutlinesB) : [], [parallelMode, chapterOutlinesB]);
+
+  // Stable context value — prevents all PopupContext consumers re-rendering on unrelated state changes
+  const popupContextValue = useMemo(() => ({ pushPopup }), [pushPopup]);
 
   // Verse count for the jump strip — read directly from static table, no text parsing needed
   const verseCount = (selectedBook && selectedChapter)
@@ -1474,7 +1483,7 @@ export default function Bible({ lang }) {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <PopupContext.Provider value={{ pushPopup }}>
+    <PopupContext.Provider value={popupContextValue}>
     <>
     {/* ── Mobile bottom sheet (< 768 px) ───────────────────────────── */}
     {isMobile && mobileSheet.idx >= 0 && (
@@ -1523,15 +1532,15 @@ export default function Bible({ lang }) {
         ntExpanded={ntExpanded}
         otExpanded={otExpanded}
         expandedBooks={expandedBooks}
-        onToggleNt={() => setNtExpanded(e => !e)}
-        onToggleOt={() => setOtExpanded(e => !e)}
+        onToggleNt={toggleNt}
+        onToggleOt={toggleOt}
         onToggleBook={toggleBookExpand}
         onSelectBook={selectBook}
         onOpenChapter={openChapter}
       />
 
       {/* ── Main content ────────────────────────────────────── */}
-      <div className={`bible-main${mobileView === 'books' ? ' bible-hidden-mobile' : ''}`} ref={mainRef}>
+      <div className={`bible-main${mobileView === 'books' ? ' bible-hidden-mobile' : ''}`}>
 
         {/* Mobile back */}
         <div className="bible-mobile-nav">
@@ -1753,7 +1762,7 @@ export default function Bible({ lang }) {
                   {chapterLoading ? (
                     <div style={{ textAlign: 'center', padding: '40px', opacity: 0.5 }}>{t.loading}</div>
                   ) : (
-                    <div className="bible-verse-box" onClick={closeAllPopups}>
+                    <div className={`bible-verse-box bible-text-${parallelMode ? parallelLangA : displayLang}`} onClick={closeAllPopups}>
                       {parallelMode ? (
                         <>
                           <div className="parallel-titles-row" style={{ fontWeight: 700, opacity: 0.6, marginBottom: '10px', fontSize: '13px' }}>

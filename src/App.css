@@ -1218,6 +1218,16 @@ body {
   margin-top: 12px;
 }
 
+/* ── Bible verse text fonts by language ─────────────────────────────────── */
+.bible-text-zh,
+.bible-text-sc {
+  font-family: 'SimSun', '宋体', 'Songti SC', 'STSong', serif;
+}
+.bible-text-en,
+.bible-text-es {
+  font-family: Georgia, 'Palatino Linotype', 'Book Antiqua', Palatino, serif;
+}
+
 @keyframes bible-spin {
   to { transform: rotate(360deg); }
 }
