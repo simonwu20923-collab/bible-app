@@ -492,16 +492,24 @@ function formatOutlineRange(item) {
   return `${s}—${e}`;
 }
 
-function OutlineNode({ node, expandAllTrigger, onNavigate }) {
+function OutlineNode({ node, expandAllTrigger, collapseAllTrigger, onNavigate }) {
   const [expanded, setExpanded] = useState(node.level === 1);
-  const prevTrigger = useRef(expandAllTrigger);
+  const prevExpand   = useRef(expandAllTrigger);
+  const prevCollapse = useRef(collapseAllTrigger);
 
   useEffect(() => {
-    if (expandAllTrigger !== prevTrigger.current) {
-      prevTrigger.current = expandAllTrigger;
+    if (expandAllTrigger !== prevExpand.current) {
+      prevExpand.current = expandAllTrigger;
       setExpanded(true);
     }
   }, [expandAllTrigger]);
+
+  useEffect(() => {
+    if (collapseAllTrigger !== prevCollapse.current) {
+      prevCollapse.current = collapseAllTrigger;
+      setExpanded(false);
+    }
+  }, [collapseAllTrigger]);
 
   const hasChildren = node.children && node.children.length > 0;
   const range = formatOutlineRange(node);
@@ -525,7 +533,7 @@ function OutlineNode({ node, expandAllTrigger, onNavigate }) {
       {hasChildren && expanded && (
         <div>
           {node.children.map((child, i) => (
-            <OutlineNode key={child.id || i} node={child} expandAllTrigger={expandAllTrigger} onNavigate={onNavigate} />
+            <OutlineNode key={child.id || i} node={child} expandAllTrigger={expandAllTrigger} collapseAllTrigger={collapseAllTrigger} onNavigate={onNavigate} />
           ))}
         </div>
       )}
@@ -533,11 +541,11 @@ function OutlineNode({ node, expandAllTrigger, onNavigate }) {
   );
 }
 
-function OutlineTree({ nodes, expandAllTrigger, onNavigate }) {
+function OutlineTree({ nodes, expandAllTrigger, collapseAllTrigger, onNavigate }) {
   return (
     <div className="outline-tree">
       {nodes.map((node, i) => (
-        <OutlineNode key={node.id || i} node={node} expandAllTrigger={expandAllTrigger} onNavigate={onNavigate} />
+        <OutlineNode key={node.id || i} node={node} expandAllTrigger={expandAllTrigger} collapseAllTrigger={collapseAllTrigger} onNavigate={onNavigate} />
       ))}
     </div>
   );
@@ -795,7 +803,7 @@ const UI_TEXT = {
     nt: 'New Testament', ot: 'Old Testament', selectBook: 'Select a book to begin',
     loading: 'Loading…', parallel: '⇔ Parallel', noText: 'Text not available in this language.',
     chapters: 'CHAPTERS', verse: 'VERSE', text: 'Text:',
-    outline: 'Outline', expandAll: 'Expand all',
+    outline: 'Outline', expandAll: 'Expand all', collapseAll: 'Collapse all',
     introFields: { author: 'Author', timeOfWriting: 'Time of Writing', placeOfWriting: 'Place of Writing', timePeriodCovered: 'Time Period Covered', recipient: 'Recipient' },
     subjectOf: (book) => `Subject of ${book}:`,
   },
@@ -803,7 +811,7 @@ const UI_TEXT = {
     nt: 'Nuevo Testamento', ot: 'Antiguo Testamento', selectBook: 'Selecciona un libro',
     loading: 'Cargando…', parallel: '⇔ Paralelo', noText: 'Texto no disponible.',
     chapters: 'CAPÍTULOS', verse: 'VERSÍCULO', text: 'Texto:',
-    outline: 'Bosquejo', expandAll: 'Expandir todo',
+    outline: 'Bosquejo', expandAll: 'Expandir todo', collapseAll: 'Contraer todo',
     introFields: { author: 'Autor', timeOfWriting: 'Fecha de escritura', placeOfWriting: 'Lugar de escritura', timePeriodCovered: 'Período cubierto', recipient: 'Destinatarios' },
     subjectOf: (book) => `Tema de ${book}:`,
   },
@@ -811,7 +819,7 @@ const UI_TEXT = {
     nt: '新約', ot: '舊約', selectBook: '請選擇一本書',
     loading: '載入中…', parallel: '⇔ 對照', noText: '此語言暫無文字。',
     chapters: '章節選擇', verse: '節', text: '字體:',
-    outline: '綱要', expandAll: '展開所有',
+    outline: '綱要', expandAll: '展開所有', collapseAll: '收合所有',
     introFields: { author: '著者', timeOfWriting: '著時', placeOfWriting: '著地', timePeriodCovered: '涵蓋時段', recipient: '受者' },
     subjectOf: (book) => `${book}的主題：`,
   },
@@ -819,7 +827,7 @@ const UI_TEXT = {
     nt: '新约', ot: '旧约', selectBook: '请选择一本书',
     loading: '载入中…', parallel: '⇔ 对照', noText: '此语言暂无文字。',
     chapters: '章节选择', verse: '节', text: '字体:',
-    outline: '纲要', expandAll: '展开所有',
+    outline: '纲要', expandAll: '展开所有', collapseAll: '收合所有',
     introFields: { author: '著者', timeOfWriting: '著时', placeOfWriting: '著地', timePeriodCovered: '涵盖时段', recipient: '受者' },
     subjectOf: (book) => `${book}的主题：`,
   },
@@ -897,7 +905,9 @@ export default function Bible({ lang }) {
   const [bookIntro, setBookIntro] = useState(null);
   const [bookOutline, setBookOutline] = useState([]);
   const [outlineLoading, setOutlineLoading] = useState(false);
-  const [outlineExpandTrigger, setOutlineExpandTrigger] = useState(0);
+  const [outlineExpandTrigger, setOutlineExpandTrigger]   = useState(0);
+  const [outlineCollapseTrigger, setOutlineCollapseTrigger] = useState(0);
+  const [outlineAllExpanded, setOutlineAllExpanded]         = useState(false);
   const [chapterOutlines, setChapterOutlines]   = useState([]);
   const [chapterOutlinesB, setChapterOutlinesB] = useState([]);
   const [showOutline, setShowOutline] = useState(true);
@@ -971,12 +981,30 @@ export default function Bible({ lang }) {
 
   const introLang = useMemo(() => (displayLang === 'es' ? 'en' : displayLang), [displayLang]);
 
+  // Effective outline language for column A: use parallelLangA when in parallel mode
+  const outlineLangA = useMemo(() => {
+    if (parallelMode) return parallelLangA === 'es' ? 'en' : parallelLangA;
+    return introLang;
+  }, [parallelMode, parallelLangA, introLang]);
+
   // Outline language for parallel column B (null = same as A, no second fetch needed)
   const outlineLangB = useMemo(() => {
     if (!parallelMode) return null;
     const lang = parallelLangB === 'es' ? 'en' : parallelLangB;
-    return lang === introLang ? null : lang;
-  }, [parallelMode, parallelLangB, introLang]);
+    return lang === outlineLangA ? null : lang;
+  }, [parallelMode, parallelLangB, outlineLangA]);
+
+  // Fetch primary outlines reactively (language or chapter changes)
+  useEffect(() => {
+    if (!selectedBook || !selectedChapter) {
+      setChapterOutlines([]);
+      return;
+    }
+    supabase.from('bible_outlines').select('*')
+      .eq('book_abbr', selectedBook).eq('lang', outlineLangA).eq('start_chapter', selectedChapter)
+      .order('sort_order')
+      .then(({ data }) => setChapterOutlines(data || []));
+  }, [outlineLangA, selectedBook, selectedChapter]);
 
   // Fetch secondary outlines when parallel mode or chapter changes
   useEffect(() => {
@@ -1009,6 +1037,22 @@ export default function Bible({ lang }) {
     return BOOK_NAMES[abbr]?.[code] || BOOK_NAMES[abbr]?.en || abbr;
   }
 
+  // Re-fetch intro + outline whenever book or language changes
+  useEffect(() => {
+    if (!selectedBook) { setBookIntro(null); setBookOutline([]); return; }
+    setOutlineLoading(true);
+    Promise.all([
+      supabase.from('bible_book_intros').select('*').eq('book_abbr', selectedBook).eq('lang', introLang).maybeSingle(),
+      supabase.from('bible_outlines').select('*').eq('book_abbr', selectedBook).eq('lang', introLang).order('sort_order'),
+    ]).then(([{ data: introData }, { data: outlineData }]) => {
+      setBookIntro(introData || null);
+      setBookOutline(outlineData || []);
+      setOutlineAllExpanded(false); // reset expand/collapse state on new book/language
+    }).catch(() => {
+      setBookIntro(null); setBookOutline([]);
+    }).finally(() => setOutlineLoading(false));
+  }, [selectedBook, introLang]);
+
   async function selectBook(abbr) {
     if (abbr === selectedBook && bookView === 'intro') return;
     setSelectedBook(abbr);
@@ -1016,21 +1060,13 @@ export default function Bible({ lang }) {
     setChapterData(null);
     setBookView('intro');
     setMobileView('chapters');
-    setOutlineLoading(true);
     try {
-      const [chs, { data: introData }, { data: outlineData }] = await Promise.all([
-        fetchChaptersForBook(abbr),
-        supabase.from('bible_book_intros').select('*').eq('book_abbr', abbr).eq('lang', introLang).maybeSingle(),
-        supabase.from('bible_outlines').select('*').eq('book_abbr', abbr).eq('lang', introLang).order('sort_order'),
-      ]);
+      const chs = await fetchChaptersForBook(abbr);
       setChapters(chs);
       setSidebarChapters(prev => ({ ...prev, [abbr]: chs }));
-      setBookIntro(introData || null);
-      setBookOutline(outlineData || []);
     } catch {
-      setChapters([]); setBookIntro(null); setBookOutline([]);
+      setChapters([]);
     }
-    setOutlineLoading(false);
   }
 
   async function selectChapter(ch, bookOverride) {
@@ -1043,14 +1079,9 @@ export default function Bible({ lang }) {
     // Scroll verse area to top
     setTimeout(() => verseContentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
     try {
-      const [chData, { data: olData }] = await Promise.all([
-        fetchChapterData(bookAbbr, ch),
-        supabase.from('bible_outlines').select('*')
-          .eq('book_abbr', bookAbbr).eq('lang', introLang).eq('start_chapter', ch).order('sort_order'),
-      ]);
+      const chData = await fetchChapterData(bookAbbr, ch);
       setChapterData(chData);
-      setChapterOutlines(olData || []);
-    } catch { setChapterData(null); setChapterOutlines([]); }
+    } catch { setChapterData(null); }
     setChapterLoading(false);
   }
 
@@ -1452,13 +1483,25 @@ export default function Bible({ lang }) {
                     <div className="bible-outline-section">
                       <div className="bible-outline-header">
                         <h3 className="bible-outline-title">{t.outline}</h3>
-                        <button className="bible-expand-all-btn" onClick={() => setOutlineExpandTrigger(n => n + 1)}>
-                          {t.expandAll}
+                        <button
+                          className="bible-expand-all-btn"
+                          onClick={() => {
+                            if (outlineAllExpanded) {
+                              setOutlineCollapseTrigger(n => n + 1);
+                              setOutlineAllExpanded(false);
+                            } else {
+                              setOutlineExpandTrigger(n => n + 1);
+                              setOutlineAllExpanded(true);
+                            }
+                          }}
+                        >
+                          {outlineAllExpanded ? t.collapseAll : t.expandAll}
                         </button>
                       </div>
                       <OutlineTree
                         nodes={outlineTree}
                         expandAllTrigger={outlineExpandTrigger}
+                        collapseAllTrigger={outlineCollapseTrigger}
                         onNavigate={node => {
                           if (node.start_chapter) {
                             if (node.start_verse) pendingScrollVerse.current = node.start_verse;
@@ -1516,18 +1559,6 @@ export default function Bible({ lang }) {
                           <button className="font-btn" onClick={() => setFontSize(18)}>A</button>
                           <button className="font-btn" onClick={() => setFontSize(f => Math.min(26, f + 2))}>A+</button>
                         </div>
-
-                        {/* Primary language selector */}
-                        <select
-                          className="parallel-lang-select"
-                          value={parallelMode ? parallelLangA : displayLang}
-                          onChange={e => {
-                            if (parallelMode) setParallelLangA(e.target.value);
-                            else setDisplayLang(e.target.value);
-                          }}
-                        >
-                          {LANG_OPTIONS.map(l => <option key={l.code} value={l.code}>{l.label}</option>)}
-                        </select>
 
                         {/* Parallel toggle — same style as Reading page */}
                         <button
