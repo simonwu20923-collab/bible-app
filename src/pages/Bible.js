@@ -492,6 +492,35 @@ function formatOutlineRange(item) {
   return `${s}—${e}`;
 }
 
+// Build verse→[outlineItems] map; items with no start_verse slot in at verse 1
+function buildOutlinesByVerse(outlines) {
+  const map = {};
+  for (const ol of outlines) {
+    const v = ol.start_verse || 1;
+    if (!map[v]) map[v] = [];
+    map[v].push(ol);
+  }
+  return map;
+}
+
+// Render a single inline outline header; onScrollToVerse passed from component
+function renderOutlineHeader(ol, key, onScrollToVerse) {
+  const range = formatOutlineRange(ol);
+  return (
+    <div
+      key={key}
+      className={`bible-inline-outline bible-inline-outline-lv${ol.level}`}
+      style={{ cursor: ol.start_verse ? 'pointer' : 'default' }}
+      onClick={ol.start_verse ? () => onScrollToVerse(ol.start_verse) : undefined}
+    >
+      <div className="bible-inline-outline-title">
+        {ol.prefix && <span>{ol.prefix} </span>}{ol.title}
+      </div>
+      {range && <div className="bible-inline-outline-range">{range}</div>}
+    </div>
+  );
+}
+
 function OutlineNode({ node, expandAllTrigger, collapseAllTrigger, onNavigate }) {
   const [expanded, setExpanded] = useState(node.level === 1);
   const prevExpand   = useRef(expandAllTrigger);
@@ -798,6 +827,12 @@ const LANG_OPTIONS = [
   { code: 'sc',  label: '简 Simplified'     },
 ];
 
+const langLabel = (code) => LANG_OPTIONS.find(l => l.code === code)?.label || code;
+
+function bookName(abbr, lang) {
+  return BOOK_NAMES[abbr]?.[lang] || BOOK_NAMES[abbr]?.en || abbr;
+}
+
 const UI_TEXT = {
   en: {
     nt: 'New Testament', ot: 'Old Testament', selectBook: 'Select a book to begin',
@@ -840,29 +875,37 @@ function parseStoredVerses(text) {
     .filter(Boolean);
 }
 
-// ── Supabase queries ───────────────────────────────────────────────────────
+// ── Static book/chapter helpers (no DB needed — data is already in BIBLE_VERSE_COUNTS) ──
 
-async function fetchAvailableBooks() {
-  const cacheKey = 'bibleBooks_v2';
-  try { const c = sessionStorage.getItem(cacheKey); if (c) return JSON.parse(c); } catch (_) {}
-  // Paginate to avoid Supabase's default 1000-row limit (table has 1189+ rows)
-  let all = [], from = 0;
-  while (true) {
-    const { data, error } = await supabase.from('bible_chapters').select('book_abbr').range(from, from + 999);
-    if (error) throw error;
-    all = all.concat(data);
-    if (data.length < 1000) break;
-    from += 1000;
-  }
-  const books = [...new Set(all.map(r => r.book_abbr))];
-  try { sessionStorage.setItem(cacheKey, JSON.stringify(books)); } catch (_) {}
-  return books;
+// All available books — derived from the static import lists, no DB round-trip on load
+function fetchAvailableBooks() {
+  return [...NT_BOOKS, ...OT_BOOKS];
 }
 
-async function fetchChaptersForBook(bookAbbr) {
-  const { data, error } = await supabase.from('bible_chapters').select('chapter').eq('book_abbr', bookAbbr).order('chapter');
-  if (error) throw error;
-  return data.map(r => r.chapter);
+// Chapter list for a book — BIBLE_VERSE_COUNTS[abbr] length === chapter count
+function chaptersForBook(abbr) {
+  const count = (BIBLE_VERSE_COUNTS[abbr] || []).length;
+  return Array.from({ length: count }, (_, i) => i + 1);
+}
+
+// ── sessionStorage caches ──────────────────────────────────────────────────
+
+// Chapter outlines cache — keyed per book + chapter + lang
+function getOutlineCache(bookAbbr, chapter, lang) {
+  try { const r = sessionStorage.getItem(`bol_${bookAbbr}_${chapter}_${lang}`); return r ? JSON.parse(r) : null; }
+  catch { return null; }
+}
+function setOutlineCache(bookAbbr, chapter, lang, data) {
+  try { sessionStorage.setItem(`bol_${bookAbbr}_${chapter}_${lang}`, JSON.stringify(data)); } catch (_) {}
+}
+
+// Book intro + full outline cache — keyed per book + lang
+function getBookIntroCache(bookAbbr, lang) {
+  try { const r = sessionStorage.getItem(`bi_${bookAbbr}_${lang}`); return r ? JSON.parse(r) : null; }
+  catch { return null; }
+}
+function setBookIntroCache(bookAbbr, lang, intro, outline) {
+  try { sessionStorage.setItem(`bi_${bookAbbr}_${lang}`, JSON.stringify({ intro, outline })); } catch (_) {}
 }
 
 // ── Chapter data cache (sessionStorage, keyed per book+chapter) ────────────
@@ -895,8 +938,8 @@ async function fetchChapterData(bookAbbr, chapter, cols) {
 // ── Component ──────────────────────────────────────────────────────────────
 
 export default function Bible({ lang }) {
-  const [availableBooks, setAvailableBooks] = useState(null);
-  const [loadError, setLoadError]           = useState(null);
+  // Book list is static — initialize immediately from imports, no DB call needed
+  const [availableBooks]                    = useState(() => fetchAvailableBooks());
   const [selectedBook, setSelectedBook]     = useState(null);
   const [chapters, setChapters]             = useState([]);
   const [selectedChapter, setSelectedChapter] = useState(null);
@@ -905,9 +948,9 @@ export default function Bible({ lang }) {
 
   const [displayLang, setDisplayLang]       = useState(() => localStorage.getItem('bibleAppLang') || 'en');
   const [fontSize, setFontSize]             = useState(() => parseInt(localStorage.getItem('bibleFontSize'), 10) || 18);
-  const [parallelMode, setParallelMode]     = useState(false);
-  const [parallelLangA, setParallelLangA]   = useState(() => lang || 'en');
-  const [parallelLangB, setParallelLangB]   = useState('zh');
+  const [parallelMode, setParallelMode]     = useState(() => localStorage.getItem('parallelMode') === 'true');
+  const [parallelLangA, setParallelLangA]   = useState(() => localStorage.getItem('parallelLangA') || lang || 'en');
+  const [parallelLangB, setParallelLangB]   = useState(() => localStorage.getItem('parallelLangB') || 'zh');
   const [mobileView, setMobileView]         = useState('books');
 
   // ── Book list collapse state ─────────────────────────────────────────────
@@ -926,7 +969,7 @@ export default function Bible({ lang }) {
   const [outlineAllExpanded, setOutlineAllExpanded]         = useState(false);
   const [chapterOutlines, setChapterOutlines]   = useState([]);
   const [chapterOutlinesB, setChapterOutlinesB] = useState([]);
-  const [showOutline, setShowOutline] = useState(true);
+  const [showOutline, setShowOutline] = useState(() => localStorage.getItem('showOutline') === 'true');
 
   const pendingScrollVerse = useRef(null);
 
@@ -1010,8 +1053,12 @@ export default function Bible({ lang }) {
     return lang === outlineLangA ? null : lang;
   }, [parallelMode, parallelLangB, outlineLangA]);
 
-  // Persist font size preference
-  useEffect(() => { localStorage.setItem('bibleFontSize', String(fontSize)); }, [fontSize]);
+  // Persist preferences
+  useEffect(() => { localStorage.setItem('bibleFontSize',  String(fontSize));       }, [fontSize]);
+  useEffect(() => { localStorage.setItem('parallelMode',   String(parallelMode));    }, [parallelMode]);
+  useEffect(() => { localStorage.setItem('parallelLangA',  parallelLangA);           }, [parallelLangA]);
+  useEffect(() => { localStorage.setItem('parallelLangB',  parallelLangB);           }, [parallelLangB]);
+  useEffect(() => { localStorage.setItem('showOutline',    String(showOutline));     }, [showOutline]);
 
   // Columns to fetch for chapter text — only what the current display config needs
   const chapterCols = useMemo(() => {
@@ -1037,77 +1084,85 @@ export default function Bible({ lang }) {
       .catch(() => {});
   }, [chapterCols]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Fetch primary outlines reactively — deferred until outline panel is open
+  // Fetch primary outlines — deferred until outline toggle is on; caches in sessionStorage
   useEffect(() => {
     if (!selectedBook || !selectedChapter) { setChapterOutlines([]); return; }
-    if (!showOutline) return; // don't fetch while panel is hidden; fires when user opens it
+    if (!showOutline) return;
+    const cached = getOutlineCache(selectedBook, selectedChapter, outlineLangA);
+    if (cached) { setChapterOutlines(cached); return; }
     supabase.from('bible_outlines').select('*')
       .eq('book_abbr', selectedBook).eq('lang', outlineLangA).eq('start_chapter', selectedChapter)
       .order('sort_order')
-      .then(({ data }) => setChapterOutlines(data || []));
+      .then(({ data }) => {
+        const result = data || [];
+        setOutlineCache(selectedBook, selectedChapter, outlineLangA, result);
+        setChapterOutlines(result);
+      });
   }, [outlineLangA, selectedBook, selectedChapter, showOutline]);
 
-  // Fetch secondary outlines when parallel mode or chapter changes
+  // Fetch secondary outlines (parallel column B); caches in sessionStorage
   useEffect(() => {
-    if (!outlineLangB || !selectedBook || !selectedChapter) {
-      setChapterOutlinesB([]);
-      return;
-    }
+    if (!outlineLangB || !selectedBook || !selectedChapter) { setChapterOutlinesB([]); return; }
+    const cached = getOutlineCache(selectedBook, selectedChapter, outlineLangB);
+    if (cached) { setChapterOutlinesB(cached); return; }
     supabase.from('bible_outlines').select('*')
       .eq('book_abbr', selectedBook).eq('lang', outlineLangB).eq('start_chapter', selectedChapter)
       .order('sort_order')
-      .then(({ data }) => setChapterOutlinesB(data || []));
+      .then(({ data }) => {
+        const result = data || [];
+        setOutlineCache(selectedBook, selectedChapter, outlineLangB, result);
+        setChapterOutlinesB(result);
+      });
   }, [outlineLangB, selectedBook, selectedChapter]);
-
-  useEffect(() => {
-    fetchAvailableBooks()
-      .then(books => setAvailableBooks(books))
-      .catch(() => setLoadError(true));
-  }, []);
 
   useEffect(() => { setDisplayLang(lang); }, [lang]);
 
+  // Keep parallelLangA in sync when lang prop changes and user hasn't overridden it
+  useEffect(() => {
+    if (!localStorage.getItem('parallelLangA')) setParallelLangA(lang || 'en');
+  }, [lang]);
+
   const { ntBooks, otBooks } = useMemo(() => {
-    if (!availableBooks) return { ntBooks: [], otBooks: [] };
     const set = new Set(availableBooks);
     return { ntBooks: NT_BOOKS.filter(b => set.has(b)), otBooks: OT_BOOKS.filter(b => set.has(b)) };
   }, [availableBooks]);
 
-  function bookName(abbr, l) {
-    const code = l || displayLang;
-    return BOOK_NAMES[abbr]?.[code] || BOOK_NAMES[abbr]?.en || abbr;
-  }
-
-  // Re-fetch intro + outline whenever book or language changes
+  // Re-fetch intro + outline whenever book or language changes; caches in sessionStorage
   useEffect(() => {
     if (!selectedBook) { setBookIntro(null); setBookOutline([]); return; }
+    const cached = getBookIntroCache(selectedBook, introLang);
+    if (cached) {
+      setBookIntro(cached.intro);
+      setBookOutline(cached.outline);
+      setOutlineAllExpanded(false);
+      return;
+    }
     setOutlineLoading(true);
     Promise.all([
       supabase.from('bible_book_intros').select('*').eq('book_abbr', selectedBook).eq('lang', introLang).maybeSingle(),
       supabase.from('bible_outlines').select('*').eq('book_abbr', selectedBook).eq('lang', introLang).order('sort_order'),
     ]).then(([{ data: introData }, { data: outlineData }]) => {
-      setBookIntro(introData || null);
-      setBookOutline(outlineData || []);
-      setOutlineAllExpanded(false); // reset expand/collapse state on new book/language
+      const intro   = introData  || null;
+      const outline = outlineData || [];
+      setBookIntroCache(selectedBook, introLang, intro, outline);
+      setBookIntro(intro);
+      setBookOutline(outline);
+      setOutlineAllExpanded(false);
     }).catch(() => {
       setBookIntro(null); setBookOutline([]);
     }).finally(() => setOutlineLoading(false));
   }, [selectedBook, introLang]);
 
-  async function selectBook(abbr) {
+  function selectBook(abbr) {
     if (abbr === selectedBook && showIntro) return;
     setSelectedBook(abbr);
     setSelectedChapter(null);
     setChapterData(null);
     setShowIntro(true);
     setMobileView('chapters');
-    try {
-      const chs = await fetchChaptersForBook(abbr);
-      setChapters(chs);
-      setSidebarChapters(prev => ({ ...prev, [abbr]: chs }));
-    } catch {
-      setChapters([]);
-    }
+    const chs = chaptersForBook(abbr);
+    setChapters(chs);
+    setSidebarChapters(prev => ({ ...prev, [abbr]: chs }));
   }
 
   async function selectChapter(ch, bookOverride) {
@@ -1135,7 +1190,8 @@ export default function Bible({ lang }) {
       else {
         next.add(abbr);
         if (!sidebarChapters[abbr]) {
-          fetchChaptersForBook(abbr).then(chs => setSidebarChapters(p => ({ ...p, [abbr]: chs })));
+          const chs = chaptersForBook(abbr);
+          setSidebarChapters(p => ({ ...p, [abbr]: chs }));
         }
       }
       return next;
@@ -1146,7 +1202,7 @@ export default function Bible({ lang }) {
     if (abbr !== selectedBook) {
       setSelectedBook(abbr);
       if (!sidebarChapters[abbr]) {
-        const chs = await fetchChaptersForBook(abbr);
+        const chs = chaptersForBook(abbr);
         setSidebarChapters(p => ({ ...p, [abbr]: chs }));
         setChapters(chs);
       } else {
@@ -1227,21 +1283,12 @@ export default function Bible({ lang }) {
   }, [selectedChapter, chapterData]);
 
   // ── Marked text parser: "...[marker]word..." → React nodes ───────────────
-  // overrideRefsMap / overrideLang: used for parallel column B
+  // Reuses parseMarkerParts for tokenisation; overrideRefsMap/overrideLang for parallel col B.
+  // selectedBook + selectedChapter are in deps so popup context is never stale.
   const parseMarkedText = useCallback((text, verseNum, overrideRefsMap, overrideLang) => {
     const localMap  = overrideRefsMap || refsMap;
     const localLang = overrideLang    || activeRefsLang;
-    const parts = [];
-    const re = /\[([^\]]+)\]/g;
-    let lastIdx = 0, m;
-    while ((m = re.exec(text))) {
-      if (m.index > lastIdx) parts.push({ kind: 'text', text: text.slice(lastIdx, m.index) });
-      parts.push({ kind: 'marker', marker: m[1] });
-      lastIdx = m.index + m[0].length;
-    }
-    if (lastIdx < text.length) parts.push({ kind: 'text', text: text.slice(lastIdx) });
-
-    return parts.map((p, i) => {
+    return parseMarkerParts(text).map((p, i) => {
       if (p.kind === 'text') return <React.Fragment key={i}>{p.text}</React.Fragment>;
       const key = `${verseNum}_${p.marker}`;
       const ref = localMap[key];
@@ -1270,7 +1317,7 @@ export default function Bible({ lang }) {
         </sup>
       );
     });
-  }, [refsMap, pushPopup, activeRefsLang]);
+  }, [refsMap, pushPopup, activeRefsLang, selectedBook, selectedChapter]);
 
   // Called by DraggablePopup: either close one popup or commit a drag-move
   const handlePopupAction = useCallback((action) => {
@@ -1283,35 +1330,6 @@ export default function Bible({ lang }) {
 
   // ── Verse renderers ────────────────────────────────────────────────────────
 
-  // Build verse→[outlineItems] map; items with no start_verse slot in at verse 1
-  function buildOutlinesByVerse(outlines) {
-    const map = {};
-    for (const ol of outlines) {
-      const v = ol.start_verse || 1;
-      if (!map[v]) map[v] = [];
-      map[v].push(ol);
-    }
-    return map;
-  }
-
-  // Render a single inline outline header row
-  function renderOutlineHeader(ol, key) {
-    const range = formatOutlineRange(ol);
-    return (
-      <div
-        key={key}
-        className={`bible-inline-outline bible-inline-outline-lv${ol.level}`}
-        style={{ cursor: ol.start_verse ? 'pointer' : 'default' }}
-        onClick={ol.start_verse ? () => scrollToVerse(ol.start_verse) : undefined}
-      >
-        <div className="bible-inline-outline-title">
-          {ol.prefix && <span>{ol.prefix} </span>}{ol.title}
-        </div>
-        {range && <div className="bible-inline-outline-range">{range}</div>}
-      </div>
-    );
-  }
-
   function renderVerses(text, outlines = []) {
     const verses = parseStoredVerses(text);
     if (verses.length === 0) return <p style={{ opacity: 0.5, padding: '12px 0' }}>{t.noText}</p>;
@@ -1322,7 +1340,7 @@ export default function Bible({ lang }) {
       const content   = useMarked ? parseMarkedText(markedTexts[verse], verse) : vt;
       return (
         <React.Fragment key={verse}>
-          {headers.map((ol, i) => renderOutlineHeader(ol, `ol-${ol.id || i}`))}
+          {headers.map((ol, i) => renderOutlineHeader(ol, `ol-${ol.id || i}`, scrollToVerse))}
           <div id={`bible-verse-${verse}`} style={{ display: 'flex', gap: '10px', marginBottom: '8px', lineHeight: 1.75, fontSize: fontSize + 'px' }}>
             <span style={{ fontSize: '11px', color: 'var(--text-muted)', minWidth: '22px', paddingTop: '4px', fontWeight: 600, flexShrink: 0 }}>
               {verse}
@@ -1357,10 +1375,10 @@ export default function Bible({ lang }) {
           {hasHeaders && (
             <div className="parallel-row" style={{ marginBottom: '2px' }}>
               <div className="parallel-col">
-                {headersA.map((ol, i) => renderOutlineHeader(ol, `olA-${ol.id || i}`))}
+                {headersA.map((ol, i) => renderOutlineHeader(ol, `olA-${ol.id || i}`, scrollToVerse))}
               </div>
               <div className="parallel-col">
-                {headersB.map((ol, i) => renderOutlineHeader(ol, `olB-${ol.id || i}`))}
+                {headersB.map((ol, i) => renderOutlineHeader(ol, `olB-${ol.id || i}`, scrollToVerse))}
               </div>
             </div>
           )}
@@ -1388,26 +1406,12 @@ export default function Bible({ lang }) {
   const enrichedChapterOutlines  = useMemo(() => inferEndRefs(chapterOutlines),  [chapterOutlines]);
   const enrichedChapterOutlinesB = useMemo(() => inferEndRefs(chapterOutlinesB), [chapterOutlinesB]);
 
-  // Verse count for the jump strip
-  const verseCount = useMemo(() => {
-    if (!chapterData) return 0;
-    const col = parallelMode ? `text_${parallelLangA}` : `text_${displayLang}`;
-    const text = chapterData[col] || '';
-    return parseStoredVerses(text).length;
-  }, [chapterData, displayLang, parallelMode, parallelLangA]);
+  // Verse count for the jump strip — read directly from static table, no text parsing needed
+  const verseCount = (selectedBook && selectedChapter)
+    ? (BIBLE_VERSE_COUNTS[selectedBook]?.[selectedChapter - 1] ?? 0)
+    : 0;
 
   // ── Render ─────────────────────────────────────────────────────────────────
-
-  if (loadError) return <div style={{ textAlign: 'center', padding: '60px', color: '#e53e3e' }}>Failed to load Bible data.</div>;
-
-  if (!availableBooks) return (
-    <div style={{ textAlign: 'center', padding: '80px', opacity: 0.6 }}>
-      <div className="bible-loading-spinner" />
-      <div style={{ marginTop: '16px' }}>{t.loading}</div>
-    </div>
-  );
-
-  const langLabel = (code) => LANG_OPTIONS.find(l => l.code === code)?.label || code;
 
   return (
     <PopupContext.Provider value={{ pushPopup }}>
@@ -1464,7 +1468,7 @@ export default function Bible({ lang }) {
                 {expandedBooks.has(abbr) ? '▾' : '▸'}
               </button>
               <button className={`bible-book-btn${selectedBook === abbr ? ' active' : ''}`} onClick={() => selectBook(abbr)}>
-                {bookName(abbr)}
+                {bookName(abbr, displayLang)}
               </button>
             </div>
             {expandedBooks.has(abbr) && (
@@ -1493,7 +1497,7 @@ export default function Bible({ lang }) {
                 {expandedBooks.has(abbr) ? '▾' : '▸'}
               </button>
               <button className={`bible-book-btn${selectedBook === abbr ? ' active' : ''}`} onClick={() => selectBook(abbr)}>
-                {bookName(abbr)}
+                {bookName(abbr, displayLang)}
               </button>
             </div>
             {expandedBooks.has(abbr) && (
@@ -1536,7 +1540,7 @@ export default function Bible({ lang }) {
               {/* Chapter grid at top */}
               <div className="bible-chapter-section">
                 <div className="bible-chapter-section-header">
-                  <h2 className="bible-book-heading">{bookName(selectedBook)}</h2>
+                  <h2 className="bible-book-heading">{bookName(selectedBook, displayLang)}</h2>
                   <span className="bible-section-tag">{t.chapters}</span>
                 </div>
                 <div className="bible-chapter-grid">
@@ -1568,7 +1572,7 @@ export default function Bible({ lang }) {
                   )}
                   {bookIntro?.subject && (
                     <div className="bible-intro-subject">
-                      <div className="bible-intro-subject-label">{t.subjectOf(bookName(selectedBook))}</div>
+                      <div className="bible-intro-subject-label">{t.subjectOf(bookName(selectedBook, displayLang))}</div>
                       <div className="bible-intro-subject-text">{bookIntro.subject}</div>
                     </div>
                   )}
@@ -1616,7 +1620,7 @@ export default function Bible({ lang }) {
               {/* ── Chapter selection block ── */}
               <div className="bible-chapter-section">
                 <div className="bible-chapter-section-header">
-                  <h2 className="bible-book-heading">{bookName(selectedBook)}</h2>
+                  <h2 className="bible-book-heading">{bookName(selectedBook, displayLang)}</h2>
                   <span className="bible-section-tag">{t.chapters}</span>
                 </div>
                 <div className="bible-chapter-grid">
