@@ -898,7 +898,8 @@ export default function Bible({ lang }) {
   const [bookOutline, setBookOutline] = useState([]);
   const [outlineLoading, setOutlineLoading] = useState(false);
   const [outlineExpandTrigger, setOutlineExpandTrigger] = useState(0);
-  const [chapterOutlines, setChapterOutlines] = useState([]);
+  const [chapterOutlines, setChapterOutlines]   = useState([]);
+  const [chapterOutlinesB, setChapterOutlinesB] = useState([]);
   const [showOutline, setShowOutline] = useState(true);
 
   const pendingScrollVerse = useRef(null);
@@ -969,6 +970,25 @@ export default function Bible({ lang }) {
   const t = UI_TEXT[displayLang] || UI_TEXT.en;
 
   const introLang = useMemo(() => (displayLang === 'es' ? 'en' : displayLang), [displayLang]);
+
+  // Outline language for parallel column B (null = same as A, no second fetch needed)
+  const outlineLangB = useMemo(() => {
+    if (!parallelMode) return null;
+    const lang = parallelLangB === 'es' ? 'en' : parallelLangB;
+    return lang === introLang ? null : lang;
+  }, [parallelMode, parallelLangB, introLang]);
+
+  // Fetch secondary outlines when parallel mode or chapter changes
+  useEffect(() => {
+    if (!outlineLangB || !selectedBook || !selectedChapter) {
+      setChapterOutlinesB([]);
+      return;
+    }
+    supabase.from('bible_outlines').select('*')
+      .eq('book_abbr', selectedBook).eq('lang', outlineLangB).eq('start_chapter', selectedChapter)
+      .order('sort_order')
+      .then(({ data }) => setChapterOutlinesB(data || []));
+  }, [outlineLangB, selectedBook, selectedChapter]);
 
   useEffect(() => {
     fetchAvailableBooks()
@@ -1589,25 +1609,58 @@ export default function Bible({ lang }) {
                   {/* ── Chapter outline block (standalone, works alongside parallel mode) ── */}
                   {showOutline && chapterOutlines.length > 0 && !chapterLoading && (
                     <div className="bible-chapter-outline-block">
-                      {chapterOutlines.map((ol, hi) => {
-                        const enriched = enrichedOutlineById.get(ol.id) || ol;
-                        return (
-                          <div
-                            key={`col-${ol.id || hi}`}
-                            className={`bible-inline-outline bible-inline-outline-lv${enriched.level}`}
-                            style={{ cursor: enriched.start_verse ? 'pointer' : 'default' }}
-                            onClick={enriched.start_verse ? () => scrollToVerse(enriched.start_verse) : undefined}
-                          >
-                            <div className="bible-inline-outline-title">
-                              {enriched.prefix && <span>{enriched.prefix} </span>}
-                              {enriched.title}
+                      {parallelMode && chapterOutlinesB.length > 0 ? (
+                        /* Two-column layout matching the parallel verse columns */
+                        <div className="parallel-outline-cols">
+                          {[
+                            { items: chapterOutlines,  getId: ol => enrichedOutlineById.get(ol.id) || ol },
+                            { items: chapterOutlinesB, getId: ol => ol },
+                          ].map(({ items, getId }, colIdx) => (
+                            <div key={colIdx} className="parallel-outline-col">
+                              {items.map((ol, hi) => {
+                                const enriched = getId(ol);
+                                return (
+                                  <div
+                                    key={`col${colIdx}-${ol.id || hi}`}
+                                    className={`bible-inline-outline bible-inline-outline-lv${enriched.level}`}
+                                    style={{ cursor: enriched.start_verse ? 'pointer' : 'default' }}
+                                    onClick={enriched.start_verse ? () => scrollToVerse(enriched.start_verse) : undefined}
+                                  >
+                                    <div className="bible-inline-outline-title">
+                                      {enriched.prefix && <span>{enriched.prefix} </span>}
+                                      {enriched.title}
+                                    </div>
+                                    {formatOutlineRange(enriched) && (
+                                      <div className="bible-inline-outline-range">{formatOutlineRange(enriched)}</div>
+                                    )}
+                                  </div>
+                                );
+                              })}
                             </div>
-                            {formatOutlineRange(enriched) && (
-                              <div className="bible-inline-outline-range">{formatOutlineRange(enriched)}</div>
-                            )}
-                          </div>
-                        );
-                      })}
+                          ))}
+                        </div>
+                      ) : (
+                        /* Single-column layout */
+                        chapterOutlines.map((ol, hi) => {
+                          const enriched = enrichedOutlineById.get(ol.id) || ol;
+                          return (
+                            <div
+                              key={`col-${ol.id || hi}`}
+                              className={`bible-inline-outline bible-inline-outline-lv${enriched.level}`}
+                              style={{ cursor: enriched.start_verse ? 'pointer' : 'default' }}
+                              onClick={enriched.start_verse ? () => scrollToVerse(enriched.start_verse) : undefined}
+                            >
+                              <div className="bible-inline-outline-title">
+                                {enriched.prefix && <span>{enriched.prefix} </span>}
+                                {enriched.title}
+                              </div>
+                              {formatOutlineRange(enriched) && (
+                                <div className="bible-inline-outline-range">{formatOutlineRange(enriched)}</div>
+                              )}
+                            </div>
+                          );
+                        })
+                      )}
                     </div>
                   )}
 
