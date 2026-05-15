@@ -655,6 +655,7 @@ body {
 }
 .parallel-row:last-child { border-bottom: none; }
 .parallel-col { min-width: 0; }
+.parallel-unavailable { opacity: 0.35; font-style: italic; font-size: 13px; }
 .verses-box-parallel { padding: 12px; }
 
 @media (max-width: 768px) {

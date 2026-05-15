@@ -41,9 +41,13 @@ export default function Reading({ lang = 'en' }) {
   const [parallelLangA, setParallelLangA] = React.useState(() =>
     localStorage.getItem('parallelLangA') || lang
   );
-  const [parallelLangB, setParallelLangB] = React.useState(() =>
-    localStorage.getItem('parallelLangB') || 'zh'
-  );
+  const [parallelLangB, setParallelLangB] = React.useState(() => {
+    const storedB = localStorage.getItem('parallelLangB');
+    const initA   = localStorage.getItem('parallelLangA') || lang;
+    // Ensure B is different from A at startup
+    if (storedB && storedB !== initA) return storedB;
+    return initA === 'zh' || initA === 'sc' || initA === 'es' ? 'en' : 'zh';
+  });
 
   React.useEffect(() => {
     const navbar = document.querySelector('.navbar');
@@ -126,12 +130,21 @@ export default function Reading({ lang = 'en' }) {
     setSearchParams(nd === todayStr ? {} : { date: nd });
   }
 
-  function getTextForLang(langCode, portion) {
+  function getTextForLang(langCode, portion, fallback = true) {
     if (!verses) return null;
     const base = portion === 'nt' ? verses.nt_text : verses.ot_text;
-    if (langCode === 'es') return (portion === 'nt' ? verses.nt_text_es : verses.ot_text_es) || base;
-    if (langCode === 'zh') return (portion === 'nt' ? verses.nt_text_zh : verses.ot_text_zh) || base;
-    if (langCode === 'sc') return (portion === 'nt' ? verses.nt_text_sc : verses.ot_text_sc) || base;
+    if (langCode === 'es') {
+      const t2 = portion === 'nt' ? verses.nt_text_es : verses.ot_text_es;
+      return t2 || (fallback ? base : null);
+    }
+    if (langCode === 'zh') {
+      const t2 = portion === 'nt' ? verses.nt_text_zh : verses.ot_text_zh;
+      return t2 || (fallback ? base : null);
+    }
+    if (langCode === 'sc') {
+      const t2 = portion === 'nt' ? verses.nt_text_sc : verses.ot_text_sc;
+      return t2 || (fallback ? base : null);
+    }
     return base;
   }
   function getNtText() { return getTextForLang(lang, 'nt'); }
@@ -196,15 +209,27 @@ export default function Reading({ lang = 'en' }) {
   }
 
   function formatVersesParallel(textA, textB) {
-    if (!textA) return null;
-    const linesA = textA.split('\n');
-    const linesB = (textB || '').split('\n');
-    return linesA.map((lineA, i) => (
-      <div key={i} className="parallel-row">
-        <div className="parallel-col">{formatVerseLine(lineA, 0)}</div>
-        <div className="parallel-col">{formatVerseLine(linesB[i] || '', 0)}</div>
-      </div>
-    ));
+    if (!textA && !textB) return null;
+    // If one column is missing, use the other as driver and show placeholder
+    const driverText = textA || textB;
+    const otherText  = textA ? textB : null;
+    const leftIsDriver = !!textA;
+    const linesDriver = driverText.split('\n');
+    const linesOther  = otherText ? otherText.split('\n') : null;
+    return linesDriver.map((lineDriver, i) => {
+      const leftLine  = leftIsDriver ? lineDriver : (linesOther ? linesOther[i] || '' : null);
+      const rightLine = leftIsDriver ? (linesOther ? linesOther[i] || '' : null) : lineDriver;
+      return (
+        <div key={i} className="parallel-row">
+          <div className="parallel-col">
+            {leftLine !== null ? formatVerseLine(leftLine, 0) : <span className="parallel-unavailable">—</span>}
+          </div>
+          <div className="parallel-col">
+            {rightLine !== null ? formatVerseLine(rightLine, 0) : <span className="parallel-unavailable">—</span>}
+          </div>
+        </div>
+      );
+    });
   }
 
   const ABBREV = {
@@ -431,6 +456,12 @@ export default function Reading({ lang = 'en' }) {
               if (next) {
                 setParallelLangA(lang);
                 localStorage.setItem('parallelLangA', lang);
+                // Ensure B is different from A
+                if (parallelLangB === lang) {
+                  const newB = lang === 'zh' || lang === 'sc' || lang === 'es' ? 'en' : 'zh';
+                  setParallelLangB(newB);
+                  localStorage.setItem('parallelLangB', newB);
+                }
               }
             }}
           >
@@ -518,7 +549,7 @@ export default function Reading({ lang = 'en' }) {
                       <div className="verses-title">{getTitle(verses.nt_title, parallelLangB)}</div>
                     </div>
                     <div className="verses-text">
-                      {formatVersesParallel(getTextForLang(parallelLangA, 'nt'), getTextForLang(parallelLangB, 'nt'))}
+                      {formatVersesParallel(getTextForLang(parallelLangA, 'nt', false), getTextForLang(parallelLangB, 'nt', false))}
                     </div>
                   </>
                 ) : (
@@ -585,7 +616,7 @@ export default function Reading({ lang = 'en' }) {
                       <div className="verses-title">{getTitle(verses.ot_title, parallelLangB)}</div>
                     </div>
                     <div className="verses-text">
-                      {formatVersesParallel(getTextForLang(parallelLangA, 'ot'), getTextForLang(parallelLangB, 'ot'))}
+                      {formatVersesParallel(getTextForLang(parallelLangA, 'ot', false), getTextForLang(parallelLangB, 'ot', false))}
                     </div>
                   </>
                 ) : (
