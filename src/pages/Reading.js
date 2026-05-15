@@ -483,7 +483,7 @@ export default function Reading({ lang = 'en' }) {
             {parallelMode ? (
               <div className="parallel-audio-row">
                 {getAudioForLang(parallelLangA, 'nt') && (
-                  <AudioPlayer key={`nt-${parallelLangA}`}
+                  <AudioPlayer key={`nt-A-${parallelLangA}`}
                     label={parallelLangA === 'zh' ? '新約音頻' : parallelLangA === 'sc' ? '新约音频' : parallelLangA === 'es' ? 'Audio NT' : 'NT Audio'}
                     book={getBookLabel(verses.nt_title, parallelLangA)}
                     audioJson={getAudioForLang(parallelLangA, 'nt')}
@@ -492,7 +492,7 @@ export default function Reading({ lang = 'en' }) {
                   />
                 )}
                 {getAudioForLang(parallelLangB, 'nt') && (
-                  <AudioPlayer key={`nt-${parallelLangB}`}
+                  <AudioPlayer key={`nt-B-${parallelLangB}`}
                     label={parallelLangB === 'zh' ? '新約音頻' : parallelLangB === 'sc' ? '新约音频' : parallelLangB === 'es' ? 'Audio NT' : 'NT Audio'}
                     book={getBookLabel(verses.nt_title, parallelLangB)}
                     audioJson={getAudioForLang(parallelLangB, 'nt')}
