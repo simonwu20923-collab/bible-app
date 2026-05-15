@@ -651,7 +651,7 @@ const BibleSidebar = React.memo(function BibleSidebar({
 
 // ── Draggable popup card ─────────────────────────────────────────────────────
 // Uses pointer capture for reliable cross-browser drag (no mousemove/mouseup on window).
-function DraggablePopup({ popup, idx, onClose, onCloseAll, totalCount, children }) {
+const DraggablePopup = React.memo(function DraggablePopup({ popup, idx, onClose, onCloseAll, totalCount, children }) {
   const headerRef = useRef(null);
   const dragState = useRef(null); // { startMX, startMY, startPX, startPY, el }
 
@@ -722,12 +722,12 @@ function DraggablePopup({ popup, idx, onClose, onCloseAll, totalCount, children 
       </div>
     </div>
   );
-}
+});
 
 // ── Mobile bottom sheet ──────────────────────────────────────────────────────
 // Shown on narrow screens instead of draggable popups.
 // history = [{id, kind, title, ...}], idx = current position.
-function MobileBottomSheet({ history, idx, onNavigate, onClose }) {
+const MobileBottomSheet = React.memo(function MobileBottomSheet({ history, idx, onNavigate, onClose }) {
   const current = history[idx];
   if (!current) return null;
   const canBack = idx > 0;
@@ -772,7 +772,7 @@ function MobileBottomSheet({ history, idx, onNavigate, onClose }) {
       </div>
     </>
   );
-}
+});
 
 // ── Split "[marker]" tokens from marked-text string ──────────────────────────
 function parseMarkerParts(text) {
@@ -859,6 +859,7 @@ function RefContent({ content, lang: contentLang, contextBook, contextChapter })
           .eq('book_abbr', token.abbr).eq('chapter', token.chapter).eq('lang', refsLang),
       ]);
       chData = cd; refsData = rd;
+      if (_refCache.size >= 60) _refCache.clear(); // prevent unbounded growth
       _refCache.set(cacheKey, { chData, refsData });
       setLoading(prev => ({ ...prev, [key]: false }));
     }
@@ -957,11 +958,18 @@ function parseStoredVerses(text) {
 
 // ── Static book/chapter helpers (no DB needed — data is already in BIBLE_VERSE_COUNTS) ──
 
-// Chapter list for a book — BIBLE_VERSE_COUNTS[abbr] length === chapter count
+// Chapter list for a book — lazily computed once per abbr, cached for the app lifetime
+const _chapterListCache = {};
 function chaptersForBook(abbr) {
-  const count = (BIBLE_VERSE_COUNTS[abbr] || []).length;
-  return Array.from({ length: count }, (_, i) => i + 1);
+  if (!_chapterListCache[abbr]) {
+    const count = (BIBLE_VERSE_COUNTS[abbr] || []).length;
+    _chapterListCache[abbr] = Array.from({ length: count }, (_, i) => i + 1);
+  }
+  return _chapterListCache[abbr];
 }
+
+// Columns fetched from bible_outlines — avoids pulling admin/timestamp cols we never use
+const OUTLINE_COLS = 'id,book_abbr,lang,level,sort_order,start_chapter,start_verse,end_chapter,end_verse,title,prefix';
 
 // ── sessionStorage caches ──────────────────────────────────────────────────
 // Bump CACHE_V when the stored format changes so stale entries are ignored.
@@ -1163,42 +1171,49 @@ export default function Bible({ lang }) {
       .catch(() => {});
   }, [chapterCols]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Fetch primary outlines whenever chapter/lang changes; caches in sessionStorage.
-  // Always fetched (data is tiny) so the toggle button can appear; rendering is
-  // gated on showOutline separately inside renderVerses / renderVersesParallel.
+  // Fetch chapter outlines for A (and B when needed) in a single DB round-trip.
+  // Always fetched so the § Outline toggle button appears; rendering gated on showOutline.
   useEffect(() => {
-    if (!selectedBook || !selectedChapter) { setChapterOutlines([]); return; }
-    const cached = getOutlineCache(selectedBook, selectedChapter, outlineLangA);
-    if (cached) { setChapterOutlines(cached); return; }
-    supabase.from('bible_outlines').select('*')
-      .eq('book_abbr', selectedBook).eq('lang', outlineLangA).eq('start_chapter', selectedChapter)
+    if (!selectedBook || !selectedChapter) {
+      setChapterOutlines([]); setChapterOutlinesB([]); return;
+    }
+
+    const cachedA = getOutlineCache(selectedBook, selectedChapter, outlineLangA);
+    const needsB  = !!outlineLangB;
+    const cachedB = needsB ? getOutlineCache(selectedBook, selectedChapter, outlineLangB) : null;
+
+    // Apply any cached data immediately
+    if (cachedA !== null) setChapterOutlines(cachedA);
+    if (!needsB) setChapterOutlinesB([]);
+    else if (cachedB !== null) setChapterOutlinesB(cachedB);
+
+    const needA = cachedA === null;
+    const needB = needsB && cachedB === null;
+    if (!needA && !needB) return;
+
+    // One query covers both langs when both are missing
+    const langsToFetch = [...(needA ? [outlineLangA] : []), ...(needB ? [outlineLangB] : [])];
+    supabase.from('bible_outlines').select(OUTLINE_COLS)
+      .eq('book_abbr', selectedBook).in('lang', langsToFetch).eq('start_chapter', selectedChapter)
       .order('sort_order')
       .then(({ data }) => {
-        const result = data || [];
-        setOutlineCache(selectedBook, selectedChapter, outlineLangA, result);
-        setChapterOutlines(result);
+        const rows = data || [];
+        if (needA) {
+          const result = rows.filter(r => r.lang === outlineLangA);
+          setOutlineCache(selectedBook, selectedChapter, outlineLangA, result);
+          setChapterOutlines(result);
+        }
+        if (needB) {
+          const result = rows.filter(r => r.lang === outlineLangB);
+          setOutlineCache(selectedBook, selectedChapter, outlineLangB, result);
+          setChapterOutlinesB(result);
+        }
       });
-  }, [outlineLangA, selectedBook, selectedChapter]);
+  }, [outlineLangA, outlineLangB, selectedBook, selectedChapter]);
 
-  // Fetch secondary outlines (parallel column B); caches in sessionStorage
+  // Sync both display lang and (unoverridden) parallelLangA when the lang prop changes
   useEffect(() => {
-    if (!outlineLangB || !selectedBook || !selectedChapter) { setChapterOutlinesB([]); return; }
-    const cached = getOutlineCache(selectedBook, selectedChapter, outlineLangB);
-    if (cached) { setChapterOutlinesB(cached); return; }
-    supabase.from('bible_outlines').select('*')
-      .eq('book_abbr', selectedBook).eq('lang', outlineLangB).eq('start_chapter', selectedChapter)
-      .order('sort_order')
-      .then(({ data }) => {
-        const result = data || [];
-        setOutlineCache(selectedBook, selectedChapter, outlineLangB, result);
-        setChapterOutlinesB(result);
-      });
-  }, [outlineLangB, selectedBook, selectedChapter]);
-
-  useEffect(() => { setDisplayLang(lang); }, [lang]);
-
-  // Keep parallelLangA in sync when lang prop changes and user hasn't overridden it
-  useEffect(() => {
+    setDisplayLang(lang);
     if (!localStorage.getItem('parallelLangA')) setParallelLangA(lang || 'en');
   }, [lang]);
 
@@ -1219,7 +1234,7 @@ export default function Bible({ lang }) {
       supabase.from('bible_book_intros')
         .select('author,time_of_writing,place_of_writing,time_period_covered,recipient,subject')
         .eq('book_abbr', selectedBook).eq('lang', introLang).maybeSingle(),
-      supabase.from('bible_outlines').select('*').eq('book_abbr', selectedBook).eq('lang', introLang).order('sort_order'),
+      supabase.from('bible_outlines').select(OUTLINE_COLS).eq('book_abbr', selectedBook).eq('lang', introLang).order('sort_order'),
     ]).then(([{ data: introData }, { data: outlineData }]) => {
       const intro   = introData  || null;
       const outline = outlineData || [];
@@ -1396,14 +1411,20 @@ export default function Bible({ lang }) {
   const parsedVerses  = useMemo(() => parseStoredVerses(chapterData?.[`text_${displayLang}`]),   [chapterData, displayLang]);
   const parsedVersesA = useMemo(() => parallelMode ? parseStoredVerses(chapterData?.[`text_${parallelLangA}`]) : [], [parallelMode, chapterData, parallelLangA]);
   const parsedVersesB = useMemo(() => parallelMode ? parseStoredVerses(chapterData?.[`text_${parallelLangB}`]) : [], [parallelMode, chapterData, parallelLangB]);
+  // verse-number → text map for parallel column B (avoids rebuilding inside renderVersesParallel)
+  const verseMapB = useMemo(() => {
+    const m = {};
+    parsedVersesB.forEach(v => { m[v.verse] = v.text; });
+    return m;
+  }, [parsedVersesB]);
 
-  // ── Verse renderers — receive pre-parsed verse arrays ─────────────────────
+  // ── Verse renderers — stable useCallback so useMemo output can skip re-renders ──
+  // Both receive pre-computed maps (byVerse, verseMapB) to avoid rebuilding inside.
 
-  function renderVerses(verses, outlines = []) {
+  const renderVerses = useCallback((verses, byVerse) => {
     if (verses.length === 0) return <p style={{ opacity: 0.5, padding: '12px 0' }}>{t.noText}</p>;
-    const byVerse = showOutline && outlines.length ? buildOutlinesByVerse(outlines) : {};
     return verses.map(({ verse, text: vt }) => {
-      const headers = byVerse[verse] || [];
+      const headers   = byVerse[verse] || [];
       const useMarked = showRefs && markedTexts[verse];
       const content   = useMarked ? parseMarkedText(markedTexts[verse], verse) : vt;
       return (
@@ -1418,17 +1439,13 @@ export default function Bible({ lang }) {
         </React.Fragment>
       );
     });
-  }
+  }, [showRefs, markedTexts, fontSize, t, scrollToVerse, parseMarkedText]);
 
-  function renderVersesParallel(versesA, versesB, outlinesA = [], outlinesB = []) {
+  const renderVersesParallel = useCallback((versesA, byVerseA, byVerseB, mapB) => {
     if (versesA.length === 0) return <p style={{ opacity: 0.5 }}>{t.noText}</p>;
-    const mapB = {};
-    versesB.forEach(v => { mapB[v.verse] = v.text; });
-    const byVerseA = showOutline && outlinesA.length ? buildOutlinesByVerse(outlinesA) : {};
-    const byVerseB = showOutline && outlinesB.length ? buildOutlinesByVerse(outlinesB) : {};
     return versesA.map(({ verse, text: vt }) => {
-      const headersA = byVerseA[verse] || [];
-      const headersB = byVerseB[verse] || [];
+      const headersA   = byVerseA[verse] || [];
+      const headersB   = byVerseB[verse] || [];
       const hasHeaders = headersA.length > 0 || headersB.length > 0;
       // Column A — uses activeRefsLang (parallelLangA)
       const contentA = (showRefs && activeRefsLang && markedTexts[verse])
@@ -1462,16 +1479,36 @@ export default function Bible({ lang }) {
         </React.Fragment>
       );
     });
-  }
+  }, [showRefs, markedTexts, markedTextsB, refsMapB, fontSize, t, scrollToVerse, parseMarkedText,
+      activeRefsLang, activeRefsLangB, parallelLangA, parallelLangB]);
+
+  // Memoised rendered output — rebuilds only when verse data, outline maps, font, or refs change.
+  // Popup opens / mobileSheet changes / isMobile flips no longer re-reconcile the verse list.
+  const renderedVerses = useMemo(
+    () => renderVerses(parsedVerses, outlinesByVerse),
+    [renderVerses, parsedVerses, outlinesByVerse]
+  );
+  const renderedVersesParallel = useMemo(
+    () => renderVersesParallel(parsedVersesA, outlinesByVerse, outlinesByVerseB, verseMapB),
+    [renderVersesParallel, parsedVersesA, outlinesByVerse, outlinesByVerseB, verseMapB]
+  );
 
   // ── Outline tree (memoised) ──────────────────────────────────────────────
   // Enrich all outline items with inferred end refs (once, for reuse in both tree and inline view)
   const enrichedBookOutline = useMemo(() => inferEndRefs(bookOutline), [bookOutline]);
   const outlineTree = useMemo(() => buildOutlineTree(enrichedBookOutline), [enrichedBookOutline]);
-  // Build an id-keyed map so inline chapter outlines can look up enriched items
   // Enrich chapter outlines independently (so ranges show even if book intro hasn't been loaded)
   const enrichedChapterOutlines  = useMemo(() => inferEndRefs(chapterOutlines),  [chapterOutlines]);
   const enrichedChapterOutlinesB = useMemo(() => parallelMode ? inferEndRefs(chapterOutlinesB) : [], [parallelMode, chapterOutlinesB]);
+  // Pre-build verse→outlineItems maps (avoids rebuilding inside every render call)
+  const outlinesByVerse  = useMemo(
+    () => showOutline && enrichedChapterOutlines.length  ? buildOutlinesByVerse(enrichedChapterOutlines)  : {},
+    [showOutline, enrichedChapterOutlines]
+  );
+  const outlinesByVerseB = useMemo(
+    () => showOutline && parallelMode && enrichedChapterOutlinesB.length ? buildOutlinesByVerse(enrichedChapterOutlinesB) : {},
+    [showOutline, parallelMode, enrichedChapterOutlinesB]
+  );
 
   // Stable context value — prevents all PopupContext consumers re-rendering on unrelated state changes
   const popupContextValue = useMemo(() => ({ pushPopup }), [pushPopup]);
@@ -1480,6 +1517,13 @@ export default function Bible({ lang }) {
   const verseCount = (selectedBook && selectedChapter)
     ? (BIBLE_VERSE_COUNTS[selectedBook]?.[selectedChapter - 1] ?? 0)
     : 0;
+
+  // Verse jump strip buttons — only rebuilt when the chapter changes
+  const verseJumpStrip = useMemo(() => (
+    Array.from({ length: verseCount }, (_, i) => i + 1).map(n => (
+      <button key={n} className="bible-verse-jump-btn" onClick={() => scrollToVerse(n)}>{n}</button>
+    ))
+  ), [verseCount, scrollToVerse]);
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -1735,11 +1779,11 @@ export default function Bible({ lang }) {
                   {chapterData && (getAudioSrc(parallelMode ? parallelLangA : displayLang) || (parallelMode && getAudioSrc(parallelLangB))) && (
                     <div className={parallelMode ? 'parallel-audio-row' : 'bible-audio-single'}>
                       {getAudioSrc(parallelMode ? parallelLangA : displayLang)
-                        ? <audio key={`a-${parallelMode ? parallelLangA : displayLang}-${selectedChapter}`} controls src={getAudioSrc(parallelMode ? parallelLangA : displayLang)} style={{ width: '100%' }} />
+                        ? <audio key={`a-${selectedBook}-${parallelMode ? parallelLangA : displayLang}-${selectedChapter}`} controls src={getAudioSrc(parallelMode ? parallelLangA : displayLang)} style={{ width: '100%' }} />
                         : parallelMode ? <div /> : null}
                       {parallelMode && (
                         getAudioSrc(parallelLangB)
-                          ? <audio key={`b-${parallelLangB}-${selectedChapter}`} controls src={getAudioSrc(parallelLangB)} style={{ width: '100%' }} />
+                          ? <audio key={`b-${selectedBook}-${parallelLangB}-${selectedChapter}`} controls src={getAudioSrc(parallelLangB)} style={{ width: '100%' }} />
                           : <div />
                       )}
                     </div>
@@ -1750,11 +1794,7 @@ export default function Bible({ lang }) {
                     <div className="bible-verse-jump">
                       <span className="bible-verse-jump-label">{t.verse}</span>
                       <div className="bible-verse-jump-strip">
-                        {Array.from({ length: verseCount }, (_, i) => i + 1).map(n => (
-                          <button key={n} className="bible-verse-jump-btn" onClick={() => scrollToVerse(n)}>
-                            {n}
-                          </button>
-                        ))}
+                        {verseJumpStrip}
                       </div>
                     </div>
                   )}
@@ -1770,10 +1810,10 @@ export default function Bible({ lang }) {
                             <div>{langLabel(parallelLangA)}</div>
                             <div>{langLabel(parallelLangB)}</div>
                           </div>
-                          {renderVersesParallel(parsedVersesA, parsedVersesB, enrichedChapterOutlines, enrichedChapterOutlinesB)}
+                          {renderedVersesParallel}
                         </>
                       ) : (
-                        renderVerses(parsedVerses, enrichedChapterOutlines)
+                        renderedVerses
                       )}
                     </div>
                   )}
