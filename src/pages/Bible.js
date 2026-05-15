@@ -580,6 +580,75 @@ function OutlineTree({ nodes, expandAllTrigger, collapseAllTrigger, onNavigate }
   );
 }
 
+// ── Memoized sidebar — only re-renders when book/language/expand state changes ─
+// Extracted so that verse loading, font changes, and popup state don't cause
+// the 66-book list to re-reconcile.
+const BibleSidebar = React.memo(function BibleSidebar({
+  displayLang, selectedBook, selectedChapter, mobileView,
+  ntExpanded, otExpanded, expandedBooks,
+  onToggleNt, onToggleOt, onToggleBook, onSelectBook, onOpenChapter,
+}) {
+  const t = UI_TEXT[displayLang] || UI_TEXT.en;
+  return (
+    <div className={`bible-sidebar${mobileView !== 'books' ? ' bible-hidden-mobile' : ''}`}>
+      <div className="bible-testament-label bible-testament-collapse" onClick={onToggleNt}>
+        <span className="bible-collapse-arrow">{ntExpanded ? '▾' : '▸'}</span>
+        {t.nt}
+      </div>
+      {ntExpanded && NT_BOOKS.map(abbr => (
+        <div key={abbr} className="bible-book-item">
+          <div className="bible-book-row">
+            <button className="bible-book-expand-btn" onClick={e => { e.stopPropagation(); onToggleBook(abbr); }}>
+              {expandedBooks.has(abbr) ? '▾' : '▸'}
+            </button>
+            <button className={`bible-book-btn${selectedBook === abbr ? ' active' : ''}`} onClick={() => onSelectBook(abbr)}>
+              {bookName(abbr, displayLang)}
+            </button>
+          </div>
+          {expandedBooks.has(abbr) && (
+            <div className="bible-sidebar-chapter-grid">
+              {chaptersForBook(abbr).map(ch => (
+                <button key={ch}
+                  className={`bible-sidebar-ch-btn${selectedBook === abbr && selectedChapter === ch ? ' active' : ''}`}
+                  onClick={() => onOpenChapter(abbr, ch)}>
+                  {ch}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+      <div className="bible-testament-label bible-testament-collapse" style={{ marginTop: '8px' }} onClick={onToggleOt}>
+        <span className="bible-collapse-arrow">{otExpanded ? '▾' : '▸'}</span>
+        {t.ot}
+      </div>
+      {otExpanded && OT_BOOKS.map(abbr => (
+        <div key={abbr} className="bible-book-item">
+          <div className="bible-book-row">
+            <button className="bible-book-expand-btn" onClick={e => { e.stopPropagation(); onToggleBook(abbr); }}>
+              {expandedBooks.has(abbr) ? '▾' : '▸'}
+            </button>
+            <button className={`bible-book-btn${selectedBook === abbr ? ' active' : ''}`} onClick={() => onSelectBook(abbr)}>
+              {bookName(abbr, displayLang)}
+            </button>
+          </div>
+          {expandedBooks.has(abbr) && (
+            <div className="bible-sidebar-chapter-grid">
+              {chaptersForBook(abbr).map(ch => (
+                <button key={ch}
+                  className={`bible-sidebar-ch-btn${selectedBook === abbr && selectedChapter === ch ? ' active' : ''}`}
+                  onClick={() => onOpenChapter(abbr, ch)}>
+                  {ch}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+});
+
 // ── Draggable popup card ─────────────────────────────────────────────────────
 // Uses pointer capture for reliable cross-browser drag (no mousemove/mouseup on window).
 function DraggablePopup({ popup, idx, onClose, onCloseAll, totalCount, children }) {
@@ -752,6 +821,10 @@ function VerseWithMarkers({ verseNum, plainText, markedText, refsMap, verseLang 
   );
 }
 
+// Module-level cache for cross-reference popup content — keyed by book+chapter+lang
+// Prevents duplicate DB fetches when the same ref is clicked more than once
+const _refCache = new Map();
+
 // ── RefContent: note body — ref links each open a new verse popup ─────────────
 // Auto-detects ZH vs EN content and uses the appropriate tokenizer + columns
 // contextBook / contextChapter: the host verse's book+chapter for paragraph-aware parsing
@@ -768,20 +841,27 @@ function RefContent({ content, lang: contentLang, contextBook, contextChapter })
 
   async function handleRefClick(token, key) {
     if (loading[key]) return;
-    setLoading(prev => ({ ...prev, [key]: true }));
 
-    // Choose text/marked columns based on content language
-    const textCol    = isZh ? (contentLang === 'sc' ? 'text_sc' : 'text_zh') : 'text_en';
-    const markedCol  = isZh ? (contentLang === 'sc' ? 'text_sc_marked' : 'text_zh_marked') : 'text_en_marked';
-    const refsLang   = isZh ? (contentLang === 'sc' ? 'sc' : 'zh') : 'en';
+    const textCol   = isZh ? (contentLang === 'sc' ? 'text_sc' : 'text_zh') : 'text_en';
+    const markedCol = isZh ? (contentLang === 'sc' ? 'text_sc_marked' : 'text_zh_marked') : 'text_en_marked';
+    const refsLang  = isZh ? (contentLang === 'sc' ? 'sc' : 'zh') : 'en';
+    const cacheKey  = `${token.abbr}_${token.chapter}_${refsLang}`;
 
-    const [{ data: chData }, { data: refsData }] = await Promise.all([
-      supabase.from('bible_chapters').select(`${textCol},${markedCol}`)
-        .eq('book_abbr', token.abbr).eq('chapter', token.chapter).single(),
-      supabase.from('bible_refs').select('verse,marker,type,content')
-        .eq('book_abbr', token.abbr).eq('chapter', token.chapter).eq('lang', refsLang),
-    ]);
-    setLoading(prev => ({ ...prev, [key]: false }));
+    let chData, refsData;
+    if (_refCache.has(cacheKey)) {
+      ({ chData, refsData } = _refCache.get(cacheKey));
+    } else {
+      setLoading(prev => ({ ...prev, [key]: true }));
+      const [{ data: cd }, { data: rd }] = await Promise.all([
+        supabase.from('bible_chapters').select(`${textCol},${markedCol}`)
+          .eq('book_abbr', token.abbr).eq('chapter', token.chapter).single(),
+        supabase.from('bible_refs').select('verse,marker,type,content')
+          .eq('book_abbr', token.abbr).eq('chapter', token.chapter).eq('lang', refsLang),
+      ]);
+      chData = cd; refsData = rd;
+      _refCache.set(cacheKey, { chData, refsData });
+      setLoading(prev => ({ ...prev, [key]: false }));
+    }
 
     const verses = parseStoredVerses(chData?.[textCol] || '')
       .filter(v => v.verse >= token.startVerse && v.verse <= token.endVerse);
@@ -877,11 +957,6 @@ function parseStoredVerses(text) {
 
 // ── Static book/chapter helpers (no DB needed — data is already in BIBLE_VERSE_COUNTS) ──
 
-// All available books — derived from the static import lists, no DB round-trip on load
-function fetchAvailableBooks() {
-  return [...NT_BOOKS, ...OT_BOOKS];
-}
-
 // Chapter list for a book — BIBLE_VERSE_COUNTS[abbr] length === chapter count
 function chaptersForBook(abbr) {
   const count = (BIBLE_VERSE_COUNTS[abbr] || []).length;
@@ -938,13 +1013,13 @@ async function fetchChapterData(bookAbbr, chapter, cols) {
 // ── Component ──────────────────────────────────────────────────────────────
 
 export default function Bible({ lang }) {
-  // Book list is static — initialize immediately from imports, no DB call needed
-  const [availableBooks]                    = useState(() => fetchAvailableBooks());
-  const [selectedBook, setSelectedBook]     = useState(null);
-  const [chapters, setChapters]             = useState([]);
+  const [selectedBook, setSelectedBook]       = useState(null);
   const [selectedChapter, setSelectedChapter] = useState(null);
-  const [chapterData, setChapterData]       = useState(null);
-  const [chapterLoading, setChapterLoading] = useState(false);
+  const [chapterData, setChapterData]         = useState(null);
+  const [chapterLoading, setChapterLoading]   = useState(false);
+
+  // Chapter list derived directly — chaptersForBook is O(1), no state needed
+  const chapters = useMemo(() => selectedBook ? chaptersForBook(selectedBook) : [], [selectedBook]);
 
   const [displayLang, setDisplayLang]       = useState(() => localStorage.getItem('bibleAppLang') || 'en');
   const [fontSize, setFontSize]             = useState(() => parseInt(localStorage.getItem('bibleFontSize'), 10) || 18);
@@ -959,11 +1034,10 @@ export default function Bible({ lang }) {
 
   // ── Sidebar expandable books + intro/outline state ───────────────────────
   const [expandedBooks, setExpandedBooks] = useState(new Set());
-  const [sidebarChapters, setSidebarChapters] = useState({});
-  const [showIntro, setShowIntro] = useState(false);
-  const [bookIntro, setBookIntro] = useState(null);
-  const [bookOutline, setBookOutline] = useState([]);
-  const [outlineLoading, setOutlineLoading] = useState(false);
+  const [showIntro, setShowIntro]         = useState(false);
+  const [bookIntro, setBookIntro]         = useState(null);
+  const [bookOutline, setBookOutline]     = useState([]);
+  const [introFetching, setIntroFetching] = useState(false);
   const [outlineExpandTrigger, setOutlineExpandTrigger]   = useState(0);
   const [outlineCollapseTrigger, setOutlineCollapseTrigger] = useState(0);
   const [outlineAllExpanded, setOutlineAllExpanded]         = useState(false);
@@ -1036,7 +1110,7 @@ export default function Bible({ lang }) {
     return (parallelLangB === 'en' || parallelLangB === 'zh' || parallelLangB === 'sc') ? parallelLangB : null;
   }, [parallelMode, parallelLangB]);
 
-  const t = UI_TEXT[displayLang] || UI_TEXT.en;
+  const t = useMemo(() => UI_TEXT[displayLang] || UI_TEXT.en, [displayLang]);
 
   const introLang = useMemo(() => (displayLang === 'es' ? 'en' : displayLang), [displayLang]);
 
@@ -1053,12 +1127,14 @@ export default function Bible({ lang }) {
     return lang === outlineLangA ? null : lang;
   }, [parallelMode, parallelLangB, outlineLangA]);
 
-  // Persist preferences
-  useEffect(() => { localStorage.setItem('bibleFontSize',  String(fontSize));       }, [fontSize]);
-  useEffect(() => { localStorage.setItem('parallelMode',   String(parallelMode));    }, [parallelMode]);
-  useEffect(() => { localStorage.setItem('parallelLangA',  parallelLangA);           }, [parallelLangA]);
-  useEffect(() => { localStorage.setItem('parallelLangB',  parallelLangB);           }, [parallelLangB]);
-  useEffect(() => { localStorage.setItem('showOutline',    String(showOutline));     }, [showOutline]);
+  // Persist preferences — single effect, runs only when a relevant value changes
+  useEffect(() => {
+    localStorage.setItem('bibleFontSize', String(fontSize));
+    localStorage.setItem('parallelMode',  String(parallelMode));
+    localStorage.setItem('parallelLangA', parallelLangA);
+    localStorage.setItem('parallelLangB', parallelLangB);
+    localStorage.setItem('showOutline',   String(showOutline));
+  }, [fontSize, parallelMode, parallelLangA, parallelLangB, showOutline]);
 
   // Columns to fetch for chapter text — only what the current display config needs
   const chapterCols = useMemo(() => {
@@ -1122,10 +1198,7 @@ export default function Bible({ lang }) {
     if (!localStorage.getItem('parallelLangA')) setParallelLangA(lang || 'en');
   }, [lang]);
 
-  const { ntBooks, otBooks } = useMemo(() => {
-    const set = new Set(availableBooks);
-    return { ntBooks: NT_BOOKS.filter(b => set.has(b)), otBooks: OT_BOOKS.filter(b => set.has(b)) };
-  }, [availableBooks]);
+  // NT_BOOKS / OT_BOOKS are the complete static lists — no runtime filtering needed
 
   // Re-fetch intro + outline whenever book or language changes; caches in sessionStorage
   useEffect(() => {
@@ -1137,9 +1210,11 @@ export default function Bible({ lang }) {
       setOutlineAllExpanded(false);
       return;
     }
-    setOutlineLoading(true);
+    setIntroFetching(true);
     Promise.all([
-      supabase.from('bible_book_intros').select('*').eq('book_abbr', selectedBook).eq('lang', introLang).maybeSingle(),
+      supabase.from('bible_book_intros')
+        .select('author,time_of_writing,place_of_writing,time_period_covered,recipient,subject')
+        .eq('book_abbr', selectedBook).eq('lang', introLang).maybeSingle(),
       supabase.from('bible_outlines').select('*').eq('book_abbr', selectedBook).eq('lang', introLang).order('sort_order'),
     ]).then(([{ data: introData }, { data: outlineData }]) => {
       const intro   = introData  || null;
@@ -1150,20 +1225,17 @@ export default function Bible({ lang }) {
       setOutlineAllExpanded(false);
     }).catch(() => {
       setBookIntro(null); setBookOutline([]);
-    }).finally(() => setOutlineLoading(false));
+    }).finally(() => setIntroFetching(false));
   }, [selectedBook, introLang]);
 
-  function selectBook(abbr) {
+  const selectBook = useCallback((abbr) => {
     if (abbr === selectedBook && showIntro) return;
     setSelectedBook(abbr);
     setSelectedChapter(null);
     setChapterData(null);
     setShowIntro(true);
     setMobileView('chapters');
-    const chs = chaptersForBook(abbr);
-    setChapters(chs);
-    setSidebarChapters(prev => ({ ...prev, [abbr]: chs }));
-  }
+  }, [selectedBook, showIntro]);
 
   async function selectChapter(ch, bookOverride) {
     const bookAbbr = bookOverride || selectedBook;
@@ -1183,34 +1255,19 @@ export default function Bible({ lang }) {
     setChapterLoading(false);
   }
 
-  function toggleBookExpand(abbr) {
+  const toggleBookExpand = useCallback((abbr) => {
     setExpandedBooks(prev => {
       const next = new Set(prev);
-      if (next.has(abbr)) { next.delete(abbr); }
-      else {
-        next.add(abbr);
-        if (!sidebarChapters[abbr]) {
-          const chs = chaptersForBook(abbr);
-          setSidebarChapters(p => ({ ...p, [abbr]: chs }));
-        }
-      }
+      if (next.has(abbr)) next.delete(abbr);
+      else next.add(abbr);
       return next;
     });
-  }
+  }, []);
 
-  async function openChapter(abbr, ch) {
-    if (abbr !== selectedBook) {
-      setSelectedBook(abbr);
-      if (!sidebarChapters[abbr]) {
-        const chs = chaptersForBook(abbr);
-        setSidebarChapters(p => ({ ...p, [abbr]: chs }));
-        setChapters(chs);
-      } else {
-        setChapters(sidebarChapters[abbr]);
-      }
-    }
+  const openChapter = useCallback(async (abbr, ch) => {
+    if (abbr !== selectedBook) setSelectedBook(abbr);
     await selectChapter(ch, abbr);
-  }
+  }, [selectedBook, selectChapter]);
 
   function scrollToVerse(n) {
     const el = document.getElementById(`bible-verse-${n}`);
@@ -1328,10 +1385,14 @@ export default function Bible({ lang }) {
     }
   }, []);
 
-  // ── Verse renderers ────────────────────────────────────────────────────────
+  // ── Memoised parsed verse arrays — avoids re-parsing on font/popup/ref changes ──
+  const parsedVerses  = useMemo(() => parseStoredVerses(chapterData?.[`text_${displayLang}`]),   [chapterData, displayLang]);
+  const parsedVersesA = useMemo(() => parseStoredVerses(chapterData?.[`text_${parallelLangA}`]), [chapterData, parallelLangA]);
+  const parsedVersesB = useMemo(() => parseStoredVerses(chapterData?.[`text_${parallelLangB}`]), [chapterData, parallelLangB]);
 
-  function renderVerses(text, outlines = []) {
-    const verses = parseStoredVerses(text);
+  // ── Verse renderers — receive pre-parsed verse arrays ─────────────────────
+
+  function renderVerses(verses, outlines = []) {
     if (verses.length === 0) return <p style={{ opacity: 0.5, padding: '12px 0' }}>{t.noText}</p>;
     const byVerse = showOutline && outlines.length ? buildOutlinesByVerse(outlines) : {};
     return verses.map(({ verse, text: vt }) => {
@@ -1352,11 +1413,10 @@ export default function Bible({ lang }) {
     });
   }
 
-  function renderVersesParallel(textA, textB, outlinesA = [], outlinesB = []) {
-    const versesA = parseStoredVerses(textA);
+  function renderVersesParallel(versesA, versesB, outlinesA = [], outlinesB = []) {
     if (versesA.length === 0) return <p style={{ opacity: 0.5 }}>{t.noText}</p>;
     const mapB = {};
-    parseStoredVerses(textB).forEach(v => { mapB[v.verse] = v.text; });
+    versesB.forEach(v => { mapB[v.verse] = v.text; });
     const byVerseA = showOutline && outlinesA.length ? buildOutlinesByVerse(outlinesA) : {};
     const byVerseB = showOutline && outlinesB.length ? buildOutlinesByVerse(outlinesB) : {};
     return versesA.map(({ verse, text: vt }) => {
@@ -1454,66 +1514,21 @@ export default function Bible({ lang }) {
     ))}
     <div className="bible-layout">
 
-      {/* ── Books sidebar ───────────────────────────────────── */}
-      <div className={`bible-sidebar${mobileView !== 'books' ? ' bible-hidden-mobile' : ''}`}>
-        <div className="bible-testament-label bible-testament-collapse"
-          onClick={() => setNtExpanded(e => !e)}>
-          <span className="bible-collapse-arrow">{ntExpanded ? '▾' : '▸'}</span>
-          {t.nt}
-        </div>
-        {ntExpanded && ntBooks.map(abbr => (
-          <div key={abbr} className="bible-book-item">
-            <div className="bible-book-row">
-              <button className="bible-book-expand-btn" onClick={e => { e.stopPropagation(); toggleBookExpand(abbr); }}>
-                {expandedBooks.has(abbr) ? '▾' : '▸'}
-              </button>
-              <button className={`bible-book-btn${selectedBook === abbr ? ' active' : ''}`} onClick={() => selectBook(abbr)}>
-                {bookName(abbr, displayLang)}
-              </button>
-            </div>
-            {expandedBooks.has(abbr) && (
-              <div className="bible-sidebar-chapter-grid">
-                {(sidebarChapters[abbr] || (selectedBook === abbr ? chapters : [])).map(ch => (
-                  <button key={ch}
-                    className={`bible-sidebar-ch-btn${selectedBook === abbr && selectedChapter === ch ? ' active' : ''}`}
-                    onClick={() => openChapter(abbr, ch)}>
-                    {ch}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
-        <div className="bible-testament-label bible-testament-collapse"
-          style={{ marginTop: '8px' }}
-          onClick={() => setOtExpanded(e => !e)}>
-          <span className="bible-collapse-arrow">{otExpanded ? '▾' : '▸'}</span>
-          {t.ot}
-        </div>
-        {otExpanded && otBooks.map(abbr => (
-          <div key={abbr} className="bible-book-item">
-            <div className="bible-book-row">
-              <button className="bible-book-expand-btn" onClick={e => { e.stopPropagation(); toggleBookExpand(abbr); }}>
-                {expandedBooks.has(abbr) ? '▾' : '▸'}
-              </button>
-              <button className={`bible-book-btn${selectedBook === abbr ? ' active' : ''}`} onClick={() => selectBook(abbr)}>
-                {bookName(abbr, displayLang)}
-              </button>
-            </div>
-            {expandedBooks.has(abbr) && (
-              <div className="bible-sidebar-chapter-grid">
-                {(sidebarChapters[abbr] || (selectedBook === abbr ? chapters : [])).map(ch => (
-                  <button key={ch}
-                    className={`bible-sidebar-ch-btn${selectedBook === abbr && selectedChapter === ch ? ' active' : ''}`}
-                    onClick={() => openChapter(abbr, ch)}>
-                    {ch}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
+      {/* ── Books sidebar (memoized — only re-renders on book/lang/expand changes) ── */}
+      <BibleSidebar
+        displayLang={displayLang}
+        selectedBook={selectedBook}
+        selectedChapter={selectedChapter}
+        mobileView={mobileView}
+        ntExpanded={ntExpanded}
+        otExpanded={otExpanded}
+        expandedBooks={expandedBooks}
+        onToggleNt={() => setNtExpanded(e => !e)}
+        onToggleOt={() => setOtExpanded(e => !e)}
+        onToggleBook={toggleBookExpand}
+        onSelectBook={selectBook}
+        onOpenChapter={openChapter}
+      />
 
       {/* ── Main content ────────────────────────────────────── */}
       <div className={`bible-main${mobileView === 'books' ? ' bible-hidden-mobile' : ''}`} ref={mainRef}>
@@ -1550,7 +1565,7 @@ export default function Bible({ lang }) {
                 </div>
               </div>
               {/* Intro body */}
-              {outlineLoading ? (
+              {introFetching ? (
                 <div style={{ textAlign: 'center', padding: '40px', opacity: 0.5 }}>{t.loading}</div>
               ) : (
                 <div className="bible-intro-body">
@@ -1745,10 +1760,10 @@ export default function Bible({ lang }) {
                             <div>{langLabel(parallelLangA)}</div>
                             <div>{langLabel(parallelLangB)}</div>
                           </div>
-                          {renderVersesParallel(chapterData?.[`text_${parallelLangA}`], chapterData?.[`text_${parallelLangB}`], enrichedChapterOutlines, enrichedChapterOutlinesB)}
+                          {renderVersesParallel(parsedVersesA, parsedVersesB, enrichedChapterOutlines, enrichedChapterOutlinesB)}
                         </>
                       ) : (
-                        renderVerses(chapterData?.[`text_${displayLang}`], enrichedChapterOutlines)
+                        renderVerses(parsedVerses, enrichedChapterOutlines)
                       )}
                     </div>
                   )}
