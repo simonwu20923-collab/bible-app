@@ -11,7 +11,9 @@ export default function Reading({ lang = 'en' }) {
   const name = user?.name || '';
 
   const [searchParams, setSearchParams] = useSearchParams();
-  const todayStr = new Date().toISOString().split('T')[0];
+  // Local date (device timezone), not UTC — toISOString() rolls over to tomorrow
+  // late in the evening for timezones behind UTC. en-CA formats as YYYY-MM-DD.
+  const todayStr = new Date().toLocaleDateString('en-CA');
   const currentDate = searchParams.get('date') || todayStr;
   let queryDate = currentDate.replace(/^\d{4}/, '2026');
   if (queryDate.endsWith('-02-29')) queryDate = '2026-02-28';
@@ -34,7 +36,7 @@ export default function Reading({ lang = 'en' }) {
   const [showOT, setShowOT] = React.useState(true);
   const [fontSize, setFontSize] = React.useState(() => parseInt(localStorage.getItem('readingFontSize'), 10) || 18);
   const [navbarHeight, setNavbarHeight] = React.useState(54);
-  const [scrolled, setScrolled] = React.useState(false);
+  const [bannerHeight, setBannerHeight] = React.useState(0);
   const [parallelMode, setParallelMode] = React.useState(() =>
     localStorage.getItem('parallelMode') === 'true'
   );
@@ -59,11 +61,18 @@ export default function Reading({ lang = 'en' }) {
     return () => observer.disconnect();
   }, []);
 
+  // Measure the marquee banner so the sticky control bar parks right below it.
   React.useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > navbarHeight);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, [navbarHeight]);
+    const banner = document.querySelector('.sticky-banner');
+    if (!banner) { setBannerHeight(0); return; }
+    const update = () => setBannerHeight(banner.offsetHeight);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(banner);
+    return () => observer.disconnect();
+  }, [bannerItems.length]);
+
+  const controlsTop = navbarHeight + bannerHeight;
 
 
   React.useEffect(() => { localStorage.setItem('readingFontSize', String(fontSize)); }, [fontSize]);
@@ -131,7 +140,7 @@ export default function Reading({ lang = 'en' }) {
   function changeDate(delta) {
     const d = new Date(currentDate + 'T12:00:00');
     d.setDate(d.getDate() + delta);
-    const nd = d.toISOString().split('T')[0];
+    const nd = d.toLocaleDateString('en-CA'); // local date, matches todayStr
     setSearchParams(nd === todayStr ? {} : { date: nd });
   }
 
@@ -419,7 +428,7 @@ export default function Reading({ lang = 'en' }) {
   return (
     <>
       {bannerItems.length > 0 && (
-        <div className="sticky-banner" style={{ top: scrolled ? 0 : navbarHeight }}>
+        <div className="sticky-banner" style={{ top: navbarHeight }}>
           <div className="banner-track">
             {bannerContent.map((r, i) => (
               <span key={i} className="banner-item">
@@ -442,6 +451,7 @@ export default function Reading({ lang = 'en' }) {
           <button className="nav-arrow" onClick={() => changeDate(1)}>→</button>
         </div>
 
+        <div className="reading-sticky-controls" style={{ top: controlsTop }}>
         <div className="reading-meta-row">
           <span className="readers-count-pill">
             {todayReaders.length} {todayReaders.length === 1 ? t.person : t.people} {t.today}
@@ -503,6 +513,7 @@ export default function Reading({ lang = 'en' }) {
             </select>
           </div>
         )}
+        </div>
 
         <div className={`reading-cards${parallelMode ? ' reading-cards-parallel' : ''}`}>
           {/* NT Card */}

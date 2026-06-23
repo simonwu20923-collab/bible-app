@@ -1,5 +1,7 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
-html, body { overflow-x: hidden; width: 100%; }
+/* overflow-x: clip (not hidden) prevents horizontal scroll WITHOUT making body a
+   scroll container, which would break position: sticky on the navbar/controls. */
+html, body { overflow-x: clip; width: 100%; }
 
 /* ── CSS Variables ─────────────────────────────────────────── */
 :root {
@@ -220,6 +222,14 @@ body {
 .reading-date-label { color: var(--text); font-weight: 600; font-size: 1rem; }
 .reading-day-count { color: var(--text-muted); font-size: 0.8rem; margin-top: 2px; }
 
+/* Sticky control bar (text size + parallel + lang selectors) — parks below the
+   navbar/banner. `top` is set inline from measured navbar+banner heights. */
+.reading-sticky-controls {
+  position: sticky;
+  z-index: 97;
+  background: var(--bg);
+  padding-top: 8px;
+}
 .reading-meta-row {
   display: flex;
   justify-content: space-between;
@@ -1126,7 +1136,16 @@ body {
 }
 
 /* ── Verse section ───────────────────────────────── */
-.bible-verse-header { margin-bottom: 14px; }
+/* Sticky within .bible-main (the scrolling panel) so the chapter title +
+   text-size/parallel/refs/outline controls stay visible while reading. */
+.bible-verse-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--bg);
+  margin-bottom: 14px;
+  padding: 6px 0;
+}
 .bible-verse-title-row {
   display: flex;
   align-items: center;

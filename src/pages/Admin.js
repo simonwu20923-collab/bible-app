@@ -322,7 +322,7 @@ export default function Admin() {
   const [pinError,     setPinError]     = useState(false);
   const [loading,      setLoading]      = useState(false);
   const [data,         setData]         = useState(null);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(new Date().toLocaleDateString('en-CA')); // local date
   const [mainTab,      setMainTab]      = useState('checkins'); // 'checkins' | 'bible'
 
   useEffect(() => { if (authed) loadAdminData(); }, [authed, selectedDate]);
@@ -355,7 +355,7 @@ export default function Admin() {
     }
     if (all.length === 0) { setLoading(false); return; }
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toLocaleDateString('en-CA'); // local date, not UTC
     const todayCheckins = all.filter(r => r.date === selectedDate);
     const todayMap = {};
     todayCheckins.forEach(r => {

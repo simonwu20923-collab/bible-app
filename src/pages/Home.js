@@ -103,12 +103,15 @@ export default function Home({ lang = 'en' }) {
     let streak = 0;
 const today = new Date(); // keep this — used below for nextDate too
 const todayKey = today.toLocaleDateString('en-CA');
-const sortedDates = Object.keys(byDate).sort().reverse();
-for (let i = 0; i < sortedDates.length; i++) {
+// Count consecutive read days ending today. Not having read TODAY yet doesn't
+// break the streak (the day isn't over) — only a missed past day does.
+for (let i = 0; i < 400; i++) {
   const expected = new Date(todayKey + 'T12:00:00');
   expected.setDate(expected.getDate() - i);
-  const expectedKey = expected.toISOString().split('T')[0];
-  if (byDate[expectedKey] && (byDate[expectedKey].nt || byDate[expectedKey].ot)) streak++;
+  const expectedKey = expected.toLocaleDateString('en-CA');
+  const read = byDate[expectedKey] && (byDate[expectedKey].nt || byDate[expectedKey].ot);
+  if (read) streak++;
+  else if (i === 0) continue; // today still pending
   else break;
 }
 
@@ -117,9 +120,9 @@ for (let i = 0; i < sortedDates.length; i++) {
       const lastRead = readDates[readDates.length - 1];
       const nextDay = new Date(lastRead + 'T12:00:00');
       nextDay.setDate(nextDay.getDate() + 1);
-      setNextDate(nextDay.toISOString().split('T')[0]);
+      setNextDate(nextDay.toLocaleDateString('en-CA'));
     } else {
-      setNextDate(today.toISOString().split('T')[0]);
+      setNextDate(today.toLocaleDateString('en-CA'));
     }
 
     setStats({ fullDays, totalDays, streak });
@@ -134,7 +137,7 @@ for (let i = 0; i < sortedDates.length; i++) {
     if (!rpcError && rpcData) {
       const today = new Date();
       const weekAgo = new Date(); weekAgo.setDate(today.getDate() - 7);
-      const weekStart = weekAgo.toISOString().split('T')[0];
+      const weekStart = weekAgo.toLocaleDateString('en-CA');
       const { data: weekData } = await supabase.rpc('get_leaderboard', {
         date_from: weekStart, date_to: yearEnd,
       });
@@ -215,7 +218,7 @@ for (let i = 0; i < sortedDates.length; i++) {
           <button
             className="home-btn home-btn-primary"
             onClick={() => navigate(
-              nextDate === new Date().toISOString().split('T')[0]
+              nextDate === new Date().toLocaleDateString('en-CA')
                 ? '/reading'
                 : `/reading?date=${nextDate}`
             )}>
