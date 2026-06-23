@@ -42,6 +42,7 @@ function AppInner() {
     sc: { home: '首页', reading: '阅读', schedule: '计划', bible: '圣经' },
   };
   const [searchOpen, setSearchOpen] = React.useState(false);
+  const [menuOpen, setMenuOpen] = React.useState(false);
   const nav = navLabels[lang] || navLabels.en;
 
   return (
@@ -51,7 +52,16 @@ function AppInner() {
 
       <nav className="navbar">
         <div className="nav-brand">📖 Bible Reading</div>
-        <div className="nav-links">
+        <button
+          className="nav-hamburger"
+          onClick={() => setMenuOpen(o => !o)}
+          aria-label="Menu"
+          aria-expanded={menuOpen}
+        >
+          {menuOpen ? '✕' : '☰'}
+        </button>
+        <div className={`nav-collapse${menuOpen ? ' open' : ''}`}>
+        <div className="nav-links" onClick={() => setMenuOpen(false)}>
           <NavLink to="/" end>{nav.home}</NavLink>
           <NavLink to="/reading">{nav.reading}</NavLink>
           <NavLink to="/schedule">{nav.schedule}</NavLink>
@@ -129,6 +139,7 @@ function AppInner() {
               </button>
             ))}
           </div>
+        </div>
         </div>
       </nav>
 

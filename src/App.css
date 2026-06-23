@@ -112,6 +112,11 @@ body {
 .nav-links a:hover { background: var(--border); color: var(--text); }
 .nav-links a.active { background: var(--brand-bg); color: var(--brand); }
 
+/* Hamburger: hidden on desktop. nav-collapse is transparent (display:contents)
+   so brand/links/right stay direct flex children of the navbar as before. */
+.nav-hamburger { display: none; }
+.nav-collapse { display: contents; }
+
 /* ── Theme toggle button ───────────────────────────────────── */
 .theme-toggle {
   background: var(--theme-toggle-bg);
@@ -825,11 +830,27 @@ body {
 
 /* ── Mobile ──────────────────────────────────────────────── */
 @media (max-width: 768px) {
-  .navbar { padding: 8px 12px; flex-wrap: wrap; gap: 4px; }
-  .nav-brand { font-size: 0.95rem; }
-  .nav-links { gap: 2px; }
-  .nav-links a { padding: 6px 10px; font-size: 0.78rem; }
-  .reading-page-content { padding: 58px 8px 10px; }  /* extra top for 2-row mobile navbar + banner */
+  /* Compact one-row navbar: brand + hamburger. Links/controls drop into a panel. */
+  .navbar { padding: 10px 14px; flex-wrap: nowrap; gap: 4px; }
+  .nav-brand { font-size: 1rem; }
+  .nav-hamburger {
+    display: flex; align-items: center; justify-content: center;
+    width: 38px; height: 38px; flex-shrink: 0;
+    background: transparent; border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); font-size: 20px; line-height: 1; cursor: pointer;
+  }
+  .nav-collapse { display: none; }
+  .nav-collapse.open {
+    display: flex; flex-direction: column; align-items: stretch; gap: 12px;
+    position: absolute; top: 100%; left: 0; right: 0;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 12px 14px; z-index: 99; box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+  }
+  .nav-collapse.open .nav-links { flex-direction: column; gap: 2px; width: 100%; }
+  .nav-collapse.open .nav-links a { padding: 12px 12px; font-size: 1rem; }
+  .nav-collapse.open .nav-right { flex-direction: column; align-items: stretch; width: 100%; gap: 12px; }
+  .nav-collapse.open .lang-toggle { width: 100%; justify-content: center; }
+  .reading-page-content { padding: 48px 8px 10px; }  /* clears the fixed marquee banner */
   .date-nav { padding: 10px 12px; }
   .reading-date-label { font-size: 0.9rem; }
   .reading-cards { flex-direction: column; gap: 12px; }
