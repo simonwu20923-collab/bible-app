@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { supabase } from '../supabase';
 import { BOOK_NAMES, NT_BOOKS, OT_BOOKS } from '../utils/bibleBooks';
 
@@ -649,6 +650,33 @@ const BibleSidebar = React.memo(function BibleSidebar({
   );
 });
 
+// ── Landing book grid ───────────────────────────────────────────────────────
+// Shown when no book is selected: a centered, tap-friendly grid of all books
+// grouped by testament — much faster to pick from than the vertical sidebar.
+const BibleBookGrid = React.memo(function BibleBookGrid({ displayLang, onSelectBook }) {
+  const t = UI_TEXT[displayLang] || UI_TEXT.en;
+  const section = (heading, books) => (
+    <div className="bible-grid-section">
+      <h2 className="bible-grid-heading">{heading}</h2>
+      <div className="bible-grid">
+        {books.map(abbr => (
+          <button key={abbr} className="bible-grid-btn" onClick={() => onSelectBook(abbr)}>
+            {bookName(abbr, displayLang)}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+  return (
+    <div className="bible-landing">
+      <div className="bible-landing-inner">
+        {section(t.nt, NT_BOOKS)}
+        {section(t.ot, OT_BOOKS)}
+      </div>
+    </div>
+  );
+});
+
 // ── Draggable popup card ─────────────────────────────────────────────────────
 // Uses pointer capture for reliable cross-browser drag (no mousemove/mouseup on window).
 const DraggablePopup = React.memo(function DraggablePopup({ popup, idx, onClose, onCloseAll, totalCount, children }) {
@@ -916,7 +944,7 @@ function bookName(abbr, lang) {
 
 const UI_TEXT = {
   en: {
-    nt: 'New Testament', ot: 'Old Testament', selectBook: 'Select a book to begin',
+    nt: 'New Testament', ot: 'Old Testament', selectBook: 'Select a book to begin', books: 'Books',
     loading: 'Loading…', parallel: '⇔ Parallel', noText: 'Text not available in this language.',
     chapters: 'CHAPTERS', verse: 'VERSE', text: 'Text:',
     outline: 'Outline', expandAll: 'Expand all', collapseAll: 'Collapse all',
@@ -924,7 +952,7 @@ const UI_TEXT = {
     subjectOf: (book) => `Subject of ${book}:`,
   },
   es: {
-    nt: 'Nuevo Testamento', ot: 'Antiguo Testamento', selectBook: 'Selecciona un libro',
+    nt: 'Nuevo Testamento', ot: 'Antiguo Testamento', selectBook: 'Selecciona un libro', books: 'Libros',
     loading: 'Cargando…', parallel: '⇔ Paralelo', noText: 'Texto no disponible.',
     chapters: 'CAPÍTULOS', verse: 'VERSÍCULO', text: 'Texto:',
     outline: 'Bosquejo', expandAll: 'Expandir todo', collapseAll: 'Contraer todo',
@@ -932,7 +960,7 @@ const UI_TEXT = {
     subjectOf: (book) => `Tema de ${book}:`,
   },
   zh: {
-    nt: '新約', ot: '舊約', selectBook: '請選擇一本書',
+    nt: '新約', ot: '舊約', selectBook: '請選擇一本書', books: '書卷',
     loading: '載入中…', parallel: '⇔ 對照', noText: '此語言暫無文字。',
     chapters: '章節選擇', verse: '節', text: '字體:',
     outline: '綱要', expandAll: '展開所有', collapseAll: '收合所有',
@@ -940,7 +968,7 @@ const UI_TEXT = {
     subjectOf: (book) => `${book}的主題：`,
   },
   sc: {
-    nt: '新约', ot: '旧约', selectBook: '请选择一本书',
+    nt: '新约', ot: '旧约', selectBook: '请选择一本书', books: '书卷',
     loading: '载入中…', parallel: '⇔ 对照', noText: '此语言暂无文字。',
     chapters: '章节选择', verse: '节', text: '字体:',
     outline: '纲要', expandAll: '展开所有', collapseAll: '收合所有',
@@ -1075,6 +1103,15 @@ export default function Bible({ lang }) {
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
+
+  // Clicking the "The Bible" nav (even while already here) returns to the book grid.
+  const location = useLocation();
+  useEffect(() => {
+    setSelectedBook(null);
+    setSelectedChapter(null);
+    setShowIntro(false);
+    setMobileView('books');
+  }, [location.key]);
 
   const verseContentRef = useRef(null);
 
@@ -1566,6 +1603,9 @@ export default function Bible({ lang }) {
         )}
       </DraggablePopup>
     ))}
+    {!selectedBook ? (
+      <BibleBookGrid displayLang={displayLang} onSelectBook={selectBook} />
+    ) : (
     <div className="bible-layout">
 
       {/* ── Books sidebar (memoized — only re-renders on book/lang/expand changes) ── */}
@@ -1587,19 +1627,10 @@ export default function Bible({ lang }) {
       {/* ── Main content ────────────────────────────────────── */}
       <div className={`bible-main${mobileView === 'books' ? ' bible-hidden-mobile' : ''}`}>
 
-        {/* Mobile back */}
+        {/* Mobile back — returns to the landing book grid */}
         <div className="bible-mobile-nav">
-          {(mobileView === 'chapters' || mobileView === 'verses') && (
-            <button className="bible-back-btn" onClick={() => setMobileView('books')}>← Books</button>
-          )}
+          <button className="bible-back-btn" onClick={() => { setSelectedBook(null); setSelectedChapter(null); setShowIntro(false); }}>← {t.books}</button>
         </div>
-
-        {/* No book selected */}
-        {!selectedBook && (
-          <div style={{ textAlign: 'center', padding: '80px 20px', opacity: 0.45, fontSize: '15px' }}>
-            {t.selectBook}
-          </div>
-        )}
 
         {/* Book selected */}
         {selectedBook && (
@@ -1824,6 +1855,7 @@ export default function Bible({ lang }) {
         )}
       </div>
     </div>
+    )}
     </>
     </PopupContext.Provider>
   );

@@ -1095,6 +1095,40 @@ body {
 }
 .bible-back-btn:hover { border-color: var(--brand); color: var(--brand); }
 
+/* ── Landing book grid (shown when no book selected) ──────── */
+.bible-landing {
+  flex: 1;
+  overflow-y: auto;
+  padding: 28px 20px 40px;
+}
+.bible-landing-inner { max-width: 900px; margin: 0 auto; }
+.bible-grid-section { margin-bottom: 32px; }
+.bible-grid-heading {
+  text-align: center;
+  color: var(--brand);
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  margin-bottom: 16px;
+}
+.bible-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+}
+.bible-grid-btn {
+  padding: 14px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+}
+.bible-grid-btn:hover { border-color: var(--brand-btn); color: var(--brand); background: var(--surface2); }
+
 /* ── Chapter section ─────────────────────────────── */
 .bible-chapter-section {
   padding: 20px 0 18px;
