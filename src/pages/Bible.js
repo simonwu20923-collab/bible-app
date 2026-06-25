@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../supabase';
 import { BOOK_NAMES, NT_BOOKS, OT_BOOKS } from '../utils/bibleBooks';
 
@@ -1051,8 +1051,15 @@ async function fetchChapterData(bookAbbr, chapter, cols) {
 // ── Component ──────────────────────────────────────────────────────────────
 
 export default function Bible({ lang }) {
-  const [selectedBook, setSelectedBook]       = useState(null);
-  const [selectedChapter, setSelectedChapter] = useState(null);
+  // URL is the source of truth: /bible?book=Lk&ch=8. Deriving (not mirroring to
+  // state) keeps book/chapter in sync with the URL with no render lag, and makes
+  // "The Bible" nav → bare /bible a real navigation back to the grid.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedBook    = searchParams.get('book') || null;
+  const selectedChapter = searchParams.get('ch') ? parseInt(searchParams.get('ch'), 10) : null;
+  const showIntro       = !!selectedBook && !selectedChapter;
+  const mobileView      = !selectedBook ? 'books' : selectedChapter ? 'verses' : 'chapters';
+
   const [chapterData, setChapterData]         = useState(null);
   const [chapterLoading, setChapterLoading]   = useState(false);
 
@@ -1064,7 +1071,6 @@ export default function Bible({ lang }) {
   const [parallelMode, setParallelMode]     = useState(() => localStorage.getItem('parallelMode') === 'true');
   const [parallelLangA, setParallelLangA]   = useState(() => localStorage.getItem('parallelLangA') || lang || 'en');
   const [parallelLangB, setParallelLangB]   = useState(() => localStorage.getItem('parallelLangB') || 'zh');
-  const [mobileView, setMobileView]         = useState('books');
 
   // ── Book list collapse state ─────────────────────────────────────────────
   const [ntExpanded, setNtExpanded] = useState(true);
@@ -1072,7 +1078,6 @@ export default function Bible({ lang }) {
 
   // ── Sidebar expandable books + intro/outline state ───────────────────────
   const [expandedBooks, setExpandedBooks] = useState(new Set());
-  const [showIntro, setShowIntro]         = useState(false);
   const [bookIntro, setBookIntro]         = useState(null);
   const [bookOutline, setBookOutline]     = useState([]);
   const [introFetching, setIntroFetching] = useState(false);
@@ -1104,14 +1109,21 @@ export default function Bible({ lang }) {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  // Clicking the "The Bible" nav (even while already here) returns to the book grid.
-  const location = useLocation();
+  // Load chapter text whenever the selected book+chapter (from the URL) changes.
   useEffect(() => {
-    setSelectedBook(null);
-    setSelectedChapter(null);
-    setShowIntro(false);
-    setMobileView('books');
-  }, [location.key]);
+    if (!selectedBook || !selectedChapter) { setChapterData(null); return; }
+    setChapterData(null);
+    setChapterLoading(true);
+    setChapterOutlines([]);
+    setChapterOutlinesB([]);
+    setTimeout(() => verseContentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+    let cancelled = false;
+    fetchChapterData(selectedBook, selectedChapter, chapterCols)
+      .then(data => { if (!cancelled) setChapterData(data); })
+      .catch(() => { if (!cancelled) setChapterData(null); })
+      .finally(() => { if (!cancelled) setChapterLoading(false); });
+    return () => { cancelled = true; };
+  }, [selectedBook, selectedChapter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const verseContentRef = useRef(null);
 
@@ -1284,32 +1296,15 @@ export default function Bible({ lang }) {
     }).finally(() => setIntroFetching(false));
   }, [selectedBook, introLang]);
 
+  // Handlers only update the URL; the [searchParams] effect drives state + fetch.
   const selectBook = useCallback((abbr) => {
-    if (abbr === selectedBook && showIntro) return;
-    setSelectedBook(abbr);
-    setSelectedChapter(null);
-    setChapterData(null);
-    setShowIntro(true);
-    setMobileView('chapters');
-  }, [selectedBook, showIntro]);
+    setSearchParams({ book: abbr });
+  }, [setSearchParams]);
 
-  const selectChapter = useCallback(async (ch, bookOverride) => {
-    const bookAbbr = bookOverride || selectedBook;
-    setSelectedChapter(ch);
-    setChapterData(null);
-    setChapterLoading(true);
-    setShowIntro(false);
-    setMobileView('verses');
-    setChapterOutlines([]);
-    setChapterOutlinesB([]);
-    // Scroll verse area to top
-    setTimeout(() => verseContentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
-    try {
-      const chData = await fetchChapterData(bookAbbr, ch, chapterCols);
-      setChapterData(chData);
-    } catch { setChapterData(null); }
-    setChapterLoading(false);
-  }, [selectedBook, chapterCols]); // eslint-disable-line react-hooks/exhaustive-deps
+  const selectChapter = useCallback((ch, bookOverride) => {
+    const bookAbbr = bookOverride || searchParams.get('book');
+    if (bookAbbr) setSearchParams({ book: bookAbbr, ch: String(ch) });
+  }, [searchParams, setSearchParams]);
 
   const toggleNt = useCallback(() => setNtExpanded(e => !e), []);
   const toggleOt = useCallback(() => setOtExpanded(e => !e), []);
@@ -1323,10 +1318,9 @@ export default function Bible({ lang }) {
     });
   }, []);
 
-  const openChapter = useCallback(async (abbr, ch) => {
-    if (abbr !== selectedBook) setSelectedBook(abbr);
-    await selectChapter(ch, abbr);
-  }, [selectedBook, selectChapter]);
+  const openChapter = useCallback((abbr, ch) => {
+    setSearchParams({ book: abbr, ch: String(ch) });
+  }, [setSearchParams]);
 
   const scrollToVerse = useCallback((n) => {
     const el = document.getElementById(`bible-verse-${n}`);
@@ -1629,7 +1623,7 @@ export default function Bible({ lang }) {
 
         {/* Mobile back — returns to the landing book grid */}
         <div className="bible-mobile-nav">
-          <button className="bible-back-btn" onClick={() => { setSelectedBook(null); setSelectedChapter(null); setShowIntro(false); }}>← {t.books}</button>
+          <button className="bible-back-btn" onClick={() => setSearchParams({})}>← {t.books}</button>
         </div>
 
         {/* Book selected */}

@@ -1129,6 +1129,20 @@ body {
 }
 .bible-grid-btn:hover { border-color: var(--brand-btn); color: var(--brand); background: var(--surface2); }
 
+/* Mobile: compact 3-col grid so all NT books fit on one screen without scrolling. */
+@media (max-width: 768px) {
+  .bible-landing { padding: 14px 10px 28px; }
+  .bible-grid-section { margin-bottom: 18px; }
+  .bible-grid-heading { font-size: 0.92rem; margin-bottom: 10px; }
+  .bible-grid { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .bible-grid-btn {
+    padding: 9px 4px;
+    font-size: 0.78rem;
+    border-radius: 8px;
+    line-height: 1.2;
+  }
+}
+
 /* ── Chapter section ─────────────────────────────── */
 .bible-chapter-section {
   padding: 20px 0 18px;
