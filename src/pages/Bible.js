@@ -1109,6 +1109,19 @@ export default function Bible({ lang }) {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
+  // Publish the sticky toolbar's height so verse-jump targets land below it
+  // (via scroll-margin-top) instead of behind it.
+  useEffect(() => {
+    const el = document.querySelector('.bible-sticky-toolbar');
+    const root = document.documentElement;
+    if (!el) { root.style.setProperty('--bible-toolbar-h', '0px'); return; }
+    const set = () => root.style.setProperty('--bible-toolbar-h', el.offsetHeight + 'px');
+    set();
+    const obs = new ResizeObserver(set);
+    obs.observe(el);
+    return () => { obs.disconnect(); root.style.setProperty('--bible-toolbar-h', '0px'); };
+  }, [selectedChapter, parallelMode, chapterData]);
+
   // Load chapter text whenever the selected book+chapter (from the URL) changes.
   useEffect(() => {
     if (!selectedBook || !selectedChapter) { setChapterData(null); return; }
@@ -1324,7 +1337,7 @@ export default function Bible({ lang }) {
 
   const scrollToVerse = useCallback((n) => {
     const el = document.getElementById(`bible-verse-${n}`);
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, []);
 
   const getAudioSrc = useCallback((l) => {
@@ -1710,29 +1723,30 @@ export default function Bible({ lang }) {
             </div>
           ) : (
             /* ── Chapter + verse view ── */
-            <>
-              {/* ── Chapter selection block ── */}
-              <div className="bible-chapter-section">
-                <div className="bible-chapter-section-header">
-                  <h2 className="bible-book-heading">{bookName(selectedBook, displayLang)}</h2>
-                  <span className="bible-section-tag">{t.chapters}</span>
-                </div>
-                <div className="bible-chapter-grid">
-                  {chapters.map(ch => (
-                    <button
-                      key={ch}
-                      className={`bible-ch-btn${selectedChapter === ch ? ' active' : ''}`}
-                      onClick={() => selectChapter(ch)}
-                    >
-                      {ch}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* ── Verse reading block ── */}
-              {selectedChapter && (
+            selectedChapter && (
                 <div className="bible-verse-view" ref={verseContentRef}>
+
+                  {/* Sticky toolbar: chapter select + text/parallel/refs/outline + verse select */}
+                  <div className="bible-sticky-toolbar">
+
+                  {/* ── Chapter selection ── */}
+                  <div className="bible-chapter-section">
+                    <div className="bible-chapter-section-header">
+                      <h2 className="bible-book-heading">{bookName(selectedBook, displayLang)}</h2>
+                      <span className="bible-section-tag">{t.chapters}</span>
+                    </div>
+                    <div className="bible-chapter-grid">
+                      {chapters.map(ch => (
+                        <button
+                          key={ch}
+                          className={`bible-ch-btn${selectedChapter === ch ? ' active' : ''}`}
+                          onClick={() => selectChapter(ch)}
+                        >
+                          {ch}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
                   {/* Controls row */}
                   <div className="bible-verse-header">
@@ -1800,6 +1814,18 @@ export default function Bible({ lang }) {
                     )}
                   </div>
 
+                  {/* Verse jump strip */}
+                  {!chapterLoading && verseCount > 0 && (
+                    <div className="bible-verse-jump">
+                      <span className="bible-verse-jump-label">{t.verse}</span>
+                      <div className="bible-verse-jump-strip">
+                        {verseJumpStrip}
+                      </div>
+                    </div>
+                  )}
+
+                  </div>{/* end .bible-sticky-toolbar */}
+
                   {/* Audio */}
                   {chapterData && (getAudioSrc(parallelMode ? parallelLangA : displayLang) || (parallelMode && getAudioSrc(parallelLangB))) && (
                     <div className={parallelMode ? 'parallel-audio-row' : 'bible-audio-single'}>
@@ -1811,16 +1837,6 @@ export default function Bible({ lang }) {
                           ? <audio key={`b-${selectedBook}-${parallelLangB}-${selectedChapter}`} controls src={getAudioSrc(parallelLangB)} style={{ width: '100%' }} />
                           : <div />
                       )}
-                    </div>
-                  )}
-
-                  {/* Verse jump strip */}
-                  {!chapterLoading && verseCount > 0 && (
-                    <div className="bible-verse-jump">
-                      <span className="bible-verse-jump-label">{t.verse}</span>
-                      <div className="bible-verse-jump-strip">
-                        {verseJumpStrip}
-                      </div>
                     </div>
                   )}
 
@@ -1843,8 +1859,7 @@ export default function Bible({ lang }) {
                     </div>
                   )}
                 </div>
-              )}
-            </>
+              )
           )
         )}
       </div>

@@ -30,6 +30,18 @@ function AppInner() {
     }
   }, [darkMode]);
 
+  // Publish the navbar height as --navbar-h so sticky elements (Bible toolbar/
+  // sidebar, search overlay) can park right below it on any screen size.
+  React.useEffect(() => {
+    const navbar = document.querySelector('.navbar');
+    if (!navbar) return;
+    const set = () => document.documentElement.style.setProperty('--navbar-h', navbar.offsetHeight + 'px');
+    set();
+    const observer = new ResizeObserver(set);
+    observer.observe(navbar);
+    return () => observer.disconnect();
+  }, []);
+
   function changeLang(l) {
     setLang(l);
     localStorage.setItem('bibleAppLang', l);

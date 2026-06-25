@@ -890,8 +890,9 @@ body {
 .bible-layout {
   display: flex;
   flex: 1;          /* fills remaining viewport after the navbar, any height */
-  min-height: 0;    /* allows flex children to shrink / scroll correctly */
-  overflow: hidden;
+  min-height: 0;
+  /* No overflow here: the page scrolls with the window so the sticky toolbar/
+     sidebar can pin to the viewport (an overflow ancestor would trap them). */
 }
 
 .bible-sidebar {
@@ -899,9 +900,14 @@ body {
   min-width: 160px;
   flex-shrink: 0;
   border-right: 1px solid var(--border);
-  overflow-y: auto;
   background: var(--surface);
   padding: 10px 0 20px;
+  /* Stays in view while the page scrolls. */
+  position: sticky;
+  top: var(--navbar-h, 54px);
+  align-self: flex-start;
+  max-height: calc(100vh - var(--navbar-h, 54px));
+  overflow-y: auto;
 }
 
 .bible-testament-label {
@@ -1076,7 +1082,7 @@ body {
 
 .bible-main {
   flex: 1;
-  overflow-y: auto;
+  min-width: 0;
   padding: 24px 28px;
   scroll-behavior: smooth;
 }
@@ -1204,16 +1210,33 @@ body {
   font-weight: 700;
 }
 
-/* ── Verse section ───────────────────────────────── */
-/* Sticky within .bible-main (the scrolling panel) so the chapter title +
-   text-size/parallel/refs/outline controls stay visible while reading. */
-.bible-verse-header {
+/* ── Sticky toolbar ──────────────────────────────── */
+/* Pins chapter select + text-size/parallel/refs/outline + verse select to the
+   top of .bible-main (the scrolling panel) while reading. */
+.bible-sticky-toolbar {
   position: sticky;
-  top: 0;
+  top: var(--navbar-h, 54px);
   z-index: 20;
   background: var(--bg);
+  border-bottom: 1px solid var(--border);
   margin-bottom: 14px;
-  padding: 6px 0;
+}
+/* Compact the chapter selector inside the bar and cap its height so long books
+   (Psalms, Isaiah) scroll internally instead of swallowing the screen. */
+.bible-sticky-toolbar .bible-chapter-section {
+  padding: 8px 0 10px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.bible-sticky-toolbar .bible-chapter-section-header { margin-bottom: 8px; }
+.bible-sticky-toolbar .bible-book-heading { font-size: 18px; }
+.bible-sticky-toolbar .bible-chapter-grid { max-height: 104px; overflow-y: auto; }
+.bible-sticky-toolbar .bible-verse-jump { margin-bottom: 10px; }
+
+/* ── Verse section ───────────────────────────────── */
+.bible-verse-header {
+  margin-bottom: 12px;
+  padding: 4px 0 0;
 }
 .bible-verse-title-row {
   display: flex;
@@ -1306,6 +1329,10 @@ body {
   line-height: 1.8;
   margin-top: 12px;
 }
+/* Jumping to a verse lands it below the sticky navbar + toolbar, not behind. */
+.bible-verse-box [id^="bible-verse-"] {
+  scroll-margin-top: calc(var(--navbar-h, 54px) + var(--bible-toolbar-h, 0px) + 12px);
+}
 
 /* ── Bible verse text fonts by language ─────────────────────────────────── */
 .bible-text-zh,
@@ -1334,15 +1361,15 @@ body {
 @media (max-width: 700px) {
   .bible-layout {
     flex-direction: column; /* stack sidebar / main vertically on mobile */
-    overflow: hidden;       /* keeps each panel scrollable within its space */
   }
   .bible-sidebar {
     width: 100%;
     min-width: 0;
     border-right: none;
     border-bottom: 1px solid var(--border);
-    overflow-y: auto;
-    /* no max-height cap — sidebar fills all available space when it's the only visible panel */
+    /* static on mobile (it's only shown as the full-width book list) */
+    position: static;
+    max-height: none;
   }
   .bible-hidden-mobile { display: none !important; }
   .bible-mobile-nav { display: block; }
