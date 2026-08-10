@@ -183,7 +183,16 @@ export default function Reading({ lang = 'en' }) {
       const pattern = '\\b' + escaped + (endsWithWordChar ? '\\b' : '');
       normalized = normalized.replace(new RegExp(pattern, 'g'), full);
     });
-    if (langCode === 'es') return normalized.replace('New Testament', 'Nuevo Testamento').replace('Old Testament', 'Antiguo Testamento');
+    if (langCode === 'es') {
+      let r = normalized
+        .replace('New Testament', 'Nuevo Testamento')
+        .replace('Old Testament', 'Antiguo Testamento');
+      // Book names too, or the heading reads "Antiguo Testamento - Psalms 31:1~33:22"
+      Object.entries(ES_MAP).sort((a, b) => b[0].length - a[0].length).forEach(([full, abbr]) => {
+        r = r.replace(new RegExp(full, 'g'), abbr);
+      });
+      return r;
+    }
     const isZh = langCode === 'zh' || langCode === 'sc';
     if (isZh) {
       const cmap = langCode === 'sc' ? SC_MAP : ZH_MAP;
@@ -208,7 +217,8 @@ export default function Reading({ lang = 'en' }) {
         <span className="verse-ref">{mEn[1]}</span><span className="verse-body"> {mEn[2]}</span>
       </p>
     );
-    const mOther = line.match(/^([\w\u4e00-\u9fff]+\.?\s*\d+:\d+)\s+(.*)/);
+    // Leading "\d " covers numbered books in the Spanish abbreviations: "1 Co. 3:1", "2 S. 7:1"
+    const mOther = line.match(/^((?:\d\s+)?[\w\u4e00-\u9fff]+\.?\s*\d+:\d+)\s+(.*)/);
     if (mOther) return (
       <p key={key} className="verse-line" style={{ fontSize: fontSize + 'px' }}>
         <span className="verse-ref">{mOther[1]}</span><span className="verse-body"> {mOther[2]}</span>

@@ -984,6 +984,21 @@ function parseStoredVerses(text) {
     .filter(Boolean);
 }
 
+// Headings are stored as "#<verse> <text>" lines above the verse they belong to:
+// Psalm superscriptions ("Of David") and Psalm 119's stanza letters ("ב (Beth)").
+// Returns { [verse]: [heading, ...] }.
+function parseStoredHeadings(text) {
+  if (!text) return {};
+  const byVerse = {};
+  for (const line of text.split('\n')) {
+    const m = line.match(/^#(\d+)\s+(.*)/);
+    if (!m) continue;
+    const verse = parseInt(m[1], 10);
+    (byVerse[verse] = byVerse[verse] || []).push(m[2]);
+  }
+  return byVerse;
+}
+
 // ── Static book/chapter helpers (no DB needed — data is already in BIBLE_VERSE_COUNTS) ──
 
 // Chapter list for a book — lazily computed once per abbr, cached for the app lifetime
@@ -1001,7 +1016,8 @@ const OUTLINE_COLS = 'id,book_abbr,lang,level,sort_order,start_chapter,start_ver
 
 // ── sessionStorage caches ──────────────────────────────────────────────────
 // Bump CACHE_V when the stored format changes so stale entries are ignored.
-const CACHE_V = 'v2';
+// v3: chapter text gained "#<verse> <heading>" lines (Psalm superscriptions)
+const CACHE_V = 'v3';
 
 // Chapter outlines cache — keyed per book + chapter + lang
 function getOutlineCache(bookAbbr, chapter, lang) {
@@ -1455,6 +1471,10 @@ export default function Bible({ lang }) {
   const parsedVerses  = useMemo(() => parseStoredVerses(chapterData?.[`text_${displayLang}`]),   [chapterData, displayLang]);
   const parsedVersesA = useMemo(() => parallelMode ? parseStoredVerses(chapterData?.[`text_${parallelLangA}`]) : [], [parallelMode, chapterData, parallelLangA]);
   const parsedVersesB = useMemo(() => parallelMode ? parseStoredVerses(chapterData?.[`text_${parallelLangB}`]) : [], [parallelMode, chapterData, parallelLangB]);
+  // Psalm superscriptions / Ps 119 stanza letters, keyed by the verse they sit above
+  const headingsByVerse  = useMemo(() => parseStoredHeadings(chapterData?.[`text_${displayLang}`]),   [chapterData, displayLang]);
+  const headingsByVerseA = useMemo(() => parallelMode ? parseStoredHeadings(chapterData?.[`text_${parallelLangA}`]) : {}, [parallelMode, chapterData, parallelLangA]);
+  const headingsByVerseB = useMemo(() => parallelMode ? parseStoredHeadings(chapterData?.[`text_${parallelLangB}`]) : {}, [parallelMode, chapterData, parallelLangB]);
   // verse-number → text map for parallel column B (avoids rebuilding inside renderVersesParallel)
   const verseMapB = useMemo(() => {
     const m = {};
@@ -1465,7 +1485,7 @@ export default function Bible({ lang }) {
   // ── Verse renderers — stable useCallback so useMemo output can skip re-renders ──
   // Both receive pre-computed maps (byVerse, verseMapB) to avoid rebuilding inside.
 
-  const renderVerses = useCallback((verses, byVerse) => {
+  const renderVerses = useCallback((verses, byVerse, headings = {}) => {
     if (verses.length === 0) return <p style={{ opacity: 0.5, padding: '12px 0' }}>{t.noText}</p>;
     return verses.map(({ verse, text: vt }) => {
       const headers   = byVerse[verse] || [];
@@ -1474,6 +1494,9 @@ export default function Bible({ lang }) {
       return (
         <React.Fragment key={verse}>
           {headers.map((ol, i) => renderOutlineHeader(ol, `ol-${ol.id || i}`, scrollToVerse))}
+          {(headings[verse] || []).map((h, i) => (
+            <div key={`sup-${i}`} className="bible-superscription" style={{ fontSize: fontSize + 'px' }}>{h}</div>
+          ))}
           <div id={`bible-verse-${verse}`} style={{ display: 'flex', gap: '10px', marginBottom: '8px', lineHeight: 1.75, fontSize: fontSize + 'px' }}>
             <span style={{ fontSize: '11px', color: 'var(--text-muted)', minWidth: '22px', paddingTop: '4px', fontWeight: 600, flexShrink: 0 }}>
               {verse}
@@ -1485,12 +1508,14 @@ export default function Bible({ lang }) {
     });
   }, [showRefs, markedTexts, fontSize, t, scrollToVerse, parseMarkedText]);
 
-  const renderVersesParallel = useCallback((versesA, byVerseA, byVerseB, mapB) => {
+  const renderVersesParallel = useCallback((versesA, byVerseA, byVerseB, mapB, headingsA = {}, headingsB = {}) => {
     if (versesA.length === 0) return <p style={{ opacity: 0.5 }}>{t.noText}</p>;
     return versesA.map(({ verse, text: vt }) => {
       const headersA   = byVerseA[verse] || [];
       const headersB   = byVerseB[verse] || [];
       const hasHeaders = headersA.length > 0 || headersB.length > 0;
+      const supA       = headingsA[verse] || [];
+      const supB       = headingsB[verse] || [];
       // Column A — uses activeRefsLang (parallelLangA)
       const contentA = (showRefs && activeRefsLang && markedTexts[verse])
         ? parseMarkedText(markedTexts[verse], verse) : vt;
@@ -1507,6 +1532,16 @@ export default function Bible({ lang }) {
               </div>
               <div className="parallel-col">
                 {headersB.map((ol, i) => renderOutlineHeader(ol, `olB-${ol.id || i}`, scrollToVerse))}
+              </div>
+            </div>
+          )}
+          {(supA.length > 0 || supB.length > 0) && (
+            <div className="parallel-row">
+              <div className="parallel-col">
+                {supA.map((h, i) => <div key={i} className="bible-superscription" style={{ fontSize: fontSize + 'px' }}>{h}</div>)}
+              </div>
+              <div className="parallel-col">
+                {supB.map((h, i) => <div key={i} className="bible-superscription" style={{ fontSize: fontSize + 'px' }}>{h}</div>)}
               </div>
             </div>
           )}
@@ -1546,12 +1581,12 @@ export default function Bible({ lang }) {
   // Memoised rendered output — rebuilds only when verse data, outline maps, font, or refs change.
   // Popup opens / mobileSheet / isMobile changes no longer re-reconcile the verse list.
   const renderedVerses = useMemo(
-    () => renderVerses(parsedVerses, outlinesByVerse),
-    [renderVerses, parsedVerses, outlinesByVerse]
+    () => renderVerses(parsedVerses, outlinesByVerse, headingsByVerse),
+    [renderVerses, parsedVerses, outlinesByVerse, headingsByVerse]
   );
   const renderedVersesParallel = useMemo(
-    () => renderVersesParallel(parsedVersesA, outlinesByVerse, outlinesByVerseB, verseMapB),
-    [renderVersesParallel, parsedVersesA, outlinesByVerse, outlinesByVerseB, verseMapB]
+    () => renderVersesParallel(parsedVersesA, outlinesByVerse, outlinesByVerseB, verseMapB, headingsByVerseA, headingsByVerseB),
+    [renderVersesParallel, parsedVersesA, outlinesByVerse, outlinesByVerseB, verseMapB, headingsByVerseA, headingsByVerseB]
   );
 
   // Stable context value — prevents all PopupContext consumers re-rendering on unrelated state changes

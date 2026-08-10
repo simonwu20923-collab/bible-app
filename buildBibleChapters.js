@@ -241,18 +241,35 @@ function buildChapterMap(rows) {
       }
 
       // Collect verse lines per (abbr, chapter, lang)
-      const verseBuf = {}; // `abbr_ch_lang` -> lines[]
+      const verseBuf   = {}; // `abbr_ch_lang` -> lines[]
+      const headingBuf = {}; // `abbr_ch_lang` -> { verseNum: headings[] }
 
       for (const lang of langs) {
         const field = lang === 'en' ? `${portion}_text` : `${portion}_text_${lang}`;
         const text = row[field];
         if (!text) continue;
 
+        // Lines with no verse reference are headings shown above the verse that follows:
+        // Psalm superscriptions ("Of David") and Psalm 119's stanza letters ("ב (Beth)").
+        // Only Psalms carries them — elsewhere an unreferenced line is the second half of
+        // a poetic verse, which must not be promoted to a heading.
+        let pendingHeadings = [];
         for (const line of text.split('\n')) {
           const p = resolveVerseLine(line, lang);
-          if (!p) continue;
+          if (!p) {
+            const trimmed = line.trim();
+            if (trimmed) pendingHeadings.push(trimmed);
+            continue;
+          }
           const key = `${p.abbr}_${p.chapter}_${lang}`;
           if (!verseBuf[key]) verseBuf[key] = [];
+          if (pendingHeadings.length) {
+            if (p.abbr === 'Ps') {
+              if (!headingBuf[key]) headingBuf[key] = {};
+              headingBuf[key][p.verse] = pendingHeadings;
+            }
+            pendingHeadings = [];
+          }
           verseBuf[key].push(`${p.verse} ${p.text}`);
         }
       }
@@ -275,6 +292,15 @@ function buildChapterMap(rows) {
           const vNum = parseInt(line, 10); // "N text" — parseInt stops at space
           if (!map[abbr][chapter][verseKey][vNum]) {
             map[abbr][chapter][verseKey][vNum] = line;
+          }
+        }
+
+        // Headings for the same (abbr, chapter, lang), keyed by the verse they precede
+        const headKey = `_hd_${lang}`;
+        if (headingBuf[key]) {
+          if (!map[abbr][chapter][headKey]) map[abbr][chapter][headKey] = {};
+          for (const [vNum, headings] of Object.entries(headingBuf[key])) {
+            if (!map[abbr][chapter][headKey][vNum]) map[abbr][chapter][headKey][vNum] = headings;
           }
         }
       }
@@ -318,11 +344,22 @@ async function main() {
     for (const data of Object.values(chapters)) {
       for (const lang of ['en', 'es', 'zh', 'sc']) {
         const verseKey = `_vs_${lang}`;
+        const headKey  = `_hd_${lang}`;
         if (data[verseKey]) {
           const sorted = Object.keys(data[verseKey]).map(Number).sort((a, b) => a - b);
-          data[`text_${lang}`] = sorted.map(n => data[verseKey][n]).join('\n');
-          delete data[verseKey];
+          const headings = data[headKey] || {};
+          // Headings are stored as "#<verse> <text>" lines just above their verse.
+          // parseStoredVerses ignores any line that does not start with a number, so
+          // readers that do not know about headings are unaffected.
+          const out = [];
+          for (const n of sorted) {
+            for (const h of headings[n] || []) out.push(`#${n} ${h}`);
+            out.push(data[verseKey][n]);
+          }
+          data[`text_${lang}`] = out.join('\n');
         }
+        delete data[verseKey];
+        delete data[headKey];
       }
     }
   }
@@ -375,15 +412,21 @@ async function main() {
     return;
   }
 
-  console.log('\nInserting into bible_chapters (upsert in batches of 100)...');
-  const BATCH = 100;
+  // 100 rows of four full chapters of verse text per statement trips Supabase's
+  // statement timeout on the longer books, so keep batches small.
+  const BATCH = parseInt((process.argv.find(a => a.startsWith('--batch=')) || '').split('=')[1], 10) || 25;
+  console.log(`\nInserting into bible_chapters (upsert in batches of ${BATCH})...`);
   for (let i = 0; i < insertRows.length; i += BATCH) {
     const batch = insertRows.slice(i, i + BATCH);
-    const { error } = await supabase
-      .from('bible_chapters')
-      .upsert(batch, { onConflict: 'book_abbr,chapter' });
+    let error;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      ({ error } = await supabase.from('bible_chapters').upsert(batch, { onConflict: 'book_abbr,chapter' }));
+      if (!error) break;
+      console.error(`\n  retry ${attempt} at row ${i}: ${error.message}`);
+      await new Promise(r => setTimeout(r, 2000 * attempt));
+    }
     if (error) {
-      console.error(`Error at batch ${i / BATCH + 1}:`, error.message);
+      console.error(`Error at row ${i} after 3 attempts:`, error.message);
       process.exit(1);
     }
     process.stdout.write(`  Inserted ${Math.min(i + BATCH, insertRows.length)}/${insertRows.length}\r`);

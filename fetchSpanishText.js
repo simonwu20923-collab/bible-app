@@ -44,9 +44,11 @@ function fetchPage(url) {
       if (res.statusCode === 301 || res.statusCode === 302) {
         return fetchPage(res.headers.location).then(resolve).catch(reject);
       }
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => resolve({ status: res.statusCode, body: data }));
+      // Collect raw bytes — string concatenation splits multi-byte UTF-8
+      // characters across chunk boundaries and corrupts accented letters.
+      const chunks = [];
+      res.on('data', chunk => chunks.push(chunk));
+      res.on('end', () => resolve({ status: res.statusCode, body: Buffer.concat(chunks).toString('utf8') }));
     });
     req.on('error', reject);
     req.setTimeout(15000, () => { req.destroy(); reject(new Error('Timeout')); });
@@ -96,6 +98,10 @@ function parseSpanishPage(html) {
   let otLines = [];
   let currentSection = null;
 
+  // Poetry (Psalms, Proverbs...) is laid out one poetic line per <br>, so a verse
+  // continues over several source lines and only the first carries the "ch:v" ref.
+  // Continuations are appended to the verse they belong to, joined with " / " —
+  // the same separator the English Recovery Version text already uses.
   for (const line of lines) {
     // Detect section headers
     if (/Nuevo Testamento/i.test(line)) {
@@ -106,12 +112,20 @@ function parseSpanishPage(html) {
       currentSection = 'OT';
       continue;
     }
+    // Google Sites page chrome that follows the last verse — everything after it
+    // is boilerplate, never scripture.
+    if (/^(Google Sites|Denunciar abuso|Detalles de la p|Página actualizada)/i.test(line)) break;
 
-    // Detect verse lines - pattern: "1:1 text" or "1:1" at start
-    const isVerse = /^\d+:\d+\s+\S/.test(line);
+    if (!currentSection) continue;
 
-    if (isVerse && currentSection === 'NT') ntLines.push(line);
-    else if (isVerse && currentSection === 'OT') otLines.push(line);
+    const target = currentSection === 'NT' ? ntLines : otLines;
+
+    if (/^\d+:\d+\s+\S/.test(line)) {
+      target.push(line);
+    } else if (target.length > 0) {
+      // Continuation of the previous verse
+      target[target.length - 1] += ' / ' + line;
+    }
   }
 
   return {
@@ -124,13 +138,18 @@ async function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+const DRY_RUN  = process.argv.includes('--dry-run');
+const ONLY_WK  = (process.argv.find(a => a.startsWith('--week=')) || '').split('=')[1];
+
 async function main() {
   console.log('🇪🇸 Fetching Spanish Bible text from Google Sites...\n');
+  if (DRY_RUN) console.log('=== DRY RUN — no writes ===\n');
 
   let updated = 0, failed = 0, empty = 0;
 
   // 52 weeks × 7 days = 364 days + 1 extra day (Dec 31)
   for (let week = 1; week <= 52; week++) {
+    if (ONLY_WK && String(week) !== ONLY_WK) continue;
     for (let day = 1; day <= 7; day++) {
       const totalDay = (week - 1) * 7 + day;
       if (totalDay > 365) break;
@@ -157,6 +176,13 @@ async function main() {
           const ntCount = ntText ? ntText.split('\n').length : 0;
           const otCount = otText ? otText.split('\n').length : 0;
           console.log(`  ✓ ${dateStr}  NT:${ntCount}v  OT:${otCount}v`);
+        }
+
+        if (DRY_RUN) {
+          if (otText) console.log(otText.split('\n').slice(0, 3).map(l => '      ' + l).join('\n'));
+          updated++;
+          await sleep(800);
+          continue;
         }
 
         // Save to Supabase

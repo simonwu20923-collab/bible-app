@@ -2171,3 +2171,13 @@ body {
   line-height: 1.75;
   color: var(--text);
 }
+
+/* Psalm superscriptions ("Of David") and Psalm 119 stanza letters ("ב (Beth)").
+   Centred and muted so they read as a heading, not as verse text. */
+.bible-superscription {
+  text-align: center;
+  font-style: italic;
+  color: var(--text-muted);
+  line-height: 1.75;
+  margin: 14px 0 10px;
+}
