@@ -4,6 +4,7 @@ import { supabase } from '../supabase';
 import { getReadingForDate } from '../data/schedule';
 import AudioPlayer from '../components/AudioPlayer';
 import CommentsSection from '../components/CommentsSection';
+import DailyBread from '../components/DailyBread';
 import { useUser } from '../context/UserContext';
 
 export default function Reading({ lang = 'en' }) {
@@ -524,6 +525,8 @@ export default function Reading({ lang = 'en' }) {
           </div>
         )}
         </div>
+
+        <DailyBread date={currentDate} lang={lang} fontSize={fontSize} />
 
         <div className={`reading-cards${parallelMode ? ' reading-cards-parallel' : ''}`}>
           {/* NT Card */}

@@ -2181,3 +2181,106 @@ body {
   line-height: 1.75;
   margin: 14px 0 10px;
 }
+
+/* ── Today's Reading (daily devotional) ────────────────────── */
+.daily-bread {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+.daily-bread > summary {
+  cursor: pointer;
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  list-style: none;
+  user-select: none;
+  border-radius: 12px;
+  transition: background 0.15s;
+}
+.daily-bread > summary:hover { background: var(--today-bg); }
+.daily-bread > summary::-webkit-details-marker { display: none; }
+/* Chevron rotates instead of swapping glyphs, so the affordance animates.
+   A real span, not a ::before — pseudo-element transforms cannot be read back
+   by getComputedStyle in Chrome, which makes them untestable. */
+.db-chevron {
+  display: inline-block;
+  color: var(--brand);
+  font-size: 1.1rem;
+  line-height: 1;
+  transition: transform 0.2s;
+}
+.daily-bread[open] .db-chevron { transform: rotate(90deg); }
+.daily-bread[open] > summary { border-radius: 12px 12px 0 0; border-bottom: 1px solid var(--border-subtle); }
+.db-title { font-weight: 800; font-size: 1.25rem; color: var(--brand); letter-spacing: 0.01em; }
+.db-ref { font-size: 0.95rem; color: var(--text-sec); flex: 1; min-width: 0; }
+/* Explicit hint — a chevron alone reads as decoration to some readers. */
+.db-toggle-hint {
+  margin-left: auto;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--brand);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 4px 12px;
+  white-space: nowrap;
+}
+.daily-bread > summary:hover .db-toggle-hint { background: var(--brand-btn); color: #fff; border-color: var(--brand-btn); }
+.db-row { padding: 12px 20px; border-bottom: 1px solid var(--border-subtle); }
+.db-row:last-child { border-bottom: none; }
+/* Each section is its own <details>; the label is its toggle. */
+.db-label {
+  font-size: 1rem; font-weight: 700; letter-spacing: 0.02em;
+  color: var(--brand); margin-bottom: 6px;
+  cursor: pointer; list-style: none; user-select: none;
+  display: flex; align-items: center; gap: 8px;
+}
+.db-label::-webkit-details-marker { display: none; }
+.db-label::after {
+  content: '−';
+  font-size: 0.9rem;
+  line-height: 1;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  width: 18px; height: 18px;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.db-row:not([open]) > .db-label::after { content: '+'; }
+.db-label:hover::after { color: var(--brand); border-color: var(--brand); }
+.db-value { color: var(--text); line-height: 1.6; white-space: pre-line; }
+.db-value a { color: var(--brand); }
+.db-audio { width: 100%; margin-top: 8px; }
+.db-video { width: 100%; aspect-ratio: 16 / 9; margin-top: 8px; border: 0; border-radius: 8px; }
+@media (max-width: 600px) {
+  .db-title { font-size: 1.1rem; }
+  .db-ref { flex-basis: 100%; }
+}
+
+/* Hymn lyrics — a nested details inside the hymn row. */
+.db-lyrics { margin-top: 10px; }
+.db-lyrics > summary {
+  cursor: pointer;
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--brand);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 4px 12px;
+  list-style: none;
+  user-select: none;
+}
+.db-lyrics > summary::-webkit-details-marker { display: none; }
+.db-lyrics > summary:hover { background: var(--brand-btn); color: #fff; border-color: var(--brand-btn); }
+.db-lyrics-text {
+  white-space: pre-line;
+  margin-top: 10px;
+  padding-left: 14px;
+  border-left: 2px solid var(--border);
+  color: var(--text-sec);
+  line-height: 1.7;
+}
