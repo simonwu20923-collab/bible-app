@@ -8,7 +8,10 @@ create table if not exists notifications (
   recipient   text not null,          -- users.name
   actor       text not null,
   type        text not null,          -- 'reply' | 'reaction' | 'mention'
-  comment_id  bigint not null,        -- comment to jump to
+  -- comments.id is a UUID, not a bigint. Declaring this as bigint made every
+  -- insert fail the type check silently: the comment posted, the notification
+  -- did not, and the error only surfaced in the browser console.
+  comment_id  text not null,          -- comment to jump to
   date        text not null,          -- reading date, for the /reading?date= link
   excerpt     text,
   emoji       text,                   -- reactions only
@@ -24,3 +27,4 @@ alter table notifications enable row level security;
 create policy "notifications read"   on notifications for select using (true);
 create policy "notifications insert" on notifications for insert with check (true);
 create policy "notifications update" on notifications for update using (true) with check (true);
+create policy "notifications delete" on notifications for delete using (true);
