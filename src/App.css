@@ -2284,3 +2284,77 @@ body {
   color: var(--text-sec);
   line-height: 1.7;
 }
+
+/* ── Notifications ─────────────────────────────────────────── */
+.notif-wrap { position: relative; display: inline-flex; }
+.notif-btn {
+  background: none; border: none; cursor: pointer; font-size: 16px;
+  line-height: 1; padding: 4px 6px; position: relative; border-radius: 6px;
+}
+.notif-btn:hover { background: var(--surface2); }
+.notif-badge {
+  position: absolute; top: -2px; right: -2px;
+  background: #dc2626; color: #fff;
+  font-size: 10px; font-weight: 700; line-height: 1;
+  min-width: 16px; height: 16px; padding: 0 4px;
+  border-radius: 10px; display: flex; align-items: center; justify-content: center;
+  border: 2px solid var(--bg);
+}
+.notif-panel {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 300;
+  width: min(340px, 90vw); max-height: 60vh; overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,0.45);
+}
+.notif-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 12px; border-bottom: 1px solid var(--border-subtle);
+  font-weight: 700; font-size: 13px; color: var(--text);
+}
+.notif-markall {
+  background: none; border: none; color: var(--brand);
+  font-size: 11px; font-weight: 600; cursor: pointer; padding: 0;
+}
+.notif-empty { padding: 18px 12px; color: var(--text-muted); font-size: 13px; text-align: center; }
+.notif-item {
+  display: block; width: 100%; text-align: left; cursor: pointer;
+  background: none; border: none; border-bottom: 1px solid var(--border-subtle);
+  padding: 10px 12px; color: var(--text); font-size: 13px;
+}
+.notif-item:hover { background: var(--surface2); }
+.notif-item.unread { background: var(--today-bg); }
+.notif-item.unread .notif-line::after {
+  content: ''; display: inline-block; width: 6px; height: 6px;
+  border-radius: 50%; background: #dc2626; margin-left: 6px; vertical-align: middle;
+}
+.notif-line { line-height: 1.4; }
+.notif-excerpt { color: var(--text-sec); font-size: 12px; margin-top: 3px; line-height: 1.4; }
+.notif-time { color: var(--text-muted); font-size: 11px; margin-top: 3px; }
+
+/* ── @mentions ─────────────────────────────────────────────── */
+.mention-wrap { position: relative; }
+.mention-wrap textarea {
+  width: 100%; background: transparent; border: none; color: var(--text);
+  font-size: 14px; resize: none; outline: none; box-sizing: border-box;
+  line-height: 1.5; font-family: inherit;
+}
+.mention-list {
+  position: absolute; z-index: 300; left: 0; top: 100%;
+  min-width: 200px; max-height: 200px; overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; box-shadow: 0 6px 24px rgba(0,0,0,0.45); padding: 4px;
+}
+.mention-opt {
+  display: block; width: 100%; text-align: left; cursor: pointer;
+  background: none; border: none; border-radius: 6px;
+  padding: 6px 10px; color: var(--text); font-size: 13px;
+}
+.mention-opt.active, .mention-opt:hover { background: var(--brand-btn); color: #fff; }
+.mention-tag { color: var(--brand); font-weight: 600; }
+
+/* Flash a comment arrived at from a notification. */
+@keyframes commentFlash {
+  0%, 70% { background: rgba(124,58,237,0.18); }
+  100%    { background: transparent; }
+}
+.comment-flash { animation: commentFlash 2.6s ease-out; border-radius: 8px; }

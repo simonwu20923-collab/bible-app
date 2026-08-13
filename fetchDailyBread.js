@@ -324,27 +324,59 @@ function buildT2S(db) {
     }
   }
 
+  // How often each character appears in Simplified text unchanged. A character
+  // that routinely survives into Simplified is script-invariant, so any
+  // "substitution" learned for it is alignment noise — this is what produced
+  // 十→七, silently rewriting 第二十二篇 as 第二七二篇.
+  const seenInS = new Map();
+  for (const md of Object.keys(db.sc)) {
+    for (const f of T2S_FIELDS) {
+      for (const ch of (db.sc[md][f] || '')) {
+        if (isCJK(ch)) seenInS.set(ch, (seenInS.get(ch) || 0) + 1);
+      }
+    }
+  }
+
+  // These numerals are identical in both scripts and carry meaning (message
+  // numbers, verse references), so must never be rewritten. Note 萬→万 and
+  // 兩→两 DO differ between scripts and are deliberately not listed.
+  const NEVER = new Set('一二三四五六七八九十百千零');
+
   const map = new Map();
-  let ambiguous = 0;
+  let ambiguous = 0, invariant = 0;
   for (const [from, tally] of votes) {
     const total = [...tally.values()].reduce((x, y) => x + y, 0);
     const [to, n] = [...tally].sort((x, y) => y[1] - x[1])[0];
+    if (NEVER.has(from)) { invariant++; continue; }
+    // If it shows up in Simplified text more often than it is substituted,
+    // it does not actually need substituting.
+    if ((seenInS.get(from) || 0) > n) { invariant++; continue; }
     // Needs corroboration and near-unanimity, or it is alignment noise.
     if (n >= 2 && n / total >= 0.8) map.set(from, to); else ambiguous++;
   }
 
-  // Sanity check against substitutions any correct table must contain.
+  // Two-sided check. Testing only "these must change" let 十→七 through, which
+  // rewrote 第二十二篇 as 第二七二篇 — so also assert what must NOT change.
   const known = { '們':'们', '這':'这', '說':'说', '對':'对', '開':'开',
                   '學':'学', '樂':'乐', '見':'见', '與':'与', '經':'经' };
+  // 節→节, 萬→万 and 兩→两 are real substitutions and are NOT listed here.
+  const mustNotChange = [...'一二三四五六七八九十百千零篇章第年月日天人神主'];
+
   const wrong = Object.entries(known)
     .filter(([k, v]) => map.has(k) && map.get(k) !== v)
     .map(([k, v]) => `${k}→${map.get(k)} (expected ${v})`);
+  const changed = mustNotChange
+    .filter(c => map.has(c))
+    .map(c => `${c}→${map.get(c)} (must not change)`);
+
   const covered = Object.keys(known).filter(k => map.has(k)).length;
   console.log(`t2s: ${usedPairs} aligned pairs (${rejectedPairs} rejected), ` +
-              `${map.size} substitutions, ${ambiguous} dropped as ambiguous; ` +
-              `spot-check ${covered}/${Object.keys(known).length} known, ${wrong.length} wrong`);
-  if (wrong.length) {
-    console.error('t2s: REFUSING to convert — table is wrong: ' + wrong.join(', '));
+              `${map.size} substitutions, ${ambiguous} ambiguous, ${invariant} invariant; ` +
+              `spot-check ${covered}/${Object.keys(known).length} known, ` +
+              `${wrong.length + changed.length} wrong`);
+  if (wrong.length || changed.length) {
+    console.error('t2s: REFUSING to convert — table is wrong: ' +
+                  [...wrong, ...changed].join(', '));
     return new Map();          // safer to show Traditional than corrupted text
   }
   return map;
@@ -553,8 +585,19 @@ async function loadTwgbr(pairs) {
     if (!res.ok) return;
     const html = await res.text();
     const title = ((html.match(/<h3[^>]*>([^<]+)/) || [])[1] || '').trim();
+    // twgbr's message title omits the book, so "第一篇　介言" is the title of
+    // message 1 in every book. Prefix the book heading ("彼得前書生命讀經") or
+    // nine different days all read as the same message.
+    let heading = ((html.match(/<h1[^>]*>([^<]+)<\/h1>/) || [])[1] || '').trim();
+    // Some volumes share one heading across both books (11 and 12 are both
+    // 列王紀生命讀經), so message 1 of each would read identically. Mark which
+    // half it is when the heading does not already say.
+    const half = /^([1-3]) /.exec(book);
+    if (heading && half && !/[上中下前後]/.test(heading)) {
+      heading += `（${['上', '中', '下'][+half[1] - 1]}）`;
+    }
     const mp3 = (html.match(/https:\/\/line\.twgbr\.org\/life-study\/mp3\/[a-z]+\/[^"]+\.mp3/) || [])[0];
-    if (title) out[pair] = { title, url, mp3: mp3 || null };
+    if (title) out[pair] = { title: heading ? `${heading}　${title}` : title, url, mp3: mp3 || null };
   });
   console.log(`twgbr: ${Object.keys(out).length}/${pairs.size} messages resolved`);
   return out;
@@ -630,6 +673,77 @@ async function main() {
   console.log(`life-study: ${fromDoc} from doc (${viaAudio} book resolved via audio url) ` +
               `+ ${fromLsm} from lsmradio + ${overridden} manual ` +
               `= ${fromDoc + fromLsm + overridden}/${days.length}`);
+
+  // ── Make every day's life-study message unique ───────────────────────────
+  // The doc deliberately assigns one message across a multi-day stretch (2 Sam
+  // msg 33 covers six days), but a reader wants fresh material daily. Keep the
+  // doc's choice on the FIRST day of each run and move later days to their next
+  // best unused message. Proverbs, Ecclesiastes and Amos do not have enough
+  // messages to go round, so those overflow days fall back to an NT message —
+  // the same rule already used for filling gaps.
+  const used = new Set();
+  const bump = [];
+  const ntPool = programs.filter(p => p.span);
+
+  // First occurrence of each message keeps it; the rest need reassigning.
+  const dupes = [];
+  for (const d of days) {
+    const cur = ls[d.md];
+    if (!cur) continue;
+    const key = `${cur.book}|${cur.msg}`;
+    if (!used.has(key)) { used.add(key); continue; }
+    dupes.push(d);
+  }
+
+  // Handle the tightest books first. Assigning in date order lets a roomy book
+  // spend messages a scarce book still needs, which is what pushed 25 days out
+  // of their own book unnecessarily.
+  const supply = {};
+  all.forEach(p => (supply[p.book] ||= new Set()).add(p.msg));
+  const slack = d => {
+    const b = ls[d.md].book;
+    const total = supply[b] ? supply[b].size : 0;
+    const spent = [...used].filter(k => k.startsWith(b + '|')).length;
+    const wanted = dupes.filter(x => ls[x.md].book === b).length;
+    return (total - spent) - wanted;
+  };
+  const order = [...dupes].sort((a, b) => slack(a) - slack(b));
+
+  for (const d of order) {
+    const cur = ls[d.md];
+
+    // Same book first, then anything in the NT, always preferring real overlap.
+    // Messages whose scripture could not be parsed ("varied" in the combined
+    // volumes) are still valid candidates within their own book — excluding
+    // them pushed Samuel/Kings/Chronicles days out of their book needlessly.
+    const candidates = [...all.filter(p => p.book === cur.book), ...ntPool];
+    let best = null, bestScore = -Infinity;
+    for (const p of candidates) {
+      if (used.has(`${p.book}|${p.msg}`)) continue;
+      const sameBook = p.book === cur.book ? 1e7 : 0;
+      let fit;
+      if (!p.span) fit = -1e5;                       // usable, just unrankable
+      else {
+        const ov = overlap(p.span, d.span);
+        fit = ov >= 0 ? ov
+            : -1e4 - Math.max(d.span.from - p.span.to, p.span.from - d.span.to, 0);
+      }
+      const score = sameBook + fit
+                  + titleAffinity(p.title, (doc[d.key] || {}).topic) * 500;
+      if (score > bestScore) { bestScore = score; best = p; }
+    }
+    if (!best) continue;                       // nothing left anywhere: keep it
+    bump.push(`${d.md} ${cur.label} -> Message ${best.msg} — Life-study of ${best.book}` +
+              (best.book === cur.book ? '' : '  [different book]'));
+    ls[d.md] = { book: best.book, msg: best.msg, cnMsg: best.cnMsg, url: best.url,
+                 audio: best.audio, approx: cur.approx, nt: d.nt, scripture: best.scripture,
+                 label: `Message ${best.msg} — Life-study of ${best.book}` };
+    used.add(`${best.book}|${best.msg}`);
+  }
+  const crossBook = bump.filter(b => b.includes('[different book]')).length;
+  console.log(`\ndeduped ${bump.length} days onto unused messages ` +
+              `(${crossBook} had to leave their own book)`);
+  bump.filter(b => b.includes('[different book]')).forEach(b => console.log('   ' + b));
 
   const pairs = new Set();
   Object.values(ls).forEach(x => { if (BOOKS[x.book]) pairs.add(`${x.book}|${x.cnMsg || x.msg}`); });

@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom';
+import NotificationBell from './components/NotificationBell';
 import './App.css';
 import Reading from './pages/Reading';
 import Home from './pages/Home';
@@ -94,6 +95,7 @@ function AppInner() {
               }}>
                 👤 {user.name}
               </span>
+              <NotificationBell name={user.name} lang={lang} />
               <button
                 onClick={logout}
                 style={{

@@ -2,6 +2,8 @@
 import React from 'react';
 import { supabase } from '../supabase';
 import { useUser } from '../context/UserContext';
+import MentionInput from './MentionInput';
+import { loadUserNames, notifyReply, notifyMentionsOnly, notifyReaction } from '../notifications';
 
 const EMOJIS = ['❤️', '🙏', '😊', '🔥', '💪', '😮'];
 
@@ -20,6 +22,28 @@ if (typeof document !== 'undefined' && !document.getElementById('comments-style'
     .comment-node-text { color: var(--text) !important; }
   `;
   document.head.appendChild(s);
+}
+
+// Highlight "@Name" only when Name is an actual member — member names
+// contain spaces, so a word-boundary regex would clip "@MaryAnn Corrigan" to
+// "@MaryAnn" and would also light up any stray @ in ordinary text.
+export function renderText(text, names = []) {
+  if (!text) return text;
+  const sorted = [...names].sort((a, b) => b.length - a.length);
+  const out = [];
+  let rest = String(text), key = 0;
+  while (rest.length) {
+    let at = -1, hit = null;
+    for (const n of sorted) {
+      const i = rest.toLowerCase().indexOf('@' + n.toLowerCase());
+      if (i !== -1 && (at === -1 || i < at)) { at = i; hit = n; }
+    }
+    if (at === -1) { out.push(rest); break; }
+    if (at > 0) out.push(rest.slice(0, at));
+    out.push(<span key={key++} className="mention-tag">{rest.substr(at, hit.length + 1)}</span>);
+    rest = rest.slice(at + hit.length + 1);
+  }
+  return out;
 }
 
 export function timeAgo(ts) {
@@ -99,7 +123,7 @@ export function ReactionBar({ comment, currentName, onReact, lang }) {
 }
 
 // ── CommentNode ───────────────────────────────────────────────────────────────
-export function CommentNode({ comment, allComments, currentName, depth, onReact, onReply, lang }) {
+export function CommentNode({ comment, allComments, currentName, depth, onReact, onReply, lang, mentionNames = [] }) {
   const [collapsed, setCollapsed] = React.useState(false);
   const [childrenCollapsed, setChildrenCollapsed] = React.useState(false);
   const [replyOpen, setReplyOpen] = React.useState(false);
@@ -131,7 +155,7 @@ export function CommentNode({ comment, allComments, currentName, depth, onReact,
   }
 
   return (
-    <div>
+    <div id={`comment-${comment.id}`}>
       <div style={{
         display: 'flex', alignItems: 'flex-start', gap: 7, paddingTop: depth === 0 ? 10 : 6,
         borderTop: depth === 0 ? '1px solid rgba(255,255,255,0.07)' : 'none',
@@ -153,7 +177,7 @@ export function CommentNode({ comment, allComments, currentName, depth, onReact,
           {!collapsed && (
             <>
               <p style={{ color: 'var(--text)', fontSize: 14, lineHeight: 1.55, margin: '4px 0 0', wordBreak: 'break-word' }}>
-                {comment.text}
+                {renderText(comment.text, mentionNames)}
               </p>
               <ReactionBar comment={comment} currentName={currentName} onReact={onReact} lang={lang} />
               <div style={{ display: 'flex', gap: 12, marginTop: 5, alignItems: 'center' }}>
@@ -172,7 +196,7 @@ export function CommentNode({ comment, allComments, currentName, depth, onReact,
                 <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
                   <Avatar name={currentName || '?'} size={24} />
                   <div style={{ flex: 1 }}>
-                    <textarea value={replyText} onChange={e => setReplyText(e.target.value)}
+                    <MentionInput value={replyText} onChange={setReplyText} names={mentionNames}
                       placeholder={lang === 'zh' ? '輸入回覆...' : lang === 'sc' ? '输入回复...' : lang === 'es' ? 'Escribe una respuesta...' : 'Write a reply...'}
                       rows={2} autoFocus
                       style={{ width: '100%', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', fontSize: 13, padding: '7px 10px', resize: 'none', boxSizing: 'border-box' }} />
@@ -202,7 +226,7 @@ export function CommentNode({ comment, allComments, currentName, depth, onReact,
             {children.map(child => (
               <CommentNode key={child.id} comment={child} allComments={allComments}
                 currentName={currentName} depth={depth + 1}
-                onReact={onReact} onReply={onReply} lang={lang} />
+                onReact={onReact} onReply={onReply} lang={lang} mentionNames={mentionNames} />
             ))}
           </div>
         </div>
@@ -230,7 +254,23 @@ export default function CommentsSection({ queryDate, lang = 'en' }) {
   };
   const t = ui[lang] || ui.en;
 
+  const [mentionNames, setMentionNames] = React.useState([]);
+  React.useEffect(() => { loadUserNames().then(setMentionNames); }, []);
+
   React.useEffect(() => { fetchComments(); }, [queryDate]);
+
+  // Arriving from a notification: ?comment=<id> — scroll it into view and flash
+  // it once the list has rendered.
+  React.useEffect(() => {
+    const target = new URLSearchParams(window.location.search).get('comment');
+    if (!target || loading || !comments.length) return;
+    const el = document.getElementById(`comment-${target}`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('comment-flash');
+    const id = setTimeout(() => el.classList.remove('comment-flash'), 2600);
+    return () => clearTimeout(id);
+  }, [loading, comments]);
 
   async function fetchComments() {
     setLoading(true);
@@ -243,14 +283,20 @@ export default function CommentsSection({ queryDate, lang = 'en' }) {
   async function submitComment() {
     if (!text.trim() || !currentName) return;
     setSubmitting(true);
-    await supabase.from('comments').insert({ date: queryDate, name: currentName.trim(), text: text.trim(), parent_id: null, reactions: {} });
+    const { data: made } = await supabase.from('comments')
+      .insert({ date: queryDate, name: currentName.trim(), text: text.trim(), parent_id: null, reactions: {} })
+      .select();
+    if (made && made[0]) await notifyMentionsOnly({ comment: made[0], actor: currentName, date: queryDate, mentionNames });
     setText('');
     await fetchComments();
     setSubmitting(false);
   }
 
   async function handleReply(parentId, replyText) {
-    await supabase.from('comments').insert({ date: queryDate, name: currentName.trim(), text: replyText, parent_id: parentId, reactions: {} });
+    const { data: made } = await supabase.from('comments')
+      .insert({ date: queryDate, name: currentName.trim(), text: replyText, parent_id: parentId, reactions: {} })
+      .select();
+    if (made && made[0]) await notifyReply({ allComments: comments, parentId, comment: made[0], actor: currentName, date: queryDate, mentionNames });
     await fetchComments();
   }
 
@@ -268,6 +314,7 @@ export default function CommentsSection({ queryDate, lang = 'en' }) {
       localStorage.setItem(storageKey, JSON.stringify([...myReactions, emoji]));
     }
     await supabase.from('comments').update({ reactions }).eq('id', comment.id);
+    if (!myReactions.includes(emoji)) await notifyReaction({ comment, actor: currentName, emoji, date: queryDate });
     setComments(prev => prev.map(c => c.id === comment.id ? { ...c, reactions } : c));
   }
 
@@ -293,7 +340,7 @@ export default function CommentsSection({ queryDate, lang = 'en' }) {
         <div style={{ display: 'flex', gap: 10, marginBottom: 16, background: 'var(--surface2)', borderRadius: 10, padding: '10px 12px', border: '1px solid var(--border)' }}>
           <Avatar name={currentName} />
           <div style={{ flex: 1 }}>
-            <textarea value={text} onChange={e => setText(e.target.value)} placeholder={t.placeholder} rows={3}
+            <MentionInput value={text} onChange={setText} names={mentionNames} placeholder={t.placeholder} rows={3}
               style={{ width: '100%', background: 'transparent', border: 'none', color: 'var(--text)', fontSize: 14, resize: 'none', outline: 'none', boxSizing: 'border-box', lineHeight: 1.5 }} />
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <button onClick={submitComment} disabled={submitting || !text.trim()}
@@ -316,7 +363,7 @@ export default function CommentsSection({ queryDate, lang = 'en' }) {
           {topLevel.map(comment => (
             <CommentNode key={comment.id} comment={comment} allComments={comments}
               currentName={currentName} depth={0}
-              onReact={handleReact} onReply={handleReply} lang={lang} />
+              onReact={handleReact} onReply={handleReply} lang={lang} mentionNames={mentionNames} />
           ))}
         </div>
       )}
@@ -330,6 +377,8 @@ export function HomeThreadCard({ threadComments, lang = 'en', onNavigate }) {
   const currentName = user?.name || '';
 
   const [allComments, setAllComments] = React.useState(threadComments);
+  const [mentionNames, setMentionNames] = React.useState([]);
+  React.useEffect(() => { loadUserNames().then(setMentionNames); }, []);
 
   const root = allComments.find(c => !c.parent_id);
   if (!root) return null;
@@ -356,6 +405,7 @@ export function HomeThreadCard({ threadComments, lang = 'en', onNavigate }) {
       localStorage.setItem(storageKey, JSON.stringify([...myReactions, emoji]));
     }
     await supabase.from('comments').update({ reactions }).eq('id', comment.id);
+    if (!myReactions.includes(emoji)) await notifyReaction({ comment, actor: currentName, emoji, date: root.date });
     setAllComments(prev => prev.map(c => c.id === comment.id ? { ...c, reactions } : c));
   }
 
@@ -364,7 +414,11 @@ export function HomeThreadCard({ threadComments, lang = 'en', onNavigate }) {
       date: root.date, name: currentName.trim(), text: replyText,
       parent_id: parentId, reactions: {},
     }).select();
-    if (result.data) setAllComments(prev => [...prev, result.data[0]]);
+    if (result.data && result.data[0]) {
+      setAllComments(prev => [...prev, result.data[0]]);
+      await notifyReply({ allComments, parentId, comment: result.data[0],
+                          actor: currentName, date: root.date, mentionNames });
+    }
   }
 
   const activityMap = {};
@@ -382,7 +436,7 @@ export function HomeThreadCard({ threadComments, lang = 'en', onNavigate }) {
       {topLevel.map(comment => (
         <CommentNode key={comment.id} comment={comment} allComments={shown}
           currentName={currentName} depth={0}
-          onReact={handleReact} onReply={handleReply} lang={lang} />
+          onReact={handleReact} onReply={handleReply} lang={lang} mentionNames={mentionNames} />
       ))}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 6, paddingLeft: 4 }}>
         {hiddenCount > 0 && (
