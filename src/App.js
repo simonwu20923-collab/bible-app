@@ -64,7 +64,7 @@ function AppInner() {
       {!user && <LoginModal />}
 
       <nav className="navbar">
-        <div className="nav-brand">📖 Bible Reading</div>
+        <a className="nav-brand" href="https://churchincerritos.org">📖 Bible Reading</a>
         <button
           className="nav-hamburger"
           onClick={() => setMenuOpen(o => !o)}

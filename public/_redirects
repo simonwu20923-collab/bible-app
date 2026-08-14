@@ -1,1 +1,7 @@
+# Send the old Netlify subdomain to the custom domain.
+# Must come before the SPA rule below — Netlify uses the first matching rule.
+# The trailing "!" forces the redirect even though index.html exists at that path.
+https://bible-appcerritos.netlify.app/*  https://bible.churchincerritos.org/:splat  301!
+
+# SPA fallback: let React Router handle client-side routes.
 /*    /index.html   200

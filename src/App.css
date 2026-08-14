@@ -99,7 +99,8 @@ body {
   flex-wrap: wrap;
   gap: 8px;
 }
-.nav-brand { font-size: 1.1rem; font-weight: 600; color: var(--brand); }
+.nav-brand { font-size: 1.1rem; font-weight: 600; color: var(--brand); text-decoration: none; }
+.nav-brand:hover { opacity: 0.8; }
 .nav-links { display: flex; gap: 8px; }
 .nav-links a {
   color: var(--text-sec);
