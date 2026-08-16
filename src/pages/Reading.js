@@ -5,6 +5,7 @@ import { getReadingForDate } from '../data/schedule';
 import AudioPlayer from '../components/AudioPlayer';
 import CommentsSection from '../components/CommentsSection';
 import DailyBread from '../components/DailyBread';
+import LangSelect from '../components/LangSelect';
 import { useUser } from '../context/UserContext';
 
 export default function Reading({ lang = 'en' }) {
@@ -38,6 +39,7 @@ export default function Reading({ lang = 'en' }) {
   const [fontSize, setFontSize] = React.useState(() => parseInt(localStorage.getItem('readingFontSize'), 10) || 18);
   const [navbarHeight, setNavbarHeight] = React.useState(54);
   const [bannerHeight, setBannerHeight] = React.useState(0);
+  const [controlsHeight, setControlsHeight] = React.useState(0);
   const [parallelMode, setParallelMode] = React.useState(() =>
     localStorage.getItem('parallelMode') === 'true'
   );
@@ -74,6 +76,20 @@ export default function Reading({ lang = 'en' }) {
   }, [bannerItems.length]);
 
   const controlsTop = navbarHeight + bannerHeight;
+
+  // Measure the control bar too, so Today's Reading parks directly beneath it.
+  // Its height changes when parallel mode adds the two language selects.
+  React.useEffect(() => {
+    const controls = document.querySelector('.reading-sticky-controls');
+    if (!controls) { setControlsHeight(0); return; }
+    const update = () => setControlsHeight(controls.offsetHeight);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(controls);
+    return () => observer.disconnect();
+  }, [parallelMode]);
+
+  const dailyBreadTop = controlsTop + controlsHeight;
 
 
   React.useEffect(() => { localStorage.setItem('readingFontSize', String(fontSize)); }, [fontSize]);
@@ -497,36 +513,22 @@ export default function Reading({ lang = 'en' }) {
 
         {parallelMode && (
           <div className="parallel-lang-bar">
-            <select
-              className="parallel-lang-select"
+            <LangSelect
+              label="Left column language"
               value={parallelLangA}
-              onChange={e => { setParallelLangA(e.target.value); localStorage.setItem('parallelLangA', e.target.value); }}
-            >
-              {[
-                { code: 'en', label: '🇺🇸 English' },
-                { code: 'es', label: '🇪🇸 Español' },
-                { code: 'zh', label: '繁 Traditional' },
-                { code: 'sc', label: '简 Simplified' },
-              ].map(opt => <option key={opt.code} value={opt.code}>{opt.label}</option>)}
-            </select>
+              onChange={code => { setParallelLangA(code); localStorage.setItem('parallelLangA', code); }}
+            />
             <span className="parallel-sep">⇔</span>
-            <select
-              className="parallel-lang-select"
+            <LangSelect
+              label="Right column language"
               value={parallelLangB}
-              onChange={e => { setParallelLangB(e.target.value); localStorage.setItem('parallelLangB', e.target.value); }}
-            >
-              {[
-                { code: 'en', label: '🇺🇸 English' },
-                { code: 'es', label: '🇪🇸 Español' },
-                { code: 'zh', label: '繁 Traditional' },
-                { code: 'sc', label: '简 Simplified' },
-              ].map(opt => <option key={opt.code} value={opt.code}>{opt.label}</option>)}
-            </select>
+              onChange={code => { setParallelLangB(code); localStorage.setItem('parallelLangB', code); }}
+            />
           </div>
         )}
         </div>
 
-        <DailyBread date={currentDate} lang={lang} fontSize={fontSize} />
+        <DailyBread date={currentDate} lang={lang} fontSize={fontSize} stickyTop={dailyBreadTop} />
 
         <div className={`reading-cards${parallelMode ? ' reading-cards-parallel' : ''}`}>
           {/* NT Card */}

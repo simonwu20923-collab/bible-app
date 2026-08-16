@@ -741,8 +741,13 @@ body {
   font-weight: 600;
   flex-shrink: 0;
 }
-.parallel-lang-select {
-  flex: 1;
+/* Custom picker, because a native <option> cannot render the flag SVGs. */
+.lang-select { flex: 1; position: relative; min-width: 0; }
+.lang-select-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 6px 10px;
   border-radius: 8px;
   border: 1px solid var(--border);
@@ -750,7 +755,41 @@ body {
   color: var(--text);
   font-size: 0.85rem;
   cursor: pointer;
+  text-align: left;
 }
+.lang-select-btn:hover { border-color: var(--brand-btn); }
+.lang-select-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lang-select-caret { color: var(--text-muted); font-size: 0.7rem; flex-shrink: 0; }
+.lang-select-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  z-index: 120;             /* above the sticky control bar (97) and card (96) */
+}
+.lang-select-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 9px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-align: left;
+}
+.lang-select-option:hover { background: var(--border); }
+.lang-select-option.is-selected { background: var(--brand-btn); color: #fff; font-weight: 600; }
 .reading-cards-parallel {
   flex-direction: column !important;
 }
@@ -823,11 +862,26 @@ body {
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
+  /* Centres the SVG flags and the 繁/简 glyphs on one baseline. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 23px;
 }
 .lang-btn:hover:not(.lang-btn-unavailable) { background: var(--border); color: var(--text); }
 .lang-btn-active { background: var(--brand-btn) !important; color: white !important; font-weight: 600; }
 .lang-btn-unavailable { opacity: 0.35; cursor: not-allowed; }
 .lang-unavailable-msg { text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 16px; font-style: italic; }
+/* 繁/简 stand in for a flag, so match the SVG flags' 21x15 footprint. */
+.flag-text {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 21px;
+  height: 15px;
+  font-size: 0.95rem;
+  line-height: 1;
+}
 
 /* ── Mobile ──────────────────────────────────────────────── */
 @media (max-width: 768px) {
@@ -2190,6 +2244,28 @@ body {
   border-radius: 12px;
   margin-bottom: 16px;
 }
+/* The card pins under the control bar, open or shut, so the day's topic stays in
+   reach while scrolling the passages. A sticky <summary> cannot do this on its
+   own: it is bound by its <details> box, only one row tall when shut.
+   Opening it while pinned must not send the reader back up the page, so instead
+   of returning to normal flow the open card caps itself to the space left below
+   the control bar and scrolls its own body. It therefore expands exactly where
+   it sits on screen. */
+.daily-bread {
+  position: sticky;
+  top: var(--db-sticky-top, 0px);
+  z-index: 96;
+}
+/* The body carries the cap rather than the <details>: Chrome wraps everything
+   after <summary> in a UA-generated slot, so .db-body is not a direct child box
+   and flex sizing on the <details> never reaches it. Both custom properties are
+   measured in JS — the control bar above, and the header row itself. */
+.daily-bread[open] > .db-body {
+  max-height: calc(100vh - var(--db-sticky-top, 0px) - var(--db-head-h, 64px) - 12px);
+  max-height: calc(100dvh - var(--db-sticky-top, 0px) - var(--db-head-h, 64px) - 12px);
+  overflow-y: auto;
+  overscroll-behavior: contain;   /* stops the page scrolling once this bottoms out */
+}
 .daily-bread > summary {
   cursor: pointer;
   padding: 18px 20px;
@@ -2201,6 +2277,8 @@ body {
   user-select: none;
   border-radius: 12px;
   transition: background 0.15s;
+  /* Opaque so the passages scrolling beneath the pinned card never show through. */
+  background: var(--surface);
 }
 .daily-bread > summary:hover { background: var(--today-bg); }
 .daily-bread > summary::-webkit-details-marker { display: none; }
@@ -2256,9 +2334,25 @@ body {
 .db-value a { color: var(--brand); }
 .db-audio { width: 100%; margin-top: 8px; }
 .db-video { width: 100%; aspect-ratio: 16 / 9; margin-top: 8px; border: 0; border-radius: 8px; }
-@media (max-width: 600px) {
-  .db-title { font-size: 1.1rem; }
-  .db-ref { flex-basis: 100%; }
+/* On phones the pinned header must stay a single row, or it eats the reading
+   area it sits above. The topic truncates instead of wrapping to its own line
+   (which flex-basis: 100% used to force). Matches the 768px breakpoint used by
+   the rest of the mobile layout. */
+@media (max-width: 768px) {
+  .daily-bread > summary {
+    flex-wrap: nowrap;
+    padding: 11px 14px;
+    gap: 8px;
+  }
+  .db-title { font-size: 1rem; white-space: nowrap; flex: 0 0 auto; }
+  .db-ref {
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .db-toggle-hint { padding: 3px 9px; font-size: 0.7rem; flex: 0 0 auto; }
 }
 
 /* Hymn lyrics — a nested details inside the hymn row. */

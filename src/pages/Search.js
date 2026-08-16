@@ -3,10 +3,10 @@ import { supabase } from '../supabase';
 import { BOOK_NAMES } from '../utils/bibleBooks';
 
 const LANG_OPTIONS = [
-  { code: 'en', label: '🇺🇸 English' },
+  { code: 'en', label: 'EN English' },
   { code: 'zh', label: '繁 Traditional' },
   { code: 'sc', label: '简 Simplified' },
-  { code: 'es', label: '🇪🇸 Español' },
+  { code: 'es', label: 'ES Español' },
 ];
 
 const UI_TEXT = {

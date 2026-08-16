@@ -930,8 +930,8 @@ function RefContent({ content, lang: contentLang, contextBook, contextChapter })
 }
 
 const LANG_OPTIONS = [
-  { code: 'en',  label: '🇺🇸 English'      },
-  { code: 'es',  label: '🇪🇸 Español'       },
+  { code: 'en',  label: 'EN English'        },
+  { code: 'es',  label: 'ES Español'        },
   { code: 'zh',  label: '繁 Traditional'    },
   { code: 'sc',  label: '简 Simplified'     },
 ];

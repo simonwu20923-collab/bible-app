@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { supabase } from '../supabase';
 import { useUser } from '../context/UserContext';
+import Flag from './Flag';
 
 const LANGS = [
-  { code: 'en', label: '🇺🇸', name: 'English' },
-  { code: 'es', label: '🇪🇸', name: 'Español' },
-  { code: 'zh', label: '繁', name: '繁體' },
-  { code: 'sc', label: '简', name: '简体' },
+  { code: 'en', name: 'English' },
+  { code: 'es', name: 'Español' },
+  { code: 'zh', name: '繁體' },
+  { code: 'sc', name: '简体' },
 ];
 
 const TEXT = {
@@ -134,7 +135,7 @@ export default function LoginModal({ onLangChange }) {
 
         {/* Language switcher */}
         <div style={styles.langRow}>
-          {LANGS.map(({ code, label }) => (
+          {LANGS.map(({ code }) => (
             <button
               key={code}
               onClick={() => switchLang(code)}
@@ -145,7 +146,7 @@ export default function LoginModal({ onLangChange }) {
                 border: lang === code ? '1px solid #3b6fd4' : '1px solid var(--border, #444)',
               }}
             >
-              {label}
+              <Flag code={code} />
             </button>
           ))}
         </div>

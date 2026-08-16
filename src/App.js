@@ -10,6 +10,7 @@ import Bible from './pages/Bible';
 import SearchOverlay from './components/SearchOverlay';
 import { UserProvider, useUser } from './context/UserContext';
 import LoginModal from './components/LoginModal';
+import Flag from './components/Flag';
 
 function AppInner() {
   const { user, logout } = useUser();
@@ -138,18 +139,13 @@ function AppInner() {
 
           {/* Language toggle */}
           <div className="lang-toggle">
-            {[
-              { code: 'en', label: '🇺🇸' },
-              { code: 'es', label: '🇪🇸' },
-              { code: 'zh', label: '繁' },
-              { code: 'sc', label: '简' },
-            ].map(({ code, label }) => (
+            {['en', 'es', 'zh', 'sc'].map(code => (
               <button
                 key={code}
                 className={`lang-btn ${lang === code ? 'lang-btn-active' : ''}`}
                 onClick={() => changeLang(code)}
               >
-                {label}
+                <Flag code={code} />
               </button>
             ))}
           </div>

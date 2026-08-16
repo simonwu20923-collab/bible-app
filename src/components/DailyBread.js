@@ -20,10 +20,24 @@ const UI = {
         show: '点击展开', hide: '点击收合', lyrics: '歌词' },
 };
 
-export default function DailyBread({ date, lang = 'en', fontSize = 18 }) {
+export default function DailyBread({ date, lang = 'en', fontSize = 18, stickyTop = 0 }) {
   const [row, setRow] = React.useState(null);
   const [open, setOpen] = React.useState(false);
   const t = UI[lang] || UI.en;
+
+  // The header row's height decides how much room the scrollable body may take.
+  // It differs between desktop and the one-line mobile layout, so measure it.
+  const headRef = React.useRef(null);
+  const [headHeight, setHeadHeight] = React.useState(64);
+  React.useEffect(() => {
+    const el = headRef.current;
+    if (!el) return;
+    const update = () => setHeadHeight(el.offsetHeight);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [row]);
 
   const md = date.slice(5);
 
@@ -51,14 +65,23 @@ export default function DailyBread({ date, lang = 'en', fontSize = 18 }) {
   const isVideo = row.hymn_audio && !/\.mp3(\?|$)/i.test(row.hymn_audio);
 
   return (
-    <details className="daily-bread" open={open} onToggle={e => setOpen(e.currentTarget.open)}>
-      <summary>
+    <details
+      className="daily-bread"
+      style={{ '--db-sticky-top': stickyTop + 'px', '--db-head-h': headHeight + 'px' }}
+      open={open}
+      onToggle={e => setOpen(e.currentTarget.open)}
+    >
+      <summary ref={headRef}>
         <span className="db-chevron" aria-hidden="true">▸</span>
         <span className="db-title">{t.title}</span>
         {row.topic && <span className="db-ref">{row.topic}</span>}
         <span className="db-toggle-hint">{open ? t.hide : t.show}</span>
       </summary>
 
+      {/* Wrapper so the open card can cap its height and scroll its own body,
+          which keeps it expanding where it is pinned instead of jumping the
+          page back to its position in the document. */}
+      <div className="db-body">
       {field(t.topic, row.topic)}
       {field(t.key_verse, row.key_verse)}
       {field(t.emphasis, row.emphasis)}
@@ -89,6 +112,7 @@ export default function DailyBread({ date, lang = 'en', fontSize = 18 }) {
 
       {row.ls_audio && section(t.lsAudio,
         <audio className="db-audio" controls preload="none" src={row.ls_audio} />)}
+      </div>
     </details>
   );
 }
