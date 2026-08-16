@@ -1,11 +1,6 @@
 import React, { useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '../supabase';
 import { useUser } from '../context/UserContext';
-
-const supabase = createClient(
-  'https://lsvhmvkhernimxmzcyak.supabase.co',
-  'sb_publishable_VC2J0-DqMbG87ANco-xAvA_7SslVPKc'
-);
 
 const LANGS = [
   { code: 'en', label: '🇺🇸', name: 'English' },
