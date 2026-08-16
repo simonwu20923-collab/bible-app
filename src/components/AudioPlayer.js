@@ -14,15 +14,39 @@ export default function AudioPlayer({ label, book, audioJson, startChap = 1, lan
 
   const [activeIdx, setActiveIdx] = useState(0);
   const audioRef = useRef(null);
+  // Set just before activeIdx changes, to carry playback across the source swap.
+  const resumeRef = useRef(false);
 
   useEffect(() => {
-    if (audioRef.current) audioRef.current.load();
+    const el = audioRef.current;
+    if (!el) return;
+    el.load();
+    if (resumeRef.current) {
+      resumeRef.current = false;
+      // Rejects if the browser blocks playback or the source changes again mid-load.
+      el.play().catch(() => {});
+    }
   }, [activeIdx]);
 
   // Reset to first chapter when audio source changes (language switch)
   useEffect(() => {
+    resumeRef.current = false;
     setActiveIdx(0);
   }, [audioJson]);
+
+  // Chain to the next chapter when one finishes; stop after the last.
+  function handleEnded() {
+    if (activeIdx >= urls.length - 1) return;
+    resumeRef.current = true;
+    setActiveIdx(activeIdx + 1);
+  }
+
+  // Switching chapters mid-playback keeps playing; switching while paused just loads.
+  function selectChapter(idx) {
+    const el = audioRef.current;
+    resumeRef.current = !!(el && !el.paused && !el.ended);
+    setActiveIdx(idx);
+  }
 
   if (urls.length === 0) return null;
 
@@ -52,14 +76,14 @@ export default function AudioPlayer({ label, book, audioJson, startChap = 1, lan
         )}
       </div>
 
-      <audio ref={audioRef} controls style={styles.audio} src={urls[activeIdx]} />
+      <audio ref={audioRef} controls style={styles.audio} src={urls[activeIdx]} onEnded={handleEnded} />
 
       {urls.length > 1 && (
         <div style={styles.chapRow}>
           {urls.map((_, idx) => (
             <button
               key={idx}
-              onClick={() => setActiveIdx(idx)}
+              onClick={() => selectChapter(idx)}
               style={{ ...styles.chapBtn, ...(idx === activeIdx ? styles.chapBtnActive : {}) }}
             >
               {chapterLabel(idx)}
