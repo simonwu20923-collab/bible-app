@@ -368,11 +368,15 @@ export default function Admin() {
     const peopleMap = {};
     all.forEach(r => {
       const key = r.name.toLowerCase();
-      if (!peopleMap[key]) peopleMap[key] = { name: r.name, dates: {}, lastDate: null };
+      if (!peopleMap[key]) peopleMap[key] = { name: r.name, dates: {}, lastDate: null, lastActivity: null };
       if (!peopleMap[key].dates[r.date]) peopleMap[key].dates[r.date] = { nt: false, ot: false };
       if (r.portion === 'NT') peopleMap[key].dates[r.date].nt = true;
       if (r.portion === 'OT') peopleMap[key].dates[r.date].ot = true;
       if (!peopleMap[key].lastDate || r.date > peopleMap[key].lastDate) peopleMap[key].lastDate = r.date;
+      // Track when they actually checked in. `date` is the scheduled reading day and
+      // can be set in the future, so it can't tell us whether someone has gone quiet.
+      const activity = new Date(r.created_at).toLocaleDateString('en-CA');
+      if (!peopleMap[key].lastActivity || activity > peopleMap[key].lastActivity) peopleMap[key].lastActivity = activity;
     });
 
     const topReaders = Object.values(peopleMap).map(p => {
@@ -382,8 +386,8 @@ export default function Admin() {
     }).sort((a, b) => b.fullDays - a.fullDays || b.totalDays - a.totalDays);
 
     const inactive = Object.values(peopleMap).map(p => {
-      const daysAgo = Math.floor((new Date(today) - new Date(p.lastDate)) / (1000 * 60 * 60 * 24));
-      return { name: p.name, lastDate: p.lastDate, daysAgo };
+      const daysAgo = Math.floor((new Date(today) - new Date(p.lastActivity)) / (1000 * 60 * 60 * 24));
+      return { name: p.name, lastDate: p.lastActivity, daysAgo };
     }).filter(p => p.daysAgo >= 3).sort((a, b) => b.daysAgo - a.daysAgo);
 
     setData({ totalCheckins: all.length, uniqueUsers: Object.keys(peopleMap).length,
@@ -474,7 +478,7 @@ export default function Admin() {
                   {data.inactive.length === 0 ? <div className="lb-empty">Everyone is on track! 🎉</div> : (
                     <div className="readers-table">
                       <div className="readers-header" style={{gridTemplateColumns:'1fr 140px 100px'}}>
-                        <span>Name</span><span>Last Read</span><span>Days Ago</span>
+                        <span>Name</span><span>Last Check-in</span><span>Days Ago</span>
                       </div>
                       {data.inactive.map(r => (
                         <div className="readers-row" key={r.name} style={{gridTemplateColumns:'1fr 140px 100px'}}>
