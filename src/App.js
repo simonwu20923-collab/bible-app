@@ -13,6 +13,7 @@ import LoginModal from './components/LoginModal';
 import Flag from './components/Flag';
 import CheckinConfirm from './pages/CheckinConfirm';
 import Unsubscribed from './pages/Unsubscribed';
+import DailyEmailToggle from './components/DailyEmailToggle';
 
 function AppInner() {
   const { user, logout } = useUser();
@@ -99,6 +100,7 @@ function AppInner() {
                 👤 {user.name}
               </span>
               <NotificationBell name={user.name} lang={lang} />
+              <DailyEmailToggle email={user.email} lang={lang} />
               <button
                 onClick={logout}
                 style={{

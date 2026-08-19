@@ -56,8 +56,8 @@ function verses(text: string): string {
     const m = line.match(/^(\S+\s*\d+\s*:\s*\d+)\s+([\s\S]*)$/);
     const ref = m ? m[1] : "";
     const body = m ? m[2] : line;
-    return `<p class="t-main" style="margin:0 0 11px;font-size:16px;line-height:1.6;color:#1a1726">` +
-      (ref ? `<span class="t-dim" style="color:#8b86a0;font-size:12px">${esc(ref)}</span> ` : "") +
+    return `<p style="margin:0 0 11px;font-size:16px;line-height:1.6;color:#1a1726">` +
+      (ref ? `<span style="color:#8b86a0;font-size:12px">${esc(ref)}</span> ` : "") +
       `${esc(body)}</p>`;
   }).join("");
 }
@@ -80,14 +80,14 @@ function devotional(db: Record<string, string> | null): string {
   if (!db) return "";
   const field = (label: string, value: string) => value
     ? `<div style="margin:0 0 14px">
-         <div class="t-brand" style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#6d28d9;margin-bottom:4px">${esc(label)}</div>
-         <div class="t-main" style="font-size:15px;line-height:1.6;color:#1a1726">${esc(value)}</div>
+         <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#6d28d9;margin-bottom:4px">${esc(label)}</div>
+         <div style="font-size:15px;line-height:1.6;color:#1a1726">${esc(value)}</div>
        </div>` : "";
 
   const links = [
     db.hymn_url ? `<a href="${esc(db.hymn_url)}" style="color:#6d28d9;font-weight:600;text-decoration:none">&#9834; ${esc(db.hymn_title || "Hymn")}</a>` : "",
     db.ls_url ? `<a href="${esc(db.ls_url)}" style="color:#6d28d9;font-weight:600;text-decoration:none">&#128214; ${esc(db.ls_title || "Life-study")}</a>` : "",
-  ].filter(Boolean).join('<span class="t-dim" style="color:#b3aec4"> &middot; </span>');
+  ].filter(Boolean).join('<span style="color:#b3aec4"> &middot; </span>');
 
   const audio = [
     db.hymn_audio && /\.mp3(\?|$)/i.test(db.hymn_audio) ? listenLink(db.hymn_audio, "Play hymn") : "",
@@ -95,8 +95,8 @@ function devotional(db: Record<string, string> | null): string {
   ].filter(Boolean).join("");
 
   return `
-    <tr><td class="rule" style="padding:22px 28px 8px;border-top:1px solid #e3dfec">
-      <div class="t-brand" style="font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#6d28d9;margin-bottom:14px">&#128218; Today's Reading</div>
+    <tr><td style="padding:22px 28px 8px;border-top:1px solid #e3dfec">
+      <div style="font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#6d28d9;margin-bottom:14px">&#128218; Today's Reading</div>
       ${field("Topic", db.topic)}
       ${field("Key Verse", db.key_verse)}
       ${field("Emphasis", db.emphasis)}
@@ -122,39 +122,25 @@ function renderEmail(o: {
   });
 
   const portion = (title: string, text: string, token: string, label: string, bg: string) => `
-    <tr><td class="rule" style="padding:26px 28px 6px;border-top:1px solid #e3dfec">
-      <div class="t-brand" style="font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#6d28d9;margin-bottom:10px">${esc(title)}</div>
+    <tr><td style="padding:26px 28px 6px;border-top:1px solid #e3dfec">
+      <div style="font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#6d28d9;margin-bottom:10px">${esc(title)}</div>
       ${verses(text)}
       ${button(`${SITE}/checkin?t=${token}`, label, bg)}
     </td></tr>`;
 
-  // Dark mode: honoured by Apple Mail and Outlook mobile via prefers-color-scheme.
-  // Gmail ignores it and runs its own inversion, so the light palette below is
-  // chosen to survive that too — no pure white behind body text.
+  // Deliberately a single light palette. Gmail — where most readers are — ignores
+  // prefers-color-scheme and runs its own inversion, so a dark variant would only
+  // have reached Apple Mail while adding a second palette to keep working.
   return `<!doctype html>
 <html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="color-scheme" content="light dark">
-<meta name="supported-color-schemes" content="light dark">
-<style>
-  :root { color-scheme: light dark; supported-color-schemes: light dark; }
-  @media (prefers-color-scheme: dark) {
-    .bg-page { background:#0b0b14 !important; }
-    .bg-card { background:#17172a !important; }
-    .t-main  { color:#e9e6f2 !important; }
-    .t-dim   { color:#948ea8 !important; }
-    .t-brand { color:#a78bfa !important; }
-    .rule    { border-color:#2c2a44 !important; }
-    a[href]  { color:#a78bfa !important; }
-  }
-</style>
 </head>
-<body class="bg-page" style="margin:0;padding:0;background:#f4f2f9;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
-<table role="presentation" class="bg-page" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f4f2f9;padding:24px 12px">
+<body style="margin:0;padding:0;background:#f4f2f9;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f4f2f9;padding:24px 12px">
 <tr><td align="center">
-  <table role="presentation" class="bg-card" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:640px;background:#ffffff;border-radius:12px;overflow:hidden">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:640px;background:#ffffff;border-radius:12px;overflow:hidden">
 
     <tr><td style="padding:26px 28px 18px;background:#7c3aed">
       <div style="font-size:20px;font-weight:700;color:#ffffff">Bible Reading</div>
@@ -162,7 +148,7 @@ function renderEmail(o: {
     </td></tr>
 
     <tr><td style="padding:20px 28px 0">
-      <p class="t-main" style="margin:0;font-size:16px;color:#4a4459">Good morning${name ? ", " + esc(name) : ""} — here is today's reading. Tap <b>Finished</b> under each portion to log it.</p>
+      <p style="margin:0;font-size:16px;color:#4a4459">Good morning${name ? ", " + esc(name) : ""} — here is today's reading. Tap <b>Finished</b> under each portion to log it.</p>
       <p style="margin:10px 0 0;font-size:14px"><a href="${SITE}/reading?date=${date}" style="color:#6d28d9">Open on the site for audio &rarr;</a></p>
     </td></tr>
 
@@ -170,7 +156,7 @@ function renderEmail(o: {
     ${portion(reading.nt_title, reading.nt_text, ntToken, "&#10003; Finished NT", "#059669")}
     ${portion(reading.ot_title, reading.ot_text, otToken, "&#10003; Finished OT", "#7c3aed")}
 
-    <tr><td class="rule t-dim" style="padding:20px 28px 26px;border-top:1px solid #e3dfec;font-size:12px;color:#8b86a0;line-height:1.6">
+    <tr><td style="padding:20px 28px 26px;border-top:1px solid #e3dfec;font-size:12px;color:#8b86a0;line-height:1.6">
       Church in Cerritos &middot; you are receiving this because you turned on daily reading emails.<br>
       <a href="${UNSUB}?t=${unsubToken}" style="color:#8b86a0">Unsubscribe</a>
     </td></tr>
@@ -228,73 +214,102 @@ Deno.serve(async (req) => {
 
   const only = url.searchParams.get("test");        // ?test=me@example.com
   const dry = url.searchParams.get("dry") === "1";  // build but do not send
+  const override = url.searchParams.get("date");    // ?date=2026-08-19, for previews
 
-  const today = new Date().toLocaleDateString("en-CA", { timeZone: TZ });
+  const nowParts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hour12: false,
+  }).formatToParts(new Date());
+  const part = (t: string) => nowParts.find((p) => p.type === t)?.value ?? "";
+  const localHour = Number(part("hour")) % 24;
+  const today = `${part("year")}-${part("month")}-${part("day")}`;
+
+  // cron runs hourly and this gate picks the right hour, rather than cron firing
+  // once at a fixed UTC time. pg_cron has no timezone awareness, so a fixed UTC
+  // schedule would drift by an hour twice a year when Pacific switches to DST.
+  if (url.searchParams.get("scheduled") === "1" && localHour !== 0) {
+    return json({ skipped: true, reason: "not the send hour", localHour, tz: TZ });
+  }
+
+  const sendDate = override || today;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(sendDate)) {
+    return json({ error: "date must be YYYY-MM-DD" }, 400);
+  }
 
   const { data: reading } = await sb
-    .from("verses").select("*").eq("date", today).maybeSingle();
-  if (!reading) return json({ error: `no reading row for ${today}` }, 404);
+    .from("verses").select("*").eq("date", sendDate).maybeSingle();
+  if (!reading) return json({ error: `no reading row for ${sendDate}` }, 404);
 
   // daily_bread repeats yearly, so it is keyed by MM-DD rather than a full date.
   const { data: bread } = await sb
-    .from("daily_bread").select("*").eq("md", today.slice(5)).eq("lang", "en").maybeSingle();
+    .from("daily_bread").select("*").eq("md", sendDate.slice(5)).eq("lang", "en").maybeSingle();
 
   let q = sb.from("users").select("id, name, email, email_token").eq("daily_email", true);
   if (only) q = q.eq("email", only);
   const { data: subs, error } = await q;
   if (error) return json({ error: error.message }, 500);
-  if (!subs?.length) return json({ date: today, sent: 0, note: "nobody opted in" });
+  if (!subs?.length) return json({ date: sendDate, sent: 0, note: "nobody opted in" });
 
-  const results: { email: string; ok: boolean; detail?: string }[] = [];
-
+  const subject = `${reading.nt_title} · ${reading.ot_title}`;
+  const messages = [];
   for (const u of subs) {
     const [ntToken, otToken] = await Promise.all([
-      mintToken(u.id, today, "NT"),
-      mintToken(u.id, today, "OT"),
+      mintToken(u.id, sendDate, "NT"),
+      mintToken(u.id, sendDate, "OT"),
     ]);
-    const html = renderEmail({
-      reading, bread, name: u.name, ntToken, otToken, date: today, unsubToken: u.email_token,
+    messages.push({
+      from: FROM,
+      to: u.email,
+      subject,
+      html: renderEmail({
+        reading, bread, name: u.name, ntToken, otToken,
+        date: sendDate, unsubToken: u.email_token,
+      }),
+      headers: {
+        "List-Unsubscribe": `<${UNSUB}?t=${u.email_token}>`,
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      },
     });
+  }
 
-    if (dry) {
-      results.push({ email: u.email, ok: true, detail: `${html.length} bytes, devotional: ${bread ? "yes" : "no"}` });
-      continue;
-    }
+  if (dry) {
+    return json({
+      date: sendDate, attempted: messages.length, sent: 0, dry: true,
+      devotional: bread ? "included" : "none for this date",
+      bytesPerEmail: messages.map((m) => m.html.length),
+      recipients: messages.map((m) => m.to),
+    });
+  }
 
+  // One batch request rather than one per recipient: the free tier allows only
+  // 2 requests a second, so 60 individual sends would be throttled into 429s.
+  // Resend caps a batch at 100, hence the chunking.
+  const failed: unknown[] = [];
+  let sent = 0;
+  for (let i = 0; i < messages.length; i += 100) {
+    const chunk = messages.slice(i, i + 100);
     try {
-      const res = await fetch("https://api.resend.com/emails", {
+      const res = await fetch("https://api.resend.com/emails/batch", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${RESEND_API_KEY}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          from: FROM,
-          to: u.email,
-          subject: `${reading.nt_title} · ${reading.ot_title}`,
-          html,
-          headers: {
-            "List-Unsubscribe": `<${UNSUB}?t=${u.email_token}>`,
-            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-          },
-        }),
+        body: JSON.stringify(chunk),
       });
       const body = await res.json();
-      results.push({
-        email: u.email,
-        ok: res.ok,
-        detail: res.ok ? body.id : JSON.stringify(body),
-      });
+      if (res.ok) sent += (body.data?.length ?? chunk.length);
+      else failed.push({ chunk: i / 100, status: res.status, body });
     } catch (e) {
-      results.push({ email: u.email, ok: false, detail: String(e) });
+      failed.push({ chunk: i / 100, error: String(e) });
     }
   }
 
   return json({
-    date: today,
-    attempted: results.length,
-    sent: results.filter((r) => r.ok).length,
-    failed: results.filter((r) => !r.ok),
-    dry,
+    date: sendDate,
+    attempted: messages.length,
+    sent,
+    failed,
+    devotional: bread ? "included" : "none for this date",
+    dry: false,
   });
 });

@@ -2468,3 +2468,32 @@ body {
   text-decoration: none;
 }
 .checkin-link:hover { color: var(--text); }
+
+/* ── Daily email opt-in (navbar) ──────────────────────────────────────────── */
+.daily-email-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-sec);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.daily-email-toggle:hover:not(:disabled) { border-color: var(--brand-btn); color: var(--text); }
+.daily-email-toggle:disabled { opacity: 0.6; cursor: wait; }
+.daily-email-toggle.is-on {
+  background: var(--brand-bg);
+  border-color: var(--brand-btn);
+  color: var(--brand);
+  font-weight: 600;
+}
+/* The navbar is tight on phones; the icon alone still reads as on or off. */
+@media (max-width: 768px) {
+  .daily-email-label { display: none; }
+  .daily-email-toggle { padding: 4px 8px; }
+}
