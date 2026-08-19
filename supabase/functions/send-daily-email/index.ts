@@ -297,9 +297,9 @@ Deno.serve(async (req) => {
   // cron runs hourly and this gate picks the right hour, rather than cron firing
   // once at a fixed UTC time. pg_cron has no timezone awareness, so a fixed UTC
   // schedule would drift by an hour twice a year when Pacific switches to DST.
-  if (url.searchParams.get("scheduled") === "1" && localHour !== 0) {
-    return json({ skipped: true, reason: "not the send hour", localHour, tz: TZ });
-  }
+  // Readers choose their own hour, so a scheduled run no longer bails on the
+  // clock — it sends to whoever asked for this hour and skips the rest.
+  const scheduled = url.searchParams.get("scheduled") === "1";
 
   const sendDate = override || today;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(sendDate)) {
@@ -325,11 +325,34 @@ Deno.serve(async (req) => {
   const breadByLang: Record<string, Record<string, string>> = {};
   (breadRows ?? []).forEach((r) => { breadByLang[r.lang] = r; });
 
-  let q = sb.from("users").select("id, name, email, email_token, email_langs").eq("daily_email", true);
+  let q = sb.from("users").select("id, name, email, email_token, email_langs, notify_at").eq("daily_email", true);
   if (only) q = q.eq("email", only);
-  const { data: subs, error } = await q;
+  const { data: allSubs, error } = await q;
   if (error) return json({ error: error.message }, 500);
-  if (!subs?.length) return json({ date: sendDate, sent: 0, note: "nobody opted in" });
+
+  // notify_at is stored as a local wall-clock time, "07:01" meaning 7am in
+  // Los Angeles whatever the season. Only the hour is compared: cron ticks once
+  // an hour, so a finer setting could not be honoured anyway.
+  // Some addresses have more than one account row. Without this, that person
+  // receives the same reading twice every morning.
+  const seen = new Set<string>();
+  const deduped = (allSubs ?? []).filter((u) => {
+    const key = String(u.email).toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  const subs = scheduled
+    ? deduped.filter((u) => Number(String(u.notify_at ?? "00:01").slice(0, 2)) === localHour)
+    : deduped;
+
+  if (!subs.length) {
+    return json({
+      date: sendDate, sent: 0, localHour,
+      note: scheduled ? "nobody chose this hour" : "nobody opted in",
+    });
+  }
 
   const subject = `${reading.nt_title} · ${reading.ot_title}`;
   const messages = [];

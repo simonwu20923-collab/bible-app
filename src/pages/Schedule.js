@@ -22,6 +22,7 @@ const ADMIN_PIN = '12061';
 export default function Schedule({ lang = 'en' }) {
   const { user } = useUser();
   const name = user?.name || '';
+  const userId = user?.id || null;
 
   const [view, setView] = React.useState('calendar');
   const [completedDates, setCompletedDates] = React.useState({});
@@ -83,7 +84,12 @@ export default function Schedule({ lang = 'en' }) {
   async function loadCompletedDates() {
     setLoading(true);
     if (name) {
-      const { data } = await supabase.from('checkins').select('date,portion').ilike('name', name);
+      // By account where we have one, so a rename keeps the calendar intact;
+      // by name otherwise, for rows written before the migration.
+      const q = supabase.from('checkins').select('date,portion');
+      const { data } = userId
+        ? await q.or(`user_id.eq.${userId},and(user_id.is.null,name.ilike.${name})`)
+        : await q.ilike('name', name);
       if (data) {
         const map = {};
         data.forEach(r => {
@@ -118,6 +124,12 @@ export default function Schedule({ lang = 'en' }) {
     setBulkRunning(true);
     setBulkStatus('');
 
+    // Resolve the typed name to an account once, so the rows carry an id.
+    // Unknown names still record by name alone rather than being rejected.
+    const { data: acct } = await supabase.from('users').select('id')
+      .ilike('name', bulkName.trim()).limit(1);
+    const bulkUserId = acct?.[0]?.id ?? null;
+
     const from = new Date(bulkFrom + 'T12:00:00');
     const to   = new Date(bulkTo   + 'T12:00:00');
     const rows = [];
@@ -129,7 +141,11 @@ export default function Schedule({ lang = 'en' }) {
       const schedKey = `${mm}-${dd}`;
       if (!schedule[schedKey]) continue;
       const portions = bulkPortion === 'both' ? ['NT', 'OT'] : bulkPortion === 'nt' ? ['NT'] : ['OT'];
-      for (const portion of portions) rows.push({ name: bulkName.trim(), date: dateStr, portion });
+      // Bulk complete names someone explicitly, which may not be the signed-in
+      // reader, so resolve that name to an account rather than assuming.
+      for (const portion of portions) {
+        rows.push({ name: bulkName.trim(), user_id: bulkUserId, date: dateStr, portion });
+      }
     }
 
     if (rows.length === 0) { setBulkStatus('none'); setBulkRunning(false); return; }

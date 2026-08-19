@@ -13,7 +13,7 @@ import LoginModal from './components/LoginModal';
 import Flag from './components/Flag';
 import CheckinConfirm from './pages/CheckinConfirm';
 import Unsubscribed from './pages/Unsubscribed';
-import DailyEmailToggle from './components/DailyEmailToggle';
+import AccountMenu from './components/AccountMenu';
 
 function AppInner() {
   const { user, logout } = useUser();
@@ -89,33 +89,10 @@ function AppInner() {
           {/* Logged-in user display + logout */}
           {user && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{
-                fontSize: '13px',
-                opacity: 0.75,
-                maxWidth: '120px',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}>
-                👤 {user.name}
-              </span>
               <NotificationBell name={user.name} lang={lang} />
-              <DailyEmailToggle email={user.email} lang={lang} />
-              <button
-                onClick={logout}
-                style={{
-                  fontSize: '12px',
-                  padding: '4px 10px',
-                  borderRadius: '6px',
-                  border: '1px solid var(--border, #ccc)',
-                  background: 'transparent',
-                  color: 'var(--text, #333)',
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                Log out
-              </button>
+              {/* Email, languages, device notifications and logout all live
+                  under the name now, rather than as separate navbar controls. */}
+              <AccountMenu user={user} lang={lang} onLogout={logout} />
             </div>
           )}
 

@@ -239,6 +239,7 @@ export function CommentNode({ comment, allComments, currentName, depth, onReact,
 export default function CommentsSection({ queryDate, lang = 'en' }) {
   const { user } = useUser();
   const currentName = user?.name || '';
+  const currentUserId = user?.id || null;
 
   const [comments, setComments] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
@@ -284,7 +285,7 @@ export default function CommentsSection({ queryDate, lang = 'en' }) {
     if (!text.trim() || !currentName) return;
     setSubmitting(true);
     const { data: made } = await supabase.from('comments')
-      .insert({ date: queryDate, name: currentName.trim(), text: text.trim(), parent_id: null, reactions: {} })
+      .insert({ date: queryDate, name: currentName.trim(), user_id: currentUserId, text: text.trim(), parent_id: null, reactions: {} })
       .select();
     if (made && made[0]) await notifyMentionsOnly({ comment: made[0], actor: currentName, date: queryDate, mentionNames });
     setText('');
@@ -294,7 +295,7 @@ export default function CommentsSection({ queryDate, lang = 'en' }) {
 
   async function handleReply(parentId, replyText) {
     const { data: made } = await supabase.from('comments')
-      .insert({ date: queryDate, name: currentName.trim(), text: replyText, parent_id: parentId, reactions: {} })
+      .insert({ date: queryDate, name: currentName.trim(), user_id: currentUserId, text: replyText, parent_id: parentId, reactions: {} })
       .select();
     if (made && made[0]) await notifyReply({ allComments: comments, parentId, comment: made[0], actor: currentName, date: queryDate, mentionNames });
     await fetchComments();
@@ -375,6 +376,7 @@ export default function CommentsSection({ queryDate, lang = 'en' }) {
 export function HomeThreadCard({ threadComments, lang = 'en', onNavigate }) {
   const { user } = useUser();
   const currentName = user?.name || '';
+  const currentUserId = user?.id || null;
 
   const [allComments, setAllComments] = React.useState(threadComments);
   const [mentionNames, setMentionNames] = React.useState([]);
@@ -411,7 +413,7 @@ export function HomeThreadCard({ threadComments, lang = 'en', onNavigate }) {
 
   async function handleReply(parentId, replyText) {
     const result = await supabase.from('comments').insert({
-      date: root.date, name: currentName.trim(), text: replyText,
+      date: root.date, name: currentName.trim(), user_id: currentUserId, text: replyText,
       parent_id: parentId, reactions: {},
     }).select();
     if (result.data && result.data[0]) {

@@ -2548,3 +2548,69 @@ body {
   font-size: 0.8rem; font-weight: 600; cursor: pointer; white-space: nowrap;
 }
 .year-today:hover { background: var(--brand-btn); color: #fff; }
+
+/* Browser notifications, inside the daily-email panel. */
+.de-push {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+}
+.de-switch-sm { font-size: 12.5px; font-weight: 600; }
+
+/* ── Account menu ─────────────────────────────────────────────────────────── */
+.account-menu { position: relative; display: inline-flex; }
+.account-name {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px; padding: 4px 10px; border-radius: 6px;
+  border: 1px solid transparent; background: transparent;
+  color: var(--text); opacity: 0.85; cursor: pointer; white-space: nowrap;
+  max-width: 190px;
+}
+.account-name:hover, .account-name.is-open {
+  opacity: 1; border-color: var(--border); background: var(--surface2);
+}
+.account-name-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-caret { font-size: 10px; color: var(--text-muted); }
+.account-panel {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 130;
+  min-width: 250px; padding: 14px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.32);
+  text-align: left; cursor: default;
+}
+.account-logout {
+  margin-top: 12px; width: 100%; padding: 7px 10px;
+  border-radius: 7px; border: 1px solid var(--border);
+  background: transparent; color: var(--text-sec);
+  font-size: 12.5px; cursor: pointer;
+}
+.account-logout:hover { border-color: #f87171; color: #f87171; }
+
+/* ── Notification preferences (account menu + login) ──────────────────────── */
+.np-switch { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--text); cursor: pointer; }
+.np-switch-sm { font-size: 12.5px; font-weight: 600; }
+.np-langs { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-subtle); transition: opacity 0.15s; }
+.np-langs.is-muted { opacity: 0.5; }
+.np-heading { font-size: 10px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 7px; }
+.np-lang { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 13px; color: var(--text); cursor: pointer; }
+.np-push { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-subtle); }
+.np-note { margin-top: 8px; font-size: 11px; line-height: 1.5; color: var(--text-muted); }
+.np-warn { margin-top: 8px; font-size: 11px; line-height: 1.5; color: #fbbf24; }
+/* Apple's install requirement needs explaining, not just stating. */
+.np-help { margin-top: 10px; padding: 9px 11px; border-radius: 7px; background: var(--surface2); border: 1px solid var(--border-subtle); }
+.np-help-title { font-size: 11.5px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+.np-help-body { font-size: 11px; line-height: 1.55; color: var(--text-muted); }
+
+/* ── Login opt-ins ────────────────────────────────────────────────────────── */
+.login-notify { width: 100%; margin: 4px 0 2px; text-align: left; }
+.login-check { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 13px; color: var(--text, #ddd); cursor: pointer; }
+
+/* Send time, inside the notification preferences. */
+.np-when { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-subtle); }
+.np-time {
+  padding: 5px 9px; border-radius: 7px;
+  border: 1px solid var(--border); background: var(--surface2);
+  color: var(--text); font-size: 12.5px; cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+.np-tz { margin-left: 8px; font-size: 11px; color: var(--text-muted); }

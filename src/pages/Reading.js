@@ -11,6 +11,7 @@ import { useUser } from '../context/UserContext';
 export default function Reading({ lang = 'en' }) {
   const { user } = useUser();
   const name = user?.name || '';
+  const userId = user?.id || null;
 
   const [searchParams, setSearchParams] = useSearchParams();
   // Local date (device timezone), not UTC — toISOString() rolls over to tomorrow
@@ -126,17 +127,21 @@ export default function Reading({ lang = 'en' }) {
 
   async function loadReaders(n) {
     const { data } = await supabase.from('checkins')
-      .select('name,portion,created_at').eq('date', currentDate)
+      .select('name,portion,created_at,user_id').eq('date', currentDate)
       .order('created_at', { ascending: true });
     if (!data) return;
     if (n) {
-      const my = data.filter(r => r.name.toLowerCase() === n.toLowerCase());
+      // Match on the account when both sides have one; rows written before the
+      // migration only carry a name, so that stays the fallback.
+      const my = data.filter(r => (userId && r.user_id)
+        ? r.user_id === userId
+        : r.name.toLowerCase() === n.toLowerCase());
       if (my.some(r => r.portion === 'NT')) setNtDone(true);
       if (my.some(r => r.portion === 'OT')) setOtDone(true);
     }
     const map = {};
     data.forEach(r => {
-      const k = r.name.toLowerCase();
+      const k = r.user_id || r.name.toLowerCase();
       if (!map[k]) map[k] = { name: r.name, nt: false, ot: false };
       if (r.portion === 'NT') map[k].nt = true;
       if (r.portion === 'OT') map[k].ot = true;
@@ -149,10 +154,22 @@ export default function Reading({ lang = 'en' }) {
   async function handleCheckin(portion, done, setDone) {
     if (done || saving || !name) return;
     setSaving(portion);
-    const { data: ex } = await supabase.from('checkins').select('id')
-      .eq('date', currentDate).eq('portion', portion).ilike('name', name);
+    // Look for an existing check-in by account first, so a renamed reader is
+    // still recognised, then by name for rows that predate the account id.
+    let ex = null;
+    if (userId) {
+      ({ data: ex } = await supabase.from('checkins').select('id')
+        .eq('date', currentDate).eq('portion', portion).eq('user_id', userId));
+    }
+    if (!ex?.length) {
+      ({ data: ex } = await supabase.from('checkins').select('id')
+        .eq('date', currentDate).eq('portion', portion).ilike('name', name));
+    }
     if (ex && ex.length > 0) { setDone(true); setSaving(''); return; }
-    const { error } = await supabase.from('checkins').insert({ name, date: currentDate, portion });
+    // Both are written: the id is the identity, the name keeps anything still
+    // reading by name working until that is retired.
+    const { error } = await supabase.from('checkins')
+      .insert({ name, user_id: userId, date: currentDate, portion });
     if (!error) { setDone(true); loadReaders(name); }
     setSaving('');
   }

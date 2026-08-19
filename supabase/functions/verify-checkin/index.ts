@@ -113,11 +113,19 @@ async function handle(
     .from("users").select("id, name").eq("id", claim.userId).maybeSingle();
   if (!user) return json({ ok: false, error: "unknown reader" }, 404);
 
-  // check-ins are keyed by name, so resolve the id before writing.
-  const { data: existing } = await sb
-    .from("checkins").select("id")
-    .eq("name", user.name).eq("date", claim.date).eq("portion", claim.portion)
-    .maybeSingle();
+  // The token already names the account, so look by id first. The name check
+  // still runs for rows written before check-ins carried an account.
+  let existing: { id: string } | null = null;
+  {
+    const byId = await sb.from("checkins").select("id")
+      .eq("user_id", user.id).eq("date", claim.date).eq("portion", claim.portion).limit(1);
+    existing = byId.data?.[0] ?? null;
+    if (!existing) {
+      const byName = await sb.from("checkins").select("id")
+        .eq("name", user.name).eq("date", claim.date).eq("portion", claim.portion).limit(1);
+      existing = byName.data?.[0] ?? null;
+    }
+  }
 
   if (existing) {
     return json({
@@ -127,7 +135,7 @@ async function handle(
   }
 
   const { error } = await sb.from("checkins")
-    .insert({ name: user.name, date: claim.date, portion: claim.portion });
+    .insert({ name: user.name, user_id: user.id, date: claim.date, portion: claim.portion });
 
   // A unique index makes a double click land here rather than duplicating.
   if (error && !/duplicate|unique/i.test(error.message)) {

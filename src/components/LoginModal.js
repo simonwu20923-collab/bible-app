@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { supabase } from '../supabase';
 import { useUser } from '../context/UserContext';
 import Flag from './Flag';
+import { AppleHelp, TEXT as NOTIFY_TEXT } from './NotifyPreferences';
+import { isPushSupported, permission, subscribe } from '../push';
 
 const LANGS = [
   { code: 'en', name: 'English' },
@@ -73,9 +75,12 @@ export default function LoginModal({ onLangChange }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
+  const [wantEmail, setWantEmail] = useState(true);
+  const [wantPush, setWantPush] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const t = TEXT[lang] || TEXT.en;
+  const nt = NOTIFY_TEXT[lang] || NOTIFY_TEXT.en;   // shared with the account menu
 
   function switchLang(code) {
     setLang(code);
@@ -94,28 +99,61 @@ export default function LoginModal({ onLangChange }) {
     setError('');
 
     try {
-      const { data: existing, error: fetchError } = await supabase
+      // Resolve the typed name to an account: the account's own name first,
+      // then any name it used to go by. Merged accounts keep working that way —
+      // "Ayele" still reaches the account now called "Ayele Dodoo".
+      const { data: found, error: fetchError } = await supabase
         .from('users')
-        .select('name, email, is_admin')
+        .select('id, name, email, is_admin')
         .ilike('name', trimmedName)
-        .maybeSingle();
-
+        .limit(1);
       if (fetchError) throw fetchError;
+
+      let existing = found && found[0];
+      if (!existing) {
+        const { data: alias } = await supabase
+          .from('user_aliases').select('user_id').ilike('name', trimmedName).limit(1);
+        if (alias?.[0]) {
+          const { data: viaAlias } = await supabase
+            .from('users').select('id, name, email, is_admin').eq('id', alias[0].user_id).limit(1);
+          existing = viaAlias && viaAlias[0];
+        }
+      }
+
+      // Still nothing, but this address already has an account: sign them into
+      // it and remember the name they typed. One address, one account — this is
+      // what stops a second account appearing every time someone abbreviates.
+      if (!existing) {
+        const { data: byEmail } = await supabase
+          .from('users').select('id, name, email, is_admin')
+          .eq('email', trimmedEmail).order('created_at', { ascending: true }).limit(1);
+        if (byEmail?.[0]) {
+          existing = byEmail[0];
+          await supabase.from('user_aliases')
+            .upsert({ name: trimmedName, user_id: existing.id }, { onConflict: 'name' });
+        }
+      }
 
       if (existing) {
         if (existing.email.toLowerCase() === trimmedEmail) {
-          login({ name: existing.name, email: existing.email, isAdmin: existing.is_admin || false });
+          await applyPreferences(existing.email);
+          await stampLogin(existing.id);
+          login({ id: existing.id, name: existing.name, email: existing.email, isAdmin: existing.is_admin || false });
         } else {
           setError(t.errorTaken);
           setLoading(false);
           return;
         }
       } else {
-        const { error: insertError } = await supabase
+        const { data: created, error: insertError } = await supabase
           .from('users')
-          .insert([{ name: trimmedName, email: trimmedEmail }]);
+          .insert([{ name: trimmedName, email: trimmedEmail }])
+          .select('id')
+          .single();
         if (insertError) throw insertError;
-        login({ name: trimmedName, email: trimmedEmail, isAdmin: false });
+        await applyPreferences(trimmedEmail);
+        await stampLogin(created?.id);
+        login({ id: created?.id, name: trimmedName, email: trimmedEmail, isAdmin: false });
       }
     } catch (err) {
       console.error(err);
@@ -124,6 +162,28 @@ export default function LoginModal({ onLangChange }) {
 
     setLoading(false);
   };
+
+  // Recorded so an account can later be judged active or dormant. Nothing
+  // depends on it yet; the clock starts the day this ships.
+  async function stampLogin(id) {
+    if (!id) return;
+    try { await supabase.from('users').update({ last_login_at: new Date().toISOString() }).eq('id', id); }
+    catch (err) { console.error('could not record login time', err); }
+  }
+
+  // Both preferences are applied after the account exists. The push prompt is
+  // still inside the click that submitted the form, which is what browsers
+  // require before they will ask.
+  async function applyPreferences(accountEmail) {
+    try {
+      await supabase.from('users').update({ daily_email: wantEmail }).eq('email', accountEmail);
+      if (wantPush && isPushSupported() && permission() !== 'denied') {
+        await subscribe(accountEmail);
+      }
+    } catch (err) {
+      console.error('could not save notification preferences', err);
+    }
+  }
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') handleSubmit();
@@ -174,6 +234,24 @@ export default function LoginModal({ onLangChange }) {
           onChange={e => setEmail(e.target.value)}
           onKeyDown={handleKeyDown}
         />
+
+        {/* Opt-ins, offered once at the start rather than as a prompt later.
+            Both are changeable afterwards under the account name. */}
+        <div className="login-notify">
+          <label className="login-check">
+            <input type="checkbox" checked={wantEmail}
+                   onChange={e => setWantEmail(e.target.checked)} />
+            <span>{nt.email}</span>
+          </label>
+          {isPushSupported() && permission() !== 'denied' && (
+            <label className="login-check">
+              <input type="checkbox" checked={wantPush}
+                     onChange={e => setWantPush(e.target.checked)} />
+              <span>{nt.push}</span>
+            </label>
+          )}
+          <AppleHelp t={nt} />
+        </div>
 
         {error && <p style={styles.error}>{error}</p>}
 

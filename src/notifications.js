@@ -37,7 +37,17 @@ export async function loadUserNames() {
 async function insert(rows) {
   const real = rows.filter(r => r.recipient && !same(r.recipient, r.actor));
   if (!real.length) return;
-  const { error } = await supabase.from('notifications').insert(real);
+  // Names still identify who a notification is for, but the account goes in
+  // alongside so a rename cannot orphan someone's alerts.
+  const names = [...new Set(real.flatMap(r => [r.recipient, r.actor]).filter(Boolean))];
+  const { data: accounts } = await supabase.from('users').select('id, name').in('name', names);
+  const idFor = new Map((accounts || []).map(u => [u.name.toLowerCase(), u.id]));
+  const withIds = real.map(r => ({
+    ...r,
+    recipient_id: idFor.get(String(r.recipient).toLowerCase()) ?? null,
+    actor_id: idFor.get(String(r.actor).toLowerCase()) ?? null,
+  }));
+  const { error } = await supabase.from('notifications').insert(withIds);
   if (error) console.error('notification insert failed', error);
 }
 
