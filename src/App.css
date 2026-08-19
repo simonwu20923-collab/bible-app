@@ -2689,3 +2689,40 @@ body {
   word-break: break-word;
 }
 .login-verified b { color: var(--text, #222); font-weight: 600; }
+
+/* ── Phone: the two navbar panels become sheets ───────────────────────────
+   Both panels hang off a small inline wrapper with `right: 0`. On desktop
+   that wrapper sits at the navbar's right edge, so the panel opens tidily
+   beneath it. In the collapsed nav the wrapper sits at the far left instead,
+   so a 250–340px panel opened leftwards and ran straight off the screen —
+   the controls were rendered, just not reachable.
+
+   On a phone they anchor to the viewport rather than to the button, which
+   also gives the rename field and the language checkboxes room to breathe. */
+@media (max-width: 768px) {
+  .notif-panel,
+  .account-panel {
+    position: fixed;
+    top: auto; bottom: 12px; left: 12px; right: 12px;
+    width: auto; min-width: 0; max-width: none;
+    max-height: 68vh; overflow-y: auto;
+    z-index: 400;
+  }
+
+  /* Both triggers were sized for a cursor. Give them a thumb-sized target. */
+  .account-name {
+    padding: 9px 12px; font-size: 14px;
+    max-width: none; justify-content: center;
+  }
+  .notif-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 42px; min-height: 42px; font-size: 19px; padding: 0;
+    border: 1px solid var(--border);
+  }
+  .notif-badge { top: 2px; right: 2px; }
+
+  /* Stacked, the rename field and its button both want the full width. */
+  .np-rename-row { flex-wrap: wrap; }
+  .np-rename-input { flex: 1 1 140px; padding: 9px 10px; font-size: 14px; }
+  .np-rename-save { padding: 9px 14px; font-size: 13.5px; }
+}
