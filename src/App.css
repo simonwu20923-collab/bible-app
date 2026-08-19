@@ -2453,3 +2453,18 @@ body {
   100%    { background: transparent; }
 }
 .comment-flash { animation: commentFlash 2.6s ease-out; border-radius: 8px; }
+
+/* ── Check-in confirmation (landing page for the daily email links) ───────── */
+.checkin-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 22px;
+}
+.checkin-link {
+  color: var(--text-sec);
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+.checkin-link:hover { color: var(--text); }

@@ -11,6 +11,8 @@ import SearchOverlay from './components/SearchOverlay';
 import { UserProvider, useUser } from './context/UserContext';
 import LoginModal from './components/LoginModal';
 import Flag from './components/Flag';
+import CheckinConfirm from './pages/CheckinConfirm';
+import Unsubscribed from './pages/Unsubscribed';
 
 function AppInner() {
   const { user, logout } = useUser();
@@ -161,6 +163,9 @@ function AppInner() {
         <Route path="/schedule" element={<div className="main-content"><Schedule lang={lang} /></div>} />
         <Route path="/bible"   element={<Bible lang={lang} />} />
         <Route path="/admin"   element={<div className="main-content"><Admin /></div>} />
+        {/* Landing page for the daily email's Finished NT/OT links. */}
+        <Route path="/checkin" element={<div className="main-content"><CheckinConfirm /></div>} />
+        <Route path="/unsubscribed" element={<div className="main-content"><Unsubscribed /></div>} />
       </Routes>
     </div>
   );

@@ -1,9 +1,9 @@
 // Daily reading email.
 //
-// Sends today's NT and OT portions to everyone with users.daily_email = true.
-// Each message carries two signed links that record a check-in without the
-// reader logging in. Tokens are HMAC-signed rather than stored, so there is no
-// table to expire and nothing guessable.
+// Sends today's devotional plus the NT and OT portions to everyone with
+// users.daily_email = true. Each message carries two signed links that record a
+// check-in without the reader signing in. Tokens are HMAC-signed rather than
+// stored, so there is no table to expire and nothing guessable.
 //
 // Secrets required (npx supabase secrets set ...):
 //   RESEND_API_KEY   sending key from resend.com
@@ -14,6 +14,9 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const SITE = "https://bible.churchincerritos.org";
 const FROM = "Bible Reading <noreply@churchincerritos.org>";
 const TZ = "America/Los_Angeles";
+// Handled by an edge function, not the SPA: Gmail's one-click unsubscribe POSTs
+// to this URL with no credentials and expects a 200, which a static page cannot do.
+const UNSUB = `${Deno.env.get("SUPABASE_URL")}/functions/v1/unsubscribe`;
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const CHECKIN_SECRET = Deno.env.get("CHECKIN_SECRET") ?? "";
@@ -43,7 +46,7 @@ async function mintToken(userId: string, date: string, portion: string) {
 }
 
 // ── template ───────────────────────────────────────────────────────────────
-const esc = (s: string) =>
+const esc = (s: unknown) =>
   String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 // Verse text arrives newline-separated as "Rm 15 :14 But I myself also am...".
@@ -53,8 +56,8 @@ function verses(text: string): string {
     const m = line.match(/^(\S+\s*\d+\s*:\s*\d+)\s+([\s\S]*)$/);
     const ref = m ? m[1] : "";
     const body = m ? m[2] : line;
-    return `<p style="margin:0 0 11px;font-size:16px;line-height:1.6;color:#1a1726">` +
-      (ref ? `<span style="color:#8b86a0;font-size:12px">${esc(ref)}</span> ` : "") +
+    return `<p class="t-main" style="margin:0 0 11px;font-size:16px;line-height:1.6;color:#1a1726">` +
+      (ref ? `<span class="t-dim" style="color:#8b86a0;font-size:12px">${esc(ref)}</span> ` : "") +
       `${esc(body)}</p>`;
   }).join("");
 }
@@ -67,31 +70,91 @@ function button(href: string, label: string, bg: string): string {
     </td></tr></table>`;
 }
 
+// Audio cannot play inside an email — Gmail and Outlook strip <audio> outright.
+// A labelled link out to the file is the honest substitute.
+function listenLink(href: string, label: string): string {
+  return `<a href="${esc(href)}" style="display:inline-block;margin:0 10px 8px 0;padding:7px 14px;font-size:13px;font-weight:600;color:#6d28d9;text-decoration:none;border:1px solid #d6cdf3;border-radius:20px">&#9654;&nbsp; ${esc(label)}</a>`;
+}
+
+function devotional(db: Record<string, string> | null): string {
+  if (!db) return "";
+  const field = (label: string, value: string) => value
+    ? `<div style="margin:0 0 14px">
+         <div class="t-brand" style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#6d28d9;margin-bottom:4px">${esc(label)}</div>
+         <div class="t-main" style="font-size:15px;line-height:1.6;color:#1a1726">${esc(value)}</div>
+       </div>` : "";
+
+  const links = [
+    db.hymn_url ? `<a href="${esc(db.hymn_url)}" style="color:#6d28d9;font-weight:600;text-decoration:none">&#9834; ${esc(db.hymn_title || "Hymn")}</a>` : "",
+    db.ls_url ? `<a href="${esc(db.ls_url)}" style="color:#6d28d9;font-weight:600;text-decoration:none">&#128214; ${esc(db.ls_title || "Life-study")}</a>` : "",
+  ].filter(Boolean).join('<span class="t-dim" style="color:#b3aec4"> &middot; </span>');
+
+  const audio = [
+    db.hymn_audio && /\.mp3(\?|$)/i.test(db.hymn_audio) ? listenLink(db.hymn_audio, "Play hymn") : "",
+    db.ls_audio ? listenLink(db.ls_audio, "Play life-study") : "",
+  ].filter(Boolean).join("");
+
+  return `
+    <tr><td class="rule" style="padding:22px 28px 8px;border-top:1px solid #e3dfec">
+      <div class="t-brand" style="font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#6d28d9;margin-bottom:14px">&#128218; Today's Reading</div>
+      ${field("Topic", db.topic)}
+      ${field("Key Verse", db.key_verse)}
+      ${field("Emphasis", db.emphasis)}
+      ${field("Musing", db.musing)}
+      ${field("Prayer", db.prayer)}
+      ${links ? `<div style="margin:14px 0 4px;font-size:14px">${links}</div>` : ""}
+      ${audio ? `<div style="margin:8px 0 4px">${audio}</div>` : ""}
+    </td></tr>`;
+}
+
 function renderEmail(o: {
   reading: Record<string, string>;
+  bread: Record<string, string> | null;
   name: string;
   ntToken: string;
   otToken: string;
   date: string;
   unsubToken: string;
 }): string {
-  const { reading, name, ntToken, otToken, date, unsubToken } = o;
+  const { reading, bread, name, ntToken, otToken, date, unsubToken } = o;
   const pretty = new Date(date + "T12:00:00Z").toLocaleDateString("en-US", {
     weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "UTC",
   });
 
   const portion = (title: string, text: string, token: string, label: string, bg: string) => `
-    <tr><td style="padding:26px 28px 6px;border-top:1px solid #e3dfec">
-      <div style="font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#6d28d9;margin-bottom:10px">${esc(title)}</div>
+    <tr><td class="rule" style="padding:26px 28px 6px;border-top:1px solid #e3dfec">
+      <div class="t-brand" style="font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#6d28d9;margin-bottom:10px">${esc(title)}</div>
       ${verses(text)}
       ${button(`${SITE}/checkin?t=${token}`, label, bg)}
     </td></tr>`;
 
+  // Dark mode: honoured by Apple Mail and Outlook mobile via prefers-color-scheme.
+  // Gmail ignores it and runs its own inversion, so the light palette below is
+  // chosen to survive that too — no pure white behind body text.
   return `<!doctype html>
-<html><body style="margin:0;padding:0;background:#f4f2f9;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f4f2f9;padding:24px 12px">
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
+<style>
+  :root { color-scheme: light dark; supported-color-schemes: light dark; }
+  @media (prefers-color-scheme: dark) {
+    .bg-page { background:#0b0b14 !important; }
+    .bg-card { background:#17172a !important; }
+    .t-main  { color:#e9e6f2 !important; }
+    .t-dim   { color:#948ea8 !important; }
+    .t-brand { color:#a78bfa !important; }
+    .rule    { border-color:#2c2a44 !important; }
+    a[href]  { color:#a78bfa !important; }
+  }
+</style>
+</head>
+<body class="bg-page" style="margin:0;padding:0;background:#f4f2f9;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
+<table role="presentation" class="bg-page" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f4f2f9;padding:24px 12px">
 <tr><td align="center">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:640px;background:#ffffff;border-radius:12px;overflow:hidden">
+  <table role="presentation" class="bg-card" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:640px;background:#ffffff;border-radius:12px;overflow:hidden">
 
     <tr><td style="padding:26px 28px 18px;background:#7c3aed">
       <div style="font-size:20px;font-weight:700;color:#ffffff">Bible Reading</div>
@@ -99,16 +162,17 @@ function renderEmail(o: {
     </td></tr>
 
     <tr><td style="padding:20px 28px 0">
-      <p style="margin:0;font-size:16px;color:#4a4459">Good morning${name ? ", " + esc(name) : ""} — here is today's reading. Tap <b>Finished</b> under each portion to log it.</p>
+      <p class="t-main" style="margin:0;font-size:16px;color:#4a4459">Good morning${name ? ", " + esc(name) : ""} — here is today's reading. Tap <b>Finished</b> under each portion to log it.</p>
       <p style="margin:10px 0 0;font-size:14px"><a href="${SITE}/reading?date=${date}" style="color:#6d28d9">Open on the site for audio &rarr;</a></p>
     </td></tr>
 
+    ${devotional(bread)}
     ${portion(reading.nt_title, reading.nt_text, ntToken, "&#10003; Finished NT", "#059669")}
     ${portion(reading.ot_title, reading.ot_text, otToken, "&#10003; Finished OT", "#7c3aed")}
 
-    <tr><td style="padding:20px 28px 26px;border-top:1px solid #e3dfec;font-size:12px;color:#8b86a0;line-height:1.6">
+    <tr><td class="rule t-dim" style="padding:20px 28px 26px;border-top:1px solid #e3dfec;font-size:12px;color:#8b86a0;line-height:1.6">
       Church in Cerritos &middot; you are receiving this because you turned on daily reading emails.<br>
-      <a href="${SITE}/unsubscribe?t=${unsubToken}" style="color:#8b86a0">Unsubscribe</a>
+      <a href="${UNSUB}?t=${unsubToken}" style="color:#8b86a0">Unsubscribe</a>
     </td></tr>
 
   </table>
@@ -171,6 +235,10 @@ Deno.serve(async (req) => {
     .from("verses").select("*").eq("date", today).maybeSingle();
   if (!reading) return json({ error: `no reading row for ${today}` }, 404);
 
+  // daily_bread repeats yearly, so it is keyed by MM-DD rather than a full date.
+  const { data: bread } = await sb
+    .from("daily_bread").select("*").eq("md", today.slice(5)).eq("lang", "en").maybeSingle();
+
   let q = sb.from("users").select("id, name, email, email_token").eq("daily_email", true);
   if (only) q = q.eq("email", only);
   const { data: subs, error } = await q;
@@ -185,11 +253,11 @@ Deno.serve(async (req) => {
       mintToken(u.id, today, "OT"),
     ]);
     const html = renderEmail({
-      reading, name: u.name, ntToken, otToken, date: today, unsubToken: u.email_token,
+      reading, bread, name: u.name, ntToken, otToken, date: today, unsubToken: u.email_token,
     });
 
     if (dry) {
-      results.push({ email: u.email, ok: true, detail: `${html.length} bytes` });
+      results.push({ email: u.email, ok: true, detail: `${html.length} bytes, devotional: ${bread ? "yes" : "no"}` });
       continue;
     }
 
@@ -206,7 +274,7 @@ Deno.serve(async (req) => {
           subject: `${reading.nt_title} · ${reading.ot_title}`,
           html,
           headers: {
-            "List-Unsubscribe": `<${SITE}/unsubscribe?t=${u.email_token}>`,
+            "List-Unsubscribe": `<${UNSUB}?t=${u.email_token}>`,
             "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
           },
         }),
