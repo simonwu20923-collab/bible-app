@@ -1,5 +1,6 @@
 import React from 'react';
 import NotifyPreferences, { TEXT } from './NotifyPreferences';
+import RenameAccount from './RenameAccount';
 
 // The account name opens everything to do with the reader: how they hear from
 // us, and logging out. Hover opens it on a mouse, tap or keyboard opens it
@@ -50,6 +51,7 @@ export default function AccountMenu({ user, lang = 'en', onLogout }) {
 
       {open && (
         <div className="account-panel" role="dialog" aria-label={user.name}>
+          <RenameAccount lang={lang} />
           <NotifyPreferences email={user.email} lang={lang} />
           <button className="account-logout" onClick={onLogout}>{t.logout}</button>
         </div>

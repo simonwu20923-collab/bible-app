@@ -151,7 +151,7 @@ for (let i = 0; i < 400; i++) {
       let allData = [];
       let page = 0;
       while (true) {
-        const { data: batch } = await supabase.from('checkins').select('name,date,portion')
+        const { data: batch } = await supabase.from('checkins').select('name,date,portion,user_id')
           .gte('date', yearStart).lte('date', yearEnd)
           .range(page * 1000, (page + 1) * 1000 - 1);
         if (!batch || batch.length === 0) break;
@@ -160,12 +160,18 @@ for (let i = 0; i < 400; i++) {
         page++;
       }
       if (allData.length) {
+        // Group by account so a rename keeps one streak instead of splitting it,
+        // and show whatever that account is called now. Rows with no account
+        // still group by the name they were written under.
+        const { data: accounts } = await supabase.from('users').select('id, name');
+        const nameFor = new Map((accounts || []).map(u => [u.id, u.name]));
+
         const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
         const buildStats = (rows) => {
           const map = {};
           rows.forEach(r => {
-            const k = r.name.toLowerCase();
-            if (!map[k]) map[k] = { name: r.name, dates: {} };
+            const k = r.user_id || r.name.toLowerCase();
+            if (!map[k]) map[k] = { name: nameFor.get(r.user_id) || r.name, dates: {} };
             if (!map[k].dates[r.date]) map[k].dates[r.date] = { nt: false, ot: false };
             if (r.portion === 'NT') map[k].dates[r.date].nt = true;
             if (r.portion === 'OT') map[k].dates[r.date].ot = true;

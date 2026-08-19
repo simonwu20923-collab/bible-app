@@ -25,6 +25,14 @@ const TEXT = {
     errorEmail: 'Please enter a valid email address.',
     errorTaken: 'This name is already taken. Please choose a different name.',
     errorGeneric: 'Something went wrong. Please try again.',
+    recoverAsk: 'Forgot your name?',
+    recoverSending: 'Sending…',
+    recoverNeedEmail: 'Enter your email above first.',
+    recoverSent: 'If that address has an account, we have emailed the name to it.',
+    google: 'Continue with Google',
+    orDivider: 'or',
+    googleFinish: 'One more step — choose the name your reading will show under.',
+    googleSignedIn: 'Signed in with Google as',
   },
   es: {
     title: 'Iglesia en Cerritos',
@@ -38,6 +46,14 @@ const TEXT = {
     errorEmail: 'Por favor ingresa un correo válido.',
     errorTaken: 'Este nombre ya está en uso. Por favor elige otro.',
     errorGeneric: 'Algo salió mal. Por favor intenta de nuevo.',
+    recoverAsk: '¿Olvidaste tu nombre?',
+    recoverSending: 'Enviando…',
+    recoverNeedEmail: 'Primero ingresa tu correo arriba.',
+    recoverSent: 'Si esa dirección tiene una cuenta, le enviamos el nombre.',
+    google: 'Continuar con Google',
+    orDivider: 'o',
+    googleFinish: 'Un paso más: elige el nombre con el que aparecerá tu lectura.',
+    googleSignedIn: 'Sesión iniciada con Google como',
   },
   zh: {
     title: '喜瑞督召會',
@@ -51,6 +67,14 @@ const TEXT = {
     errorEmail: '請輸入有效的電子郵件地址。',
     errorTaken: '此姓名已被使用，請選擇其他姓名。',
     errorGeneric: '發生錯誤，請重試。',
+    recoverAsk: '忘記你的名稱？',
+    recoverSending: '寄送中…',
+    recoverNeedEmail: '請先在上方輸入電子郵件。',
+    recoverSent: '若該地址有帳號，我們已將名稱寄出。',
+    google: '使用 Google 登入',
+    orDivider: '或',
+    googleFinish: '還有一步——請選擇顯示閱讀記錄的名稱。',
+    googleSignedIn: '已用 Google 登入：',
   },
   sc: {
     title: '喜瑞督召会',
@@ -64,6 +88,14 @@ const TEXT = {
     errorEmail: '请输入有效的电子邮件地址。',
     errorTaken: '此姓名已被使用，请选择其他姓名。',
     errorGeneric: '发生错误，请重试。',
+    recoverAsk: '忘记你的名称？',
+    recoverSending: '寄送中…',
+    recoverNeedEmail: '请先在上方输入电子邮件。',
+    recoverSent: '若该地址有帐号，我们已将名称寄出。',
+    google: '使用 Google 登录',
+    orDivider: '或',
+    googleFinish: '还有一步——请选择显示阅读记录的名称。',
+    googleSignedIn: '已用 Google 登录：',
   },
 };
 
@@ -78,6 +110,12 @@ export default function LoginModal({ onLangChange }) {
   const [wantEmail, setWantEmail] = useState(true);
   const [wantPush, setWantPush] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [recovering, setRecovering] = useState(false);
+  const [recoverMsg, setRecoverMsg] = useState('');
+  // Set only when Google has verified an address that has no account yet, so
+  // the form below is finishing a signup rather than starting one.
+  const [googleEmail, setGoogleEmail] = useState('');
+  const [returning, setReturning] = useState(false);
 
   const t = TEXT[lang] || TEXT.en;
   const nt = NOTIFY_TEXT[lang] || NOTIFY_TEXT.en;   // shared with the account menu
@@ -86,6 +124,58 @@ export default function LoginModal({ onLangChange }) {
     setLang(code);
     localStorage.setItem('bibleAppLang', code);
     if (onLangChange) onLangChange(code);
+  }
+
+  // Coming back from Google. The address Google returns is verified, so it is
+  // enough on its own to reach an existing account — no name typed, no history
+  // lost, nothing to re-register. Only a reader with no account yet has to
+  // stop and pick a name.
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase.auth.getSession();
+      const authUser = data?.session?.user;
+      if (!authUser?.email || cancelled) return;
+      setReturning(true);
+
+      const addr = authUser.email.toLowerCase();
+      const { data: rows } = await supabase
+        .from('users').select('id, name, email, is_admin')
+        .eq('email', addr).order('created_at', { ascending: true }).limit(1);
+      if (cancelled) return;
+
+      const account = rows && rows[0];
+      if (account) {
+        await stampLogin(account.id);
+        login({
+          id: account.id, name: account.name,
+          email: account.email, isAdmin: account.is_admin || false,
+        });
+        return;
+      }
+
+      // Nobody here yet. Suggest the Google profile name, but let them change
+      // it — it is what the whole congregation will see on the leaderboard.
+      const meta = authUser.user_metadata || {};
+      setGoogleEmail(addr);
+      setEmail(addr);
+      setName(String(meta.full_name || meta.name || '').trim());
+      setReturning(false);
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function signInWithGoogle() {
+    setError('');
+    const { error: authError } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin },
+    });
+    if (authError) {
+      console.error('google sign-in failed', authError);
+      setError(t.errorGeneric);
+    }
   }
 
   const handleSubmit = async () => {
@@ -185,6 +275,24 @@ export default function LoginModal({ onLangChange }) {
     }
   }
 
+  async function recoverName() {
+    const addr = email.trim().toLowerCase();
+    if (!addr.includes('@')) { setRecoverMsg(t.recoverNeedEmail); return; }
+    setRecovering(true); setRecoverMsg('');
+    try {
+      await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/recover-name`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: addr }),
+      });
+    } catch (err) {
+      console.error('recover-name request failed', err);
+    }
+    // Deliberately the same message either way — see the function's comment.
+    setRecoverMsg(t.recoverSent);
+    setRecovering(false);
+  }
+
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') handleSubmit();
   };
@@ -214,8 +322,22 @@ export default function LoginModal({ onLangChange }) {
         <h2 style={styles.title}>{t.title}</h2>
         <p style={styles.subtitle}>{t.subtitle}</p>
         <p style={styles.desc}>
-          {t.desc.split('\n').map((line, i) => <span key={i}>{line}{i === 0 && <br />}</span>)}
+          {googleEmail
+            ? t.googleFinish
+            : t.desc.split('\n').map((line, i) => <span key={i}>{line}{i === 0 && <br />}</span>)}
         </p>
+
+        {/* Offered first, because it is the shorter path for anyone who has an
+            account already — the verified address finds them without a name. */}
+        {!googleEmail && (
+          <>
+            <button className="login-google" onClick={signInWithGoogle} disabled={returning}>
+              <GoogleMark />
+              <span>{t.google}</span>
+            </button>
+            <div className="login-or"><span>{t.orDivider}</span></div>
+          </>
+        )}
 
         <input
           style={styles.input}
@@ -226,14 +348,20 @@ export default function LoginModal({ onLangChange }) {
           onKeyDown={handleKeyDown}
           autoFocus
         />
-        <input
-          style={styles.input}
-          type="email"
-          placeholder={t.emailPlaceholder}
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          onKeyDown={handleKeyDown}
-        />
+        {googleEmail ? (
+          <div className="login-verified">
+            {t.googleSignedIn} <b>{googleEmail}</b>
+          </div>
+        ) : (
+          <input
+            style={styles.input}
+            type="email"
+            placeholder={t.emailPlaceholder}
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            onKeyDown={handleKeyDown}
+          />
+        )}
 
         {/* Opt-ins, offered once at the start rather than as a prompt later.
             Both are changeable afterwards under the account name. */}
@@ -253,6 +381,17 @@ export default function LoginModal({ onLangChange }) {
           <AppleHelp t={nt} />
         </div>
 
+        {/* Anyone who has forgotten their name has their address; that is
+            enough to remind them without exposing whether it is registered. */}
+        {!googleEmail && (
+          <div style={{ width: '100%', textAlign: 'left' }}>
+            <button className="login-forgot" onClick={recoverName} disabled={recovering}>
+              {recovering ? t.recoverSending : t.recoverAsk}
+            </button>
+            {recoverMsg && <div className="login-forgot-msg">{recoverMsg}</div>}
+          </div>
+        )}
+
         {error && <p style={styles.error}>{error}</p>}
 
         <button
@@ -264,6 +403,19 @@ export default function LoginModal({ onLangChange }) {
         </button>
       </div>
     </div>
+  );
+}
+
+// Google requires its own mark on the button, at its own colours — an emoji or
+// a recoloured glyph would not meet their branding terms.
+function GoogleMark() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 48 48" aria-hidden="true">
+      <path fill="#4285F4" d="M45.1 24.5c0-1.6-.1-3.2-.4-4.7H24v8.9h11.8c-.5 2.7-2 5-4.4 6.6v5.5h7.1c4.2-3.8 6.6-9.5 6.6-16.3z" />
+      <path fill="#34A853" d="M24 46c6 0 11-2 14.6-5.4l-7.1-5.5c-2 1.3-4.5 2.1-7.5 2.1-5.8 0-10.7-3.9-12.4-9.1H4.3v5.7C7.9 41 15.4 46 24 46z" />
+      <path fill="#FBBC05" d="M11.6 28.1c-.4-1.3-.7-2.7-.7-4.1s.2-2.8.7-4.1v-5.7H4.3C2.8 17.1 2 20.4 2 24s.8 6.9 2.3 9.8l7.3-5.7z" />
+      <path fill="#EA4335" d="M24 10.8c3.3 0 6.2 1.1 8.5 3.3l6.3-6.3C35 4.1 30 2 24 2 15.4 2 7.9 7 4.3 14.2l7.3 5.7c1.7-5.2 6.6-9.1 12.4-9.1z" />
+    </svg>
   );
 }
 

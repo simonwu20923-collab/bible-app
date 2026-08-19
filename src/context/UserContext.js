@@ -45,6 +45,10 @@ export function UserProvider({ children }) {
   const logout = () => {
     localStorage.removeItem('bible_app_user');
     localStorage.removeItem('bibleAppName');
+    // A Google session outlives this app's own, and the sign-in screen picks it
+    // straight back up — so logging out has to end that one too, or the reader
+    // never actually gets out.
+    supabase.auth.signOut().catch(err => console.error('sign-out failed', err));
     setUser(null);
   };
 
