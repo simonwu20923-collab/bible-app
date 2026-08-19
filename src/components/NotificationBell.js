@@ -1,19 +1,25 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchNotifications, markRead, NOTIF_TYPES } from '../notifications';
+import {
+  fetchNotifications, markRead, clearNotifications, pruneOldNotifications, NOTIF_TYPES,
+} from '../notifications';
 import { timeAgo } from './CommentsSection';
 
 const UI = {
   en: { title: 'Notifications', none: 'No notifications yet', markAll: 'Mark all read',
+        clear: 'Clear all', clearConfirm: 'Clear all notifications?',
         reply: 'replied in a thread you are in', mention: 'mentioned you',
         reaction: 'reacted to your comment' },
   es: { title: 'Notificaciones', none: 'Sin notificaciones', markAll: 'Marcar todo',
+        clear: 'Borrar todo', clearConfirm: '¿Borrar todas las notificaciones?',
         reply: 'respondió en un hilo tuyo', mention: 'te mencionó',
         reaction: 'reaccionó a tu comentario' },
   zh: { title: '通知', none: '目前沒有通知', markAll: '全部標為已讀',
+        clear: '清除全部', clearConfirm: '確定清除所有通知？',
         reply: '在你參與的討論中回覆了', mention: '提到了你',
         reaction: '對你的留言做出回應' },
   sc: { title: '通知', none: '目前没有通知', markAll: '全部标为已读',
+        clear: '清除全部', clearConfirm: '确定清除所有通知？',
         reply: '在你参与的讨论中回复了', mention: '提到了你',
         reaction: '对你的留言做出回应' },
 };
@@ -32,6 +38,9 @@ export default function NotificationBell({ name, lang = 'en' }) {
   React.useEffect(() => {
     load();
     if (!name) return;
+    // Drop anything read and over a month old, so the table does not grow
+    // without bound. Fire and forget: nothing on screen depends on it.
+    pruneOldNotifications(name);
     // Cheap poll — this is a small congregation, not a chat app.
     const id = setInterval(load, 60000);
     return () => clearInterval(id);
@@ -69,6 +78,20 @@ export default function NotificationBell({ name, lang = 'en' }) {
     markRead(ids);
   }
 
+  async function clearAll() {
+    // Unread items disappear too, so ask first rather than silently binning
+    // something the reader has not seen.
+    if (unread.length > 0 && !window.confirm(t.clearConfirm)) return;
+    const previous = items;
+    setItems([]);
+    setOpen(false);
+    try {
+      await clearNotifications(name);
+    } catch {
+      setItems(previous);          // put them back if the delete failed
+    }
+  }
+
   return (
     <div className="notif-wrap" ref={ref}>
       <button className="notif-btn" onClick={() => setOpen(o => !o)}
@@ -83,9 +106,14 @@ export default function NotificationBell({ name, lang = 'en' }) {
         <div className="notif-panel">
           <div className="notif-head">
             <span>{t.title}</span>
-            {unread.length > 0 && (
-              <button className="notif-markall" onClick={markAll}>{t.markAll}</button>
-            )}
+            <span className="notif-actions">
+              {unread.length > 0 && (
+                <button className="notif-markall" onClick={markAll}>{t.markAll}</button>
+              )}
+              {items.length > 0 && (
+                <button className="notif-clear" onClick={clearAll}>{t.clear}</button>
+              )}
+            </span>
           </div>
           {items.length === 0 && <div className="notif-empty">{t.none}</div>}
           {items.map(n => (

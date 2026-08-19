@@ -101,3 +101,21 @@ export async function markRead(ids) {
   if (!ids.length) return;
   await supabase.from('notifications').update({ read: true }).in('id', ids);
 }
+
+// A notification has no value once it has been seen, so clearing deletes the
+// rows rather than hiding them — otherwise the panel and the table both grow
+// forever.
+export async function clearNotifications(name) {
+  if (!name) return;
+  const { error } = await supabase.from('notifications').delete().ilike('recipient', name);
+  if (error) console.error('clear notifications failed', error);
+}
+
+// Housekeeping on load. Anything read and older than a month is already past
+// the 40 the panel shows, so it is only taking up space.
+export async function pruneOldNotifications(name, days = 30) {
+  if (!name) return;
+  const cutoff = new Date(Date.now() - days * 86400000).toISOString();
+  await supabase.from('notifications').delete()
+    .ilike('recipient', name).eq('read', true).lt('created_at', cutoff);
+}

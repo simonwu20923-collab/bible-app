@@ -2410,6 +2410,13 @@ body {
   background: none; border: none; color: var(--brand);
   font-size: 11px; font-weight: 600; cursor: pointer; padding: 0;
 }
+.notif-actions { display: flex; align-items: center; gap: 10px; }
+/* Clear deletes rather than hides, so it reads as the destructive one. */
+.notif-clear {
+  background: none; border: none; color: var(--text-muted);
+  font-size: 11px; font-weight: 600; cursor: pointer; padding: 0;
+}
+.notif-clear:hover { color: #f87171; }
 .notif-empty { padding: 18px 12px; color: var(--text-muted); font-size: 13px; text-align: center; }
 .notif-item {
   display: block; width: 100%; text-align: left; cursor: pointer;
