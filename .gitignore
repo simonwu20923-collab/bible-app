@@ -26,3 +26,6 @@ audio/
 # local tooling / one-off backups
 .claude/
 audio-backup-*.json
+
+# Supabase CLI scratch state
+supabase/.temp/
