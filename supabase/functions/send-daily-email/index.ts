@@ -116,6 +116,34 @@ function renderEmail(o: {
 </body></html>`;
 }
 
+// ── access control ─────────────────────────────────────────────────────────
+// Only the scheduler may trigger a send. Edge Functions accept any valid JWT by
+// default and the publishable key ships in the web bundle, so without this
+// anyone reading the site's JavaScript could fire the whole mailing list.
+//
+// Two credential formats are accepted because this project has both key systems
+// live: the current secret key (sb_secret_…, which is what Supabase injects as
+// SUPABASE_SERVICE_ROLE_KEY here) and the legacy service_role JWT still shown in
+// the dashboard. The platform gateway verifies a JWT's signature before this
+// function runs, so a role claim that reaches us has already been authenticated.
+function isPrivileged(req: Request): boolean {
+  const bearer = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
+  if (!bearer) return false;
+
+  const envKey = (Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "").trim();
+  if (envKey && bearer === envKey) return true;
+
+  const parts = bearer.split(".");
+  if (parts.length === 3) {
+    try {
+      let b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+      while (b64.length % 4) b64 += "=";
+      return JSON.parse(atob(b64)).role === "service_role";
+    } catch { /* not a readable JWT */ }
+  }
+  return false;
+}
+
 // ── handler ────────────────────────────────────────────────────────────────
 Deno.serve(async (req) => {
   const json = (body: unknown, status = 200) =>
@@ -123,14 +151,9 @@ Deno.serve(async (req) => {
       status, headers: { "Content-Type": "application/json" },
     });
 
-  // Only the scheduler may trigger a send. Edge Functions accept any valid JWT
-  // by default, and the anon key is a valid JWT shipped publicly in the web
-  // bundle — without this check, anyone reading the site's JavaScript could
-  // fire the whole mailing list at will. pg_cron calls with the service role.
-  const bearer = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
-  if (bearer !== Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) {
-    return json({ error: "forbidden" }, 403);
-  }
+  const url = new URL(req.url);
+
+  if (!isPrivileged(req)) return json({ error: "forbidden" }, 403);
 
   // Refuse to sign with a weak or missing secret — an empty key would let
   // anyone forge a check-in link for any user.
@@ -139,7 +162,6 @@ Deno.serve(async (req) => {
   }
   if (!RESEND_API_KEY) return json({ error: "RESEND_API_KEY not set" }, 500);
 
-  const url = new URL(req.url);
   const only = url.searchParams.get("test");        // ?test=me@example.com
   const dry = url.searchParams.get("dry") === "1";  // build but do not send
 
