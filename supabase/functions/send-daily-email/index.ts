@@ -125,7 +125,7 @@ function renderEmail(o: {
     <tr><td style="padding:26px 28px 6px;border-top:1px solid #e3dfec">
       <div style="font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#6d28d9;margin-bottom:10px">${esc(title)}</div>
       ${verses(text)}
-      ${button(`${SITE}/checkin?t=${token}`, label, bg)}
+      ${button(`${SITE}/checkin.html?t=${token}`, label, bg)}
     </td></tr>`;
 
   // Deliberately a single light palette. Gmail — where most readers are — ignores
@@ -148,13 +148,13 @@ function renderEmail(o: {
     </td></tr>
 
     <tr><td style="padding:20px 28px 0">
-      <p style="margin:0;font-size:16px;color:#4a4459">Good morning${name ? ", " + esc(name) : ""} — here is today's reading. Tap <b>Finished</b> under each portion to log it.</p>
+      <p style="margin:0;font-size:16px;color:#4a4459">Good morning${name ? ", " + esc(name) : ""} — here is today's reading. Tap <b>Finish</b> under each portion once you have read it.</p>
       <p style="margin:10px 0 0;font-size:14px"><a href="${SITE}/reading?date=${date}" style="color:#6d28d9">Open on the site for audio &rarr;</a></p>
     </td></tr>
 
     ${devotional(bread)}
-    ${portion(reading.nt_title, reading.nt_text, ntToken, "&#10003; Finished NT", "#059669")}
-    ${portion(reading.ot_title, reading.ot_text, otToken, "&#10003; Finished OT", "#7c3aed")}
+    ${portion(reading.nt_title, reading.nt_text, ntToken, "Finish NT", "#059669")}
+    ${portion(reading.ot_title, reading.ot_text, otToken, "Finish OT", "#7c3aed")}
 
     <tr><td style="padding:20px 28px 26px;border-top:1px solid #e3dfec;font-size:12px;color:#8b86a0;line-height:1.6">
       Church in Cerritos &middot; you are receiving this because you turned on daily reading emails.<br>
@@ -272,11 +272,19 @@ Deno.serve(async (req) => {
   }
 
   if (dry) {
+    // The live check-in links come back too, so the landing page can be tested
+    // without waiting for a message to arrive. Reaching this needs the service
+    // role, so the tokens are not exposed to anyone who could not already send.
     return json({
       date: sendDate, attempted: messages.length, sent: 0, dry: true,
       devotional: bread ? "included" : "none for this date",
-      bytesPerEmail: messages.map((m) => m.html.length),
-      recipients: messages.map((m) => m.to),
+      subject,
+      emails: messages.map((m) => ({
+        to: m.to,
+        bytes: m.html.length,
+        finishNT: (m.html.match(/checkin\.html\?t=[^"]+/g) || [])[0],
+        finishOT: (m.html.match(/checkin\.html\?t=[^"]+/g) || [])[1],
+      })),
     });
   }
 
