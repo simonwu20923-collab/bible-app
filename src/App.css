@@ -2477,30 +2477,74 @@ body {
 .checkin-link:hover { color: var(--text); }
 
 /* ── Daily email opt-in (navbar) ──────────────────────────────────────────── */
+.daily-email { position: relative; display: inline-flex; }
 .daily-email-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  padding: 4px 10px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--text-sec);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.15s;
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; padding: 4px 10px; border-radius: 6px;
+  border: 1px solid var(--border); background: transparent; color: var(--text-sec);
+  cursor: pointer; white-space: nowrap; transition: all 0.15s;
 }
-.daily-email-toggle:hover:not(:disabled) { border-color: var(--brand-btn); color: var(--text); }
-.daily-email-toggle:disabled { opacity: 0.6; cursor: wait; }
+.daily-email-toggle:hover { border-color: var(--brand-btn); color: var(--text); }
 .daily-email-toggle.is-on {
-  background: var(--brand-bg);
-  border-color: var(--brand-btn);
-  color: var(--brand);
-  font-weight: 600;
+  background: var(--brand-bg); border-color: var(--brand-btn);
+  color: var(--brand); font-weight: 600;
 }
-/* The navbar is tight on phones; the icon alone still reads as on or off. */
-@media (max-width: 768px) {
-  .daily-email-label { display: none; }
-  .daily-email-toggle { padding: 4px 8px; }
+.daily-email-panel {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 130;
+  min-width: 226px; padding: 12px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  text-align: left; cursor: default;
 }
+.de-switch {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 700; color: var(--text); cursor: pointer;
+}
+.de-langs {
+  margin-top: 10px; padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+  transition: opacity 0.15s;
+}
+/* Dimmed rather than disabled: the choice still saves, so it is ready when the
+   reader turns the email back on. */
+.de-langs.is-muted { opacity: 0.5; }
+.de-heading {
+  font-size: 10px; letter-spacing: 0.09em; text-transform: uppercase;
+  color: var(--text-muted); font-weight: 700; margin-bottom: 7px;
+}
+.de-lang {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 0; font-size: 13px; color: var(--text); cursor: pointer;
+}
+.de-lang input { cursor: pointer; }
+.de-note, .de-warn {
+  margin-top: 8px; font-size: 11px; line-height: 1.5; color: var(--text-muted);
+}
+.de-warn { color: #fbbf24; }
+
+/* ── Schedule year navigation ─────────────────────────────────────────────── */
+.year-nav {
+  display: flex; align-items: center; gap: 6px;
+  order: -1;                 /* sits above the title on wrapped rows */
+  width: 100%;
+}
+.year-arrow {
+  width: 30px; height: 30px; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border); border-radius: 8px;
+  background: transparent; color: var(--text); cursor: pointer;
+  font-size: 15px; line-height: 1; transition: all 0.15s;
+}
+.year-arrow:hover { border-color: var(--brand-btn); color: var(--brand); }
+.year-jump {
+  padding: 5px 10px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--surface2);
+  color: var(--text); font-size: 0.85rem; font-weight: 600; cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+.year-today {
+  padding: 5px 12px; border-radius: 8px; border: 1px solid var(--brand-btn);
+  background: var(--brand-bg); color: var(--brand);
+  font-size: 0.8rem; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.year-today:hover { background: var(--brand-btn); color: #fff; }

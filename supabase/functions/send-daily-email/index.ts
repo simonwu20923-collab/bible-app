@@ -18,6 +18,21 @@ const TZ = "America/Los_Angeles";
 // to this URL with no credentials and expects a 200, which a static page cannot do.
 const UNSUB = `${Deno.env.get("SUPABASE_URL")}/functions/v1/unsubscribe`;
 
+// Which verses column holds each language. Titles stay in English: they are
+// scripture references, and only one set is stored.
+const TEXT_COL: Record<string, { nt: string; ot: string }> = {
+  en: { nt: "nt_text",    ot: "ot_text" },
+  es: { nt: "nt_text_es", ot: "ot_text_es" },
+  zh: { nt: "nt_text_zh", ot: "ot_text_zh" },
+  sc: { nt: "nt_text_sc", ot: "ot_text_sc" },
+};
+const LANG_NAME: Record<string, string> = {
+  en: "English", es: "Español", zh: "繁體", sc: "简体",
+};
+// daily_bread has no Spanish edition, so a Spanish-only reader gets the
+// passages and the devotional falls back to English.
+const BREAD_LANGS = ["en", "zh", "sc"];
+
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const CHECKIN_SECRET = Deno.env.get("CHECKIN_SECRET") ?? "";
 
@@ -115,18 +130,72 @@ function renderEmail(o: {
   otToken: string;
   date: string;
   unsubToken: string;
+  langs: string[];
+  info?: { included: string[]; dropped: string[] };
 }): string {
-  const { reading, bread, name, ntToken, otToken, date, unsubToken } = o;
+  const { reading, bread, name, ntToken, otToken, date, unsubToken, langs, info } = o;
   const pretty = new Date(date + "T12:00:00Z").toLocaleDateString("en-US", {
     weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "UTC",
   });
 
-  const portion = (title: string, text: string, token: string, label: string, bg: string) => `
+  // Gmail clips a message over roughly 102KB, replacing the tail with a "view
+  // entire message" link — so a long day in four languages would be cut off
+  // mid-verse. Decide which languages fit before rendering anything, keeping the
+  // reader's order, and say plainly which were left for the site. The first
+  // language always goes in, even on a day where it alone is enormous.
+  const byteLen = (s: string) => new TextEncoder().encode(s).length;
+  const MAX_HTML_BYTES = 95_000;
+  const CHROME_BYTES = 5_000;
+
+  const rendered: Record<string, { nt: string; ot: string; bytes: number }> = {};
+  for (const code of langs) {
+    const nt = verses(reading[TEXT_COL[code].nt]);
+    const ot = verses(reading[TEXT_COL[code].ot]);
+    rendered[code] = { nt, ot, bytes: byteLen(nt) + byteLen(ot) };
+  }
+
+  const included: string[] = [];
+  const dropped: string[] = [];
+  let budget = MAX_HTML_BYTES - CHROME_BYTES;
+  for (const code of langs) {
+    if (!rendered[code].bytes) continue;            // nothing stored for this one
+    if (included.length && rendered[code].bytes > budget) { dropped.push(code); continue; }
+    included.push(code);
+    budget -= rendered[code].bytes;
+  }
+
+  if (info) { info.included = included; info.dropped = dropped; }
+
+  // Each chosen language is stacked under the same heading rather than set in
+  // columns: at a 640px email width two columns leave ~300px each, and barely
+  // 160px on a phone, which is where most of this is read.
+  const portion = (
+    which: "nt" | "ot", title: string, token: string, label: string, bg: string,
+  ) => {
+    const blocks = included.map((code) => {
+      const heading = included.length > 1
+        ? `<div style="font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#8b86a0;margin:16px 0 8px">${esc(LANG_NAME[code])}</div>`
+        : "";
+      return heading + rendered[code][which];
+    }).join("");
+
+    return `
     <tr><td style="padding:26px 28px 6px;border-top:1px solid #e3dfec">
       <div style="font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#6d28d9;margin-bottom:10px">${esc(title)}</div>
-      ${verses(text)}
+      ${blocks}
       ${button(`${SITE}/checkin.html?t=${token}`, label, bg)}
     </td></tr>`;
+  };
+
+  const trimmedNote = dropped.length
+    ? `<tr><td style="padding:0 28px 18px">
+         <div style="font-size:13px;line-height:1.6;color:#8b86a0;background:#f4f2f9;border-radius:8px;padding:12px 14px">
+           Today's reading is long, so ${esc(dropped.map((c) => LANG_NAME[c]).join(" and "))}
+           ${dropped.length > 1 ? "were" : "was"} left out to keep this email from being cut short.
+           <a href="${SITE}/reading?date=${date}" style="color:#6d28d9;font-weight:600">Read ${dropped.length > 1 ? "them" : "it"} on the site &rarr;</a>
+         </div>
+       </td></tr>`
+    : "";
 
   // Deliberately a single light palette. Gmail — where most readers are — ignores
   // prefers-color-scheme and runs its own inversion, so a dark variant would only
@@ -153,8 +222,10 @@ function renderEmail(o: {
     </td></tr>
 
     ${devotional(bread)}
-    ${portion(reading.nt_title, reading.nt_text, ntToken, "Finish NT", "#059669")}
-    ${portion(reading.ot_title, reading.ot_text, otToken, "Finish OT", "#7c3aed")}
+    ${portion("nt", reading.nt_title, ntToken, "Finish NT", "#059669")}
+    ${portion("ot", reading.ot_title, otToken, "Finish OT", "#7c3aed")}
+
+    ${trimmedNote}
 
     <tr><td style="padding:20px 28px 26px;border-top:1px solid #e3dfec;font-size:12px;color:#8b86a0;line-height:1.6">
       Church in Cerritos &middot; you are receiving this because you turned on daily reading emails.<br>
@@ -239,11 +310,22 @@ Deno.serve(async (req) => {
     .from("verses").select("*").eq("date", sendDate).maybeSingle();
   if (!reading) return json({ error: `no reading row for ${sendDate}` }, 404);
 
-  // daily_bread repeats yearly, so it is keyed by MM-DD rather than a full date.
-  const { data: bread } = await sb
-    .from("daily_bread").select("*").eq("md", sendDate.slice(5)).eq("lang", "en").maybeSingle();
+  // The devotional runs on a two-year cycle (2027, 2029... use the 2027 set;
+  // 2028, 2030... the 2028 set), so the calendar year picks which rows to read.
+  // Without this the query would now match three years at once and the last row
+  // to arrive would win at random.
+  const sendYear = Number(sendDate.slice(0, 4));
+  const devYear = sendYear < 2027 ? 2026 : 2027 + ((sendYear - 2027) % 2);
 
-  let q = sb.from("users").select("id, name, email, email_token").eq("daily_email", true);
+  // daily_bread repeats yearly, so it is keyed by MM-DD rather than a full date.
+  // Fetched once for every language, then each reader is handed theirs.
+  const { data: breadRows } = await sb
+    .from("daily_bread").select("*")
+    .eq("md", sendDate.slice(5)).eq("year", devYear).in("lang", BREAD_LANGS);
+  const breadByLang: Record<string, Record<string, string>> = {};
+  (breadRows ?? []).forEach((r) => { breadByLang[r.lang] = r; });
+
+  let q = sb.from("users").select("id, name, email, email_token, email_langs").eq("daily_email", true);
   if (only) q = q.eq("email", only);
   const { data: subs, error } = await q;
   if (error) return json({ error: error.message }, 500);
@@ -251,18 +333,28 @@ Deno.serve(async (req) => {
 
   const subject = `${reading.nt_title} · ${reading.ot_title}`;
   const messages = [];
+  const sendInfo: { to: string; info: { included: string[]; dropped: string[] } }[] = [];
   for (const u of subs) {
     const [ntToken, otToken] = await Promise.all([
       mintToken(u.id, sendDate, "NT"),
       mintToken(u.id, sendDate, "OT"),
     ]);
+    // Ignore anything unrecognised, and never end up with an empty list.
+    const langs = (u.email_langs ?? []).filter((c: string) => TEXT_COL[c]);
+    if (!langs.length) langs.push("en");
+    // The devotional has no Spanish edition, so use the reader's first language
+    // that has one and fall back to English.
+    const bread = breadByLang[langs.find((c: string) => breadByLang[c]) ?? "en"] ?? null;
+
+    const info = { included: [] as string[], dropped: [] as string[] };
+    sendInfo.push({ to: u.email, info });
     messages.push({
       from: FROM,
       to: u.email,
       subject,
       html: renderEmail({
         reading, bread, name: u.name, ntToken, otToken,
-        date: sendDate, unsubToken: u.email_token,
+        date: sendDate, unsubToken: u.email_token, langs, info,
       }),
       headers: {
         "List-Unsubscribe": `<${UNSUB}?t=${u.email_token}>`,
@@ -277,11 +369,14 @@ Deno.serve(async (req) => {
     // role, so the tokens are not exposed to anyone who could not already send.
     return json({
       date: sendDate, attempted: messages.length, sent: 0, dry: true,
-      devotional: bread ? "included" : "none for this date",
+      devotional: Object.keys(breadByLang).join(", ") || "none for this date",
       subject,
       emails: messages.map((m) => ({
         to: m.to,
-        bytes: m.html.length,
+        langs: sendInfo.find((x) => x.to === m.to)?.info.included,
+        droppedForLength: sendInfo.find((x) => x.to === m.to)?.info.dropped,
+        bytes: new TextEncoder().encode(m.html).length,
+        clippedByGmail: new TextEncoder().encode(m.html).length > 102400,
         finishNT: (m.html.match(/checkin\.html\?t=[^"]+/g) || [])[0],
         finishOT: (m.html.match(/checkin\.html\?t=[^"]+/g) || [])[1],
       })),
@@ -317,7 +412,7 @@ Deno.serve(async (req) => {
     attempted: messages.length,
     sent,
     failed,
-    devotional: bread ? "included" : "none for this date",
+    devotional: Object.keys(breadByLang).join(", ") || "none for this date",
     dry: false,
   });
 });

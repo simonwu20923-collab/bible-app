@@ -28,7 +28,10 @@ export default function Schedule({ lang = 'en' }) {
   const [loading, setLoading] = React.useState(true);
   const today = new Date();
   const todayStr = today.toLocaleDateString('en-CA'); // local date, not UTC
-  const currentYear = today.getFullYear();
+  // The calendar is browsable across years; the schedule itself repeats, so a
+  // different year re-renders the same readings against that year's weekdays.
+  const thisYear = today.getFullYear();
+  const [currentYear, setCurrentYear] = React.useState(thisYear);
   const navigate = useNavigate();
   const todayRef = React.useRef(null);
 
@@ -47,19 +50,19 @@ export default function Schedule({ lang = 'en' }) {
 
   const isZh = lang === 'zh' || lang === 'sc';
   const ui = {
-    en: { title: `Reading Schedule ${currentYear}`, both:'Both', nt:'NT', ot:'OT', listView:'☰ List View', calView:'⊞ Calendar View', loading:'Loading...',
+    en: { title: `Reading Schedule ${currentYear}`, prevYear:'Previous year', nextYear:'Next year', jumpYear:'Jump to year', today:'Today', both:'Both', nt:'NT', ot:'OT', listView:'☰ List View', calView:'⊞ Calendar View', loading:'Loading...',
           bulk:'Bulk Complete', pinLabel:'Admin PIN', pinPlaceholder:'Enter PIN...', unlock:'Unlock', nameLabel:'Name', fromLabel:'From', toLabel:'To',
           portionLabel:'Portion', portionBoth:'Both NT & OT', portionNT:'NT only', portionOT:'OT only',
           run:'Mark as Complete', cancel:'Cancel', running:'Working...', success:'Done!', pinError:'Incorrect PIN' },
-    es: { title: `Horario de Lectura ${currentYear}`, both:'Ambos', nt:'NT', ot:'AT', listView:'☰ Lista', calView:'⊞ Calendario', loading:'Cargando...',
+    es: { title: `Horario de Lectura ${currentYear}`, prevYear:'Año anterior', nextYear:'Año siguiente', jumpYear:'Ir al año', today:'Hoy', both:'Ambos', nt:'NT', ot:'AT', listView:'☰ Lista', calView:'⊞ Calendario', loading:'Cargando...',
           bulk:'Completar en bloque', pinLabel:'PIN Admin', pinPlaceholder:'Ingresa PIN...', unlock:'Desbloquear', nameLabel:'Nombre', fromLabel:'Desde', toLabel:'Hasta',
           portionLabel:'Porción', portionBoth:'NT y AT', portionNT:'Solo NT', portionOT:'Solo AT',
           run:'Marcar como Completo', cancel:'Cancelar', running:'Procesando...', success:'¡Listo!', pinError:'PIN incorrecto' },
-    zh: { title: `${currentYear}年閱讀計劃`, both:'兩篇', nt:'新約', ot:'舊約', listView:'☰ 列表', calView:'⊞ 日曆', loading:'載入中...',
+    zh: { title: `${currentYear}年閱讀計劃`, prevYear:'上一年', nextYear:'下一年', jumpYear:'跳至年份', today:'今天', both:'兩篇', nt:'新約', ot:'舊約', listView:'☰ 列表', calView:'⊞ 日曆', loading:'載入中...',
           bulk:'批量完成', pinLabel:'管理員密碼', pinPlaceholder:'輸入密碼...', unlock:'解鎖', nameLabel:'姓名', fromLabel:'開始日期', toLabel:'結束日期',
           portionLabel:'部分', portionBoth:'新約和舊約', portionNT:'只有新約', portionOT:'只有舊約',
           run:'標記為完成', cancel:'取消', running:'處理中...', success:'完成！', pinError:'密碼錯誤' },
-    sc: { title: `${currentYear}年阅读计划`, both:'两篇', nt:'新约', ot:'旧约', listView:'☰ 列表', calView:'⊞ 日历', loading:'加载中...',
+    sc: { title: `${currentYear}年阅读计划`, prevYear:'上一年', nextYear:'下一年', jumpYear:'跳至年份', today:'今天', both:'两篇', nt:'新约', ot:'旧约', listView:'☰ 列表', calView:'⊞ 日历', loading:'加载中...',
           bulk:'批量完成', pinLabel:'管理员密码', pinPlaceholder:'输入密码...', unlock:'解锁', nameLabel:'姓名', fromLabel:'开始日期', toLabel:'结束日期',
           portionLabel:'部分', portionBoth:'新约和旧约', portionNT:'只有新约', portionOT:'只有旧约',
           run:'标记为完成', cancel:'取消', running:'处理中...', success:'完成！', pinError:'密码错误' },
@@ -247,6 +250,23 @@ export default function Schedule({ lang = 'en' }) {
   return (
     <div className="page">
       <div className="schedule-header">
+        <div className="year-nav">
+          <button className="year-arrow" onClick={() => setCurrentYear(y => y - 1)}
+                  aria-label={t.prevYear} title={t.prevYear}>←</button>
+          <select className="year-jump" value={currentYear}
+                  onChange={e => setCurrentYear(Number(e.target.value))}
+                  aria-label={t.jumpYear}>
+            {/* A decade either side is more than anyone needs and keeps the list scannable. */}
+            {Array.from({ length: 21 }, (_, i) => thisYear - 10 + i).map(y => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+          <button className="year-arrow" onClick={() => setCurrentYear(y => y + 1)}
+                  aria-label={t.nextYear} title={t.nextYear}>→</button>
+          {currentYear !== thisYear && (
+            <button className="year-today" onClick={() => setCurrentYear(thisYear)}>{t.today}</button>
+          )}
+        </div>
         <h1>{t.title}</h1>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
           <div className="cal-legend">

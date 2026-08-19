@@ -26,6 +26,9 @@ export default function Reading({ lang = 'en' }) {
   );
   const startOfYear = new Date(new Date(currentDate).getFullYear(), 0, 0);
   const dayOfYear = Math.floor((new Date(currentDate + 'T12:00:00') - startOfYear) / 86400000);
+  // Counted rather than fixed at 365, so a leap year reads "Day 231 of 366".
+  const year = Number(currentDate.slice(0, 4));
+  const daysInYear = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0 ? 366 : 365;
   const reading = getReadingForDate(currentDate);
 
   const [ntDone, setNtDone] = React.useState(false);
@@ -434,10 +437,10 @@ export default function Reading({ lang = 'en' }) {
   }
 
   const ui = {
-    en: { hideVerses:'▲ Hide verses', readVerses:'▼ Read verses', finishNT:'Finish NT', finishOT:'Finish OT', finishedNT:'✓ Finished NT', finishedOT:'✓ Finished OT', saving:'Saving...', completed:'🎉 You completed both readings today!', readersTitle:"Today's Readers", discussion:'💬 Discussion', noComments:'No comments yet — be the first!', yourName:'Your name', shareThought:'Share a thought...', post:'Post Comment', posting:'Posting...', person:'person has', people:'people have', today:'today', text:'Text:', dayOf:'Day', of:'of' },
-    es: { hideVerses:'▲ Ocultar', readVerses:'▼ Leer versículos', finishNT:'Terminar NT', finishOT:'Terminar AT', finishedNT:'✓ NT completado', finishedOT:'✓ AT completado', saving:'Guardando...', completed:'🎉 ¡Completaste ambas lecturas hoy!', readersTitle:'Lectores de hoy', discussion:'💬 Discusión', noComments:'¡Sé el primero!', yourName:'Tu nombre', shareThought:'Comparte un pensamiento...', post:'Publicar', posting:'Publicando...', person:'persona leyó', people:'personas leyeron', today:'', text:'Texto:', dayOf:'Día', of:'de' },
-    zh: { hideVerses:'▲ 隱藏經文', readVerses:'▼ 閱讀經文', finishNT:'完成新約', finishOT:'完成舊約', finishedNT:'✓ 新約完成', finishedOT:'✓ 舊約完成', saving:'儲存中...', completed:'🎉 你今天完成了兩篇閱讀！', readersTitle:'今日讀者', discussion:'💬 討論', noComments:'還沒有留言', yourName:'你的名字', shareThought:'分享你的想法...', post:'發表留言', posting:'發佈中...', person:'人已閱讀', people:'人已閱讀', today:'', text:'字體：', dayOf:'第', of:'天/365' },
-    sc: { hideVerses:'▲ 隐藏经文', readVerses:'▼ 阅读经文', finishNT:'完成新约', finishOT:'完成旧约', finishedNT:'✓ 新约完成', finishedOT:'✓ 旧约完成', saving:'保存中...', completed:'🎉 你今天完成了两篇阅读！', readersTitle:'今日读者', discussion:'💬 讨论', noComments:'还没有留言', yourName:'你的名字', shareThought:'分享你的想法...', post:'发表留言', posting:'发布中...', person:'人已阅读', people:'人已阅读', today:'', text:'字体：', dayOf:'第', of:'天/365' },
+    en: { hideVerses:'▲ Hide verses', readVerses:'▼ Read verses', finishNT:'Finish NT', finishOT:'Finish OT', finishedNT:'✓ Finished NT', finishedOT:'✓ Finished OT', saving:'Saving...', completed:'🎉 You completed both readings today!', readersTitle:"Today's Readers", discussion:'💬 Discussion', noComments:'No comments yet — be the first!', yourName:'Your name', shareThought:'Share a thought...', post:'Post Comment', posting:'Posting...', person:'person has', people:'people have', today:'today', text:'Text:', dayCount:(n,total)=>`Day ${n} of ${total}` },
+    es: { hideVerses:'▲ Ocultar', readVerses:'▼ Leer versículos', finishNT:'Terminar NT', finishOT:'Terminar AT', finishedNT:'✓ NT completado', finishedOT:'✓ AT completado', saving:'Guardando...', completed:'🎉 ¡Completaste ambas lecturas hoy!', readersTitle:'Lectores de hoy', discussion:'💬 Discusión', noComments:'¡Sé el primero!', yourName:'Tu nombre', shareThought:'Comparte un pensamiento...', post:'Publicar', posting:'Publicando...', person:'persona leyó', people:'personas leyeron', today:'', text:'Texto:', dayCount:(n,total)=>`Día ${n} de ${total}` },
+    zh: { hideVerses:'▲ 隱藏經文', readVerses:'▼ 閱讀經文', finishNT:'完成新約', finishOT:'完成舊約', finishedNT:'✓ 新約完成', finishedOT:'✓ 舊約完成', saving:'儲存中...', completed:'🎉 你今天完成了兩篇閱讀！', readersTitle:'今日讀者', discussion:'💬 討論', noComments:'還沒有留言', yourName:'你的名字', shareThought:'分享你的想法...', post:'發表留言', posting:'發佈中...', person:'人已閱讀', people:'人已閱讀', today:'', text:'字體：', dayCount:(n,total)=>`第 ${n} 天／共 ${total} 天` },
+    sc: { hideVerses:'▲ 隐藏经文', readVerses:'▼ 阅读经文', finishNT:'完成新约', finishOT:'完成旧约', finishedNT:'✓ 新约完成', finishedOT:'✓ 旧约完成', saving:'保存中...', completed:'🎉 你今天完成了两篇阅读！', readersTitle:'今日读者', discussion:'💬 讨论', noComments:'还没有留言', yourName:'你的名字', shareThought:'分享你的想法...', post:'发表留言', posting:'发布中...', person:'人已阅读', people:'人已阅读', today:'', text:'字体：', dayCount:(n,total)=>`第 ${n} 天／共 ${total} 天` },
   };
   const t = ui[lang] || ui.en;
 
@@ -473,7 +476,7 @@ export default function Reading({ lang = 'en' }) {
           <button className="nav-arrow" onClick={() => changeDate(-1)}>←</button>
           <div className="date-nav-center">
             <div className="reading-date-label">{dateLabel}</div>
-            <div className="reading-day-count">{t.dayOf} {dayOfYear} {t.of}</div>
+            <div className="reading-day-count">{t.dayCount(dayOfYear, daysInYear)}</div>
           </div>
           <button className="nav-arrow" onClick={() => changeDate(1)}>→</button>
         </div>

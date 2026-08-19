@@ -1,5 +1,6 @@
 import React from 'react';
 import { supabase } from '../supabase';
+import { devotionalYearFor } from '../data/devotionalYear';
 
 // The daily devotional for the day's portion, built by fetchDailyBread.js from
 // the "Daily Reading through the Bible in A Year" doc and daybread.org.
@@ -40,15 +41,18 @@ export default function DailyBread({ date, lang = 'en', fontSize = 18, stickyTop
   }, [row]);
 
   const md = date.slice(5);
+  // Rows repeat by MM-DD, but the devotional now runs on a two-year cycle, so
+  // the calendar year decides which set to read.
+  const devYear = devotionalYearFor(date);
 
   React.useEffect(() => {
     let cancelled = false;
     setRow(null);
     supabase.from('daily_bread')
-      .select('*').eq('md', md).eq('lang', lang).maybeSingle()
+      .select('*').eq('md', md).eq('lang', lang).eq('year', devYear).maybeSingle()
       .then(({ data }) => { if (!cancelled) setRow(data); });
     return () => { cancelled = true; };
-  }, [md, lang]);
+  }, [md, lang, devYear]);
 
   if (!row) return null;
 
