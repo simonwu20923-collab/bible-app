@@ -104,42 +104,87 @@ export function AppleHelp({ t }) {
   return null;
 }
 
+// These settings used to be fetched when the panel opened, so opening it meant
+// staring at an empty box for the length of a round trip. They are small and
+// rarely change, so the account menu warms them on mount and they are kept
+// here — opening the panel then paints immediately.
+const cache = new Map();
+const inFlight = new Map();
+let pushCache = null;
+
+export function prefetchPreferences(email) {
+  if (!email) return Promise.resolve(null);
+  if (cache.has(email)) return Promise.resolve(cache.get(email));
+  // Opening the panel while the warm-up is still in the air should join that
+  // request rather than start a second one for the same answer.
+  if (inFlight.has(email)) return inFlight.get(email);
+
+  const request = supabase
+    .from('users').select('daily_email, email_langs, notify_at')
+    .eq('email', email).order('created_at', { ascending: true }).limit(1)
+    .then(({ data, error }) => {
+      if (error) { console.error('could not load notification settings', error); return null; }
+      const row = (data && data[0]) || {};
+      const value = {
+        on: !!row.daily_email,
+        langs: row.email_langs?.length ? row.email_langs : ['en'],
+        notifyAt: row.notify_at ? String(row.notify_at).slice(0, 5) : '00:01',
+      };
+      cache.set(email, value);
+      return value;
+    })
+    .finally(() => inFlight.delete(email));
+
+  inFlight.set(email, request);
+  return request;
+}
+
+// Saves are optimistic, so the cache has to follow or reopening the panel
+// would show the value the reader just changed away from.
+function applyToCache(email, patch) {
+  const current = cache.get(email);
+  if (!current) return;
+  if ('daily_email' in patch) current.on = !!patch.daily_email;
+  if ('email_langs' in patch) current.langs = patch.email_langs;
+  if ('notify_at' in patch) current.notifyAt = String(patch.notify_at).slice(0, 5);
+}
+
 export default function NotifyPreferences({ email, lang = 'en' }) {
   const t = TEXT[lang] || TEXT.en;
-  const [on, setOn] = React.useState(null);
-  const [langs, setLangs] = React.useState(['en']);
-  const [pushOn, setPushOn] = React.useState(false);
-  const [notifyAt, setNotifyAt] = React.useState('00:01');
+  const warm = email ? cache.get(email) : null;
+  const [on, setOn] = React.useState(warm ? warm.on : null);
+  const [langs, setLangs] = React.useState(warm ? warm.langs : ['en']);
+  const [pushOn, setPushOn] = React.useState(pushCache ?? false);
+  const [notifyAt, setNotifyAt] = React.useState(warm ? warm.notifyAt : '00:01');
   const [busy, setBusy] = React.useState(false);
   const [warn, setWarn] = React.useState('');
 
+  // Resolves from the cache on the same tick when the menu has already warmed
+  // it, so there is nothing to see loading. The query it falls back to takes
+  // the earliest row rather than maybeSingle(): some addresses have more than
+  // one account row, and erroring out would render nothing at all.
   React.useEffect(() => {
     if (!email) return;
     let cancelled = false;
-    // Not maybeSingle(): some addresses have more than one account row, because
-    // sign-in matches on name, so the same person under a second name creates a
-    // second row. Take the earliest — the original account — rather than erroring
-    // out and rendering nothing.
-    supabase.from('users').select('daily_email, email_langs, notify_at')
-      .eq('email', email).order('created_at', { ascending: true }).limit(1)
-      .then(({ data, error }) => {
-        if (cancelled) return;
-        if (error) { console.error('could not load notification settings', error); setOn(false); return; }
-        const row = data && data[0];
-        if (!row) { setOn(false); return; }
-        setOn(!!row.daily_email);
-        setLangs(row.email_langs?.length ? row.email_langs : ['en']);
-        if (row.notify_at) setNotifyAt(String(row.notify_at).slice(0, 5));
-      });
+    prefetchPreferences(email).then(value => {
+      if (cancelled) return;
+      if (!value) { setOn(false); return; }
+      setOn(value.on);
+      setLangs(value.langs);
+      setNotifyAt(value.notifyAt);
+    });
     return () => { cancelled = true; };
   }, [email]);
 
-  React.useEffect(() => { isSubscribed().then(setPushOn); }, []);
+  React.useEffect(() => {
+    isSubscribed().then(v => { pushCache = v; setPushOn(v); });
+  }, []);
 
   async function save(patch, revert) {
     setBusy(true);
     const { error } = await supabase.from('users').update(patch).eq('email', email);
     if (error) revert();
+    else applyToCache(email, patch);
     setBusy(false);
   }
 

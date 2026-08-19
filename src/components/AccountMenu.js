@@ -1,5 +1,5 @@
 import React from 'react';
-import NotifyPreferences, { TEXT } from './NotifyPreferences';
+import NotifyPreferences, { TEXT, prefetchPreferences } from './NotifyPreferences';
 import RenameAccount from './RenameAccount';
 
 // The account name opens everything to do with the reader: how they hear from
@@ -25,6 +25,10 @@ export default function AccountMenu({ user, lang = 'en', onLogout }) {
   }, [open]);
 
   React.useEffect(() => () => clearTimeout(closeTimer.current), []);
+
+  // Warmed while the reader is doing something else, so the panel has its
+  // values ready the moment they reach for it rather than fetching on open.
+  React.useEffect(() => { prefetchPreferences(user?.email); }, [user?.email]);
 
   // A short delay on leaving, so crossing the gap between the name and the panel
   // does not shut it in the reader's face.
