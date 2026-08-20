@@ -24,8 +24,8 @@ self.addEventListener('push', (event) => {
   const title = payload.title || 'Bible Reading';
   const options = {
     body: payload.body || '',
-    icon: '/logo192.png',
-    badge: '/logo192.png',
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
     tag: payload.tag || 'bible-reading',
     // A reminder that replaces yesterday's is right; a mention that silently
     // replaces another mention is not.
