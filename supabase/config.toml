@@ -1,0 +1,28 @@
+# Minimal project config. Present so per-function settings survive a deploy —
+# `functions deploy` has only a --no-verify-jwt flag, no way to turn it back on
+# from the command line, and it keeps whatever the function was last set to.
+project_id = "lsvhmvkhernimxmzcyak"
+
+# Called by cron with the service key in an Authorization header. Each function
+# also checks that key itself; the gateway just turns away requests that carry
+# no credential at all.
+[functions.send-reminders]
+verify_jwt = true
+
+[functions.send-daily-email]
+verify_jwt = true
+
+# Public endpoints: reached from the sign-in screen or an email link, where
+# nobody is signed in and there is no key to send.
+[functions.recover-name]
+verify_jwt = false
+
+[functions.verify-checkin]
+verify_jwt = false
+
+[functions.unsubscribe]
+verify_jwt = false
+
+# Not called from the browser at all — invoked server-side with the service key.
+[functions.send-push]
+verify_jwt = true
